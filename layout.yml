@@ -1,7 +1,15 @@
 ---
-title: "Paper Title"
+title: |
+  Formal Verification of Rust with stainless
+  \newline
+  \LARGE From traits to type classes
 papersize: a4paper
 fontsize: 11pt
 # classoption: "onecolumn"
+author:
+  - name: Yann Bolliger
+    affiliation: EPFL
+    location: Lausanne, Switzerland
+    email: yann.bolliger@epfl.ch
 ---
 

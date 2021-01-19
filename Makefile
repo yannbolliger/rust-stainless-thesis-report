@@ -1,6 +1,6 @@
 TMPL_FOLDER = .template
 
-PDFS = paper.pdf
+PDFS = rust_type_classes_report.pdf
 
 all: $(PDFS)
 
