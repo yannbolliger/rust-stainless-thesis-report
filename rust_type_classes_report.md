@@ -69,8 +69,8 @@ encode the name of the spec'd function in the name of the generated sibling
 function. The example shows how the generated spec-function is named, the number
 serves to distinguish multiple specs of the same type:
 
-```rust
-#[post(ret > 0)]
+```{.rust caption="Attribute becomes a sibling function"}
+#[post(ret > 0)] // this attribute
 fn append(&self, a: i32) -> i32 {}
 
 // becomes:

@@ -134,13 +134,21 @@ $endfor$
 $endif$
 $if(listings)$
 \usepackage{listings}
+\usepackage{.template/listings-rust}
+\lstset{
+  language=Rust,
+  breaklines=true,
+  basicstyle=\scriptsize\ttfamily,
+  captionpos=b,
+  tabsize=2
+}
+\newcommand{\passthrough}[1]{\lstset{mathescape=false}#1\lstset{mathescape=true}}
 $endif$
 $if(lhs)$
 \lstnewenvironment{code}{\lstset{language=Haskell,basicstyle=\small\ttfamily}}{}
 $endif$
 $if(highlighting-macros)$
 $highlighting-macros$
-\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\},fontsize=\scriptsize}
 $endif$
 $if(verbatim-in-note)$
 \usepackage{fancyvrb}
