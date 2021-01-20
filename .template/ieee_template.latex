@@ -140,6 +140,7 @@ $if(lhs)$
 $endif$
 $if(highlighting-macros)$
 $highlighting-macros$
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\},fontsize=\scriptsize}
 $endif$
 $if(verbatim-in-note)$
 \usepackage{fancyvrb}

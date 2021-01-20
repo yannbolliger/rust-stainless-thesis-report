@@ -3,13 +3,24 @@ title: |
   Formal Verification of Rust with stainless
   \newline
   \LARGE From traits to type classes
-papersize: a4paper
-fontsize: 11pt
-# classoption: "onecolumn"
+
 author:
   - name: Yann Bolliger
     affiliation: EPFL
     location: Lausanne, Switzerland
     email: yann.bolliger@epfl.ch
+
+abstract: |
+  This project substantially extends the fragment of Rust code that is supported
+  by the Rust-frontend of Stainless, a formal verification framework. Most
+  notably, it is now possible to extract Stainless type classes with abstract
+  methods and attached, automatically proven laws on those methods from Rust
+  traits and implementations.
+
+papersize: a4paper
+fontsize: 11pt
+# classoption: "onecolumn"
+reference-section-title: References
+link-citations: true
 ---
 

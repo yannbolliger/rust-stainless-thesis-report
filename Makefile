@@ -25,7 +25,9 @@ $(TMPL_FOLDER)/ieee_template.latex: $(TMPL_FOLDER)/IEEEtran.cls
 	@echo
 
 	pandoc -o $@ --citeproc --csl=$(TMPL_FOLDER)/ieee_bib.csl --bibliography=bib.bib \
-		-s --template=$(TMPL_FOLDER)/ieee_template.latex layout.yml $<
+		-s --template=$(TMPL_FOLDER)/ieee_template.latex \
+		--number-sections \
+		layout.yml $<
 
 clean:
 	rm -f $(PDFS)
