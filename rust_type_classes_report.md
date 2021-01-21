@@ -1,65 +1,162 @@
 # Introduction \label{intro}
 
-Stainless[^stainless] is a formal verification tool for the Scala programming
-language, written in Scala. This project works on the Rust-frontend to
-Stainless, which is called `rust-stainless`[^repo] by Georg Schmid and is
-written in Rust. Its goal is to extract a subset of the Rust language, translate
-it to Stainless's intermediate representation and use the verifier pipeline of
-Stainless.
+The purpose of project is to extend the Rust-frontend to Stainless,
+`rust-stainless`[^repo] by Georg Schmid, written in Rust. Stainless[^stainless]
+is a formal verification tool for Scala, written in Scala. The goal of the
+frontend is to extract a subset of the Rust language, translate it to
+Stainless's intermediate representation and reuse its verification pipeline.
 
 [^stainless]: [stainless.epfl.ch](https://stainless.epfl.ch/)
 [^repo]:
     [epfl-lara/rust-stainless on Github](https://github.com/epfl-lara/rust-stainless)
 
-- many features already there: list them
+While the main architecture and infrastructure of the frontend already existed,
+this project adds numerous features and refactors, in particular it adds the
+capability to extract type classes in the Scala-Stainless sense from Rust's
+traits and their implementations. To illustrate that, consider Listing
+\ref{code1} that describes equality as an abstract class.
 
-  - expression extraction for integer operations, syntax, etc.
-  - function & body extraction
-  - pattern match extraction
-  - type parameters and generics
-  - ADT, enum/struct extraction
-  - tuples without pattern matching
-  - pre-, post conditions as attributes
+```{.scala label="code1" caption="Type class with attached laws in Scala."}
+abstract class Equals[T] {
+  def equals(x: T, y: T): Boolean
+  def notEquals(x: T, y: T): Boolean = !equals(x, y)
 
-- clear restrictions: only immutable, functional code
-- no references, no recursive data types
-- specs should not interfere with code/borrow-checking
+  @law
+  def law_reflexive(x: T): Boolean =
+    equals(x, x)
+  @law
+  def law_symmetric(x: T, y: T): Boolean =
+    equals(x, y) == equals(y, x)
+  @law
+  def law_transitive(x: T, y: T, z: T): Boolean =
+    !(equals(x, y) && equals(y, z)) || equals(x, z)
+}
+```
 
-Specs were already there, but without the `measure` one. Big challenge of specs
-is disabling the borrow-checker for their code.
+Stainless makes it possible to attach _laws_ i.e. algebraic properties to type
+classes [@algb] with the `@law` annotation. These laws are also verified by
+Stainless which ensures that implementors hold the contract set by the type
+class.
 
-# Goals and Added Features
+The primary goal of this project was to port that feature to the Rust-frontend
+of Stainless. In other words, support the code in Listing \ref{code2}. This was
+achieved with some drawbacks, discussed in \ref{caveats}.
 
-This project aimed at advancing the Rust-frontend of Stainless to support a
-sizeable chunk of Stainless' functional constructs. This will involve extending
-the frontend's current features, in particular within the Rustc-embedded
-extraction phase.
+```{.rust label="code2" caption="Type class with attached laws in Rust."}
+trait Equals {
+  fn equals(&self, x: &Self) -> bool;
+  fn not_equals(&self, x: &Self) -> bool {
+    !self.equals(x)
+  }
 
-Ultimately, we should be able to port several of the Stainless' existing
-verification benchmarks.
+  #[law]
+  fn law_reflexive(x: &Self) -> bool {
+    x.equals(x)
+  }
+  #[law]
+  fn law_symmetric(x: &Self, y: &Self) -> bool {
+    x.equals(y) == y.equals(x)
+  }
+  #[law]
+  fn law_transitive(x: &Self, y: &Self, z: &Self) -> bool {
+    !(x.equals(y) && y.equals(z)) || x.equals(z)
+  }
+}
+```
 
-- show off some first class feature with type classes
+The rest of this report is structured as follows. In \ref{background}, the
+existing features of the Rust-frontend as well as a short architecture overview
+is given. The added features are introduced on a conceptual, user-perspective in
+\ref{features} and their implementation is described in \ref{implementation}.
+Lastly, I discuss problems with the current state as well as options for future
+work \ref{discussion}.
 
-# Implementation
+# Background \label{background}
 
-The overall architecture of the code-base has not been changed. All the new
-features were implemented as extensions to the existing infrastructure. The
-architecture can be concisely described as a pipeline. First, there is the
-`libstainless` which contains the macros needed for the attributes like specs
-and flags.
+## Existing features
 
-Rustc is linked as library to the frontend and its runner is driver is used to
-execute the first few phases of compilation until the AST (on which macro
-expansion is performed) is converted to the _High-Level Intermediate
-Representation (HIR)._ This tree results after type-checking and borrow-checking
-have been performed. Hence, the frontend can assume that types and ownership are
+The targeted Rust fragment underlies some strict restrictions: all code has to
+be functional and immutable. The only allowed side-effect is `panic!`. Before
+the project, references, heap allocated objects called _boxes_ and recursive
+data types were also forbidden. Nonetheless, the majority of features was
+already supported, like extraction of most of the basic syntax, top-level
+functions and their bodies, integer and boolean expressions and operations,
+pattern matching, type parameters and generics, see Listing \ref{code3}.
+
+```{.rust label="code3" caption="Integer operations in Rust."}
+pub fn i32_ops(x: i32, y: i32) {
+  assert!(x + y == y + x);
+  assert!(x + x == 2 * x);
+  assert!(x + x == x << 1);
+  if x >= 0 && x < 1<<30 {
+    assert!(x == (x + x) / 2);
+  }
+}
+```
+
+Support for _algebraic data types (ADTs)_ was als present, including tuples
+(without their pattern matching) and generics. In Rust, ADTs are `enum`s, tuples
+and `struct`s. They are extracted to Stainless ADTs:
+
+```{.rust caption="An ADT example in Rust."}
+enum Maybe<T> {
+  Nothing,
+  Just { value: T },
+}
+
+fn get_or_else<T>(maybe: Maybe<T>, default: T) -> T {
+  match maybe {
+    Maybe::Nothing => default,
+    Maybe::Just { value } => value,
+  }
+}
+```
+
+To state pre- and postconditions on functions, like Scala's `require` and
+`ensuring` the crate `libstainless`, contains two attributes that can be added
+to functions: `pre` and `post`, in short _specs_. The expression of a spec is
+normal Rust code, but the design goal is that specs should have no influence on
+the function body. This poses an unsolved problem, because normal Rust code has
+to satisfy the type- _and_ borrow-checks, which can be difficult if some
+expression in a spec consumes an object. As a work-around, it is allowed to add
+multiple specs of the same kind which is equivalent to multiple
+`&&`-concatenated expressions.
+
+```{.rust caption="Example of function specs."}
+#[pre(x >= 0)]
+#[pre(x < 10)]
+#[post(ret >= 0)]
+pub fn fact(x: i32) -> i32 {
+  if x <= 0 { 1 }
+  else { fact(x - 1) * x }
+}
+```
+
+## Architecture
+
+The Rust-frontend is a pipeline of different stages: macros, early compilation,
+extraction, serialisation and verification. The programmer depends on
+`libstainless` which contains the macros for the attributes like specs and
+flags. The frontend can then be run as a `cargo` task.
+
+Rustc is linked as library to the frontend and, at the start of the cargo task,
+its driver executes the first few phases of compilation, until the AST (on which
+macro expansion is performed) is converted to the _High-Level Intermediate
+Representation (HIR)_. This tree results after type- and borrow-checking have
+been performed. Hence, the frontend can assume that types and ownership are
 checked.
 
-The `rust-stainless` extracts Stainless AST trees from the HIR in its extraction
-phase. Those trees are then serialised to a binary format and submitted to a
-running instance of Stainless. On the Stainless side, there is a custom frontend
-that is able to ingest the serialisation format and with only minor
-transformations feed it to the verification pipeline.
+After that, the extraction phase of the frontend converts the HIR to Stainless
+AST trees that are serialised to a binary format. Lastly, a JVM instance of
+Stainless with a custom frontend ingests the serialisation format and with only
+minor transformations feeds the trees to the verification pipeline.
+
+# New Features \label{features}
+
+# Implementation \label{implementation}
+
+The overall architecture of the code-base has not changed. All new features were
+implemented as extensions to the existing infrastructure.
 
 ## `let` Type Ascriptions and Tuple Pattern Matching [^pr1]
 
@@ -73,7 +170,7 @@ dealt with by a simple recursion. For tuples, the leaf pattern type
     [PR#60 on Github](https://github.com/epfl-lara/rust-stainless/pull/60);
     [PR#61 on Github](https://github.com/epfl-lara/rust-stainless/pull/61)
 
-[^pat-path]: `rustc_mir_build::thir::pattern::PatKind::AscribeUserType`
+[^pat-path]: `rustc_hair::hair::pattern::PatKind::AscribeUserType`
 [^tuple-path]: `rustc_middle::ty::TyKind::Tuple`
 
 ## Tuple Struct ADTs [^pr7]
@@ -220,12 +317,30 @@ example shows.
     [PR#59 on Github](https://github.com/epfl-lara/rust-stainless/pull/59);
     [PR#52 on Github](https://github.com/epfl-lara/rust-stainless/pull/52)
 
-### Caveats
+### Caveats \label{caveats}
 
 Other specs and measures don't work on trait/impl blocks currently. This leads
 to Stainless not being able to prove one of the properties in the `ListEquals`
 implementation, because it cannot infer the measure that it should use.
 
-# Discussion
+Type classes cannot have multiple implementations for different operations, e.g.
+Monoid for `i32` for addition _and_ multiplication.
+
+Type class inheritance doesn't work yet.
+
+# Discussion \label{discussion}
+
+Further work:
+
+- String extraction
+- Floating point OPs are missing
+- projection types when applying methods to refs
+
+two big problems for usability of type classes:
+
+- Discrepancy between own, spec'd traits with laws and std::traits
+- Borrow checking in laws and specs messes up
+
+Further: mutability and vectors (instead of ad-hoc, linked lists)
 
 # Conclusion
