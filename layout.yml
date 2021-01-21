@@ -22,5 +22,6 @@ fontsize: 11pt
 # classoption: "onecolumn"
 reference-section-title: References
 link-citations: true
+colorlinks: true
 ---
 

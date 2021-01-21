@@ -269,6 +269,7 @@ $endif$
 \begin{document}
 $if(title)$
 \maketitle
+\thispagestyle{empty}
 $endif$
 $if(abstract)$
 \begin{abstract}
