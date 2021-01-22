@@ -11,10 +11,10 @@ Stainless's intermediate representation and reuse its verification pipeline.
     [epfl-lara/rust-stainless on Github](https://github.com/epfl-lara/rust-stainless)
 
 While the main architecture and infrastructure of the frontend already existed,
-this project adds numerous features and refactors, in particular it adds the
-capability to extract type classes in the Scala-Stainless sense from Rust's
-traits and their implementations. To illustrate that, consider Listing
-\ref{code1} that describes equality as an abstract class.
+this project adds numerous features. In particular, the primary goal of the
+project was to add the capability to extract type classes in the Scala-Stainless
+sense from Rust's traits and their implementations. To illustrate that, consider
+Listing \ref{code1} that describes equality as an abstract class.
 
 ```{.scala label="code1" caption="Type class with attached laws in Scala."}
 abstract class Equals[T] {
@@ -34,15 +34,16 @@ abstract class Equals[T] {
 ```
 
 Stainless makes it possible to attach _laws_ i.e. algebraic properties to type
-classes [@algb] with the `@law` annotation. These laws are also verified by
-Stainless which ensures that implementors hold the contract set by the type
-class.
+classes [@algb] with the `@law` annotation, hence it ensures that implementors
+hold the contract set by the type class.
 
-The primary goal of this project was to port that feature to the Rust-frontend
-of Stainless. In other words, support the code in Listing \ref{code2}. This was
-achieved with some drawbacks, discussed in \ref{caveats}.
+The same is now possible in the Rust-frontend. In other words, the code in
+Listing \ref{code2} is now supported, although with some drawbacks, discussed in
+\ref{caveats}. Furthermore, the newly added features also permitted to translate
+and prove two benchmarks from the Scala Stainless repository into Rust:
+insertion sort and binary search.
 
-```{.rust label="code2" caption="Type class with attached laws in Rust."}
+```{.rust label="code2" caption="Type class with laws and implementations in Rust."}
 trait Equals {
   fn equals(&self, x: &Self) -> bool;
   fn not_equals(&self, x: &Self) -> bool {
@@ -62,6 +63,24 @@ trait Equals {
     !(x.equals(y) && y.equals(z)) || x.equals(z)
   }
 }
+
+impl Equals for i32 {
+  fn equals(&self, y: &i32) -> bool {
+    *self == *y
+  }
+}
+
+impl<T: Equals> Equals for List<T> {
+  fn equals(&self, other: &List<T>) -> bool {
+    match (self, other) {
+      (List::Nil, List::Nil) => true,
+      (List::Cons(x, xs), List::Cons(y, ys)) =>
+        x.equals(y) && xs.equals(ys),
+      _ => false,
+    }
+  }
+}
+
 ```
 
 The rest of this report is structured as follows. In \ref{background}, the
@@ -69,7 +88,7 @@ existing features of the Rust-frontend as well as a short architecture overview
 is given. The added features are introduced on a conceptual, user-perspective in
 \ref{features} and their implementation is described in \ref{implementation}.
 Lastly, I discuss problems with the current state as well as options for future
-work \ref{discussion}.
+work, \ref{discussion}.
 
 # Background \label{background}
 
