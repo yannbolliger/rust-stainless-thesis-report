@@ -526,8 +526,10 @@ impl NiceStruct {
 ## Type Classes and Laws \label{typecls} [^pr6]
 
 [^pr6]:
-    In order of dependency:
-    [PR#57](https://github.com/epfl-lara/rust-stainless/pull/57),
+    These are not all merged yet, they are in review but the code should be
+    stable. In order of dependency:
+    [PR#877 on Stainless](https://github.com/epfl-lara/stainless/pull/877). On
+    the frontend: [PR#57](https://github.com/epfl-lara/rust-stainless/pull/57),
     [PR#58](https://github.com/epfl-lara/rust-stainless/pull/58),
     [PR#59](https://github.com/epfl-lara/rust-stainless/pull/59) and
     [PR#52](https://github.com/epfl-lara/rust-stainless/pull/52) on Github.
@@ -597,14 +599,47 @@ This happens for example, if an external function in Listing \ref{code2} called
 
 ### Caveats \label{caveats}
 
-Other specs and measures don't work on trait/impl blocks currently. This leads
-to Stainless not being able to prove one of the properties in the `ListEquals`
-implementation, because it cannot infer the measure that it should use.
+While the described implementation is able to extract all the necessary
+information and submit it to Stainless, there are some drawbacks, that are not
+yet resolved. At the moment, it's not possible to add specs on methods of type
+classes other than laws because it is not permitted to add additional methods on
+trait implementations in Rust. This leads to Stainless not being able to prove
+one of the properties in the `Equals` implementation of list, because it cannot
+infer the measure that it should use. That problem will have to be resolved by
+unifying the way in which specs are encoded by the macros.
 
-Type classes cannot have multiple implementations for different operations, e.g.
-Monoid for `i32` for addition _and_ multiplication.
+The second missing facet of type classe is type class inheritance. Stainless
+models that as inheritance and Rust uses trait bounds on subtraits. For the sake
+of simplicity, it will be implemented not as translating the trait bounds to
+inheritance but to additional evidence parameters, for which the infrastructure
+is already in place.
 
-Type class inheritance doesn't work yet.
+The last restriction is due to Rust's type system. Traits cannot have multiple
+implementations of the same type. That is a problem if one wants to implement a
+`Monoid` type class for example. While it is possible to state the trait and the
+laws like in Listing \ref{monoid}, it's not possible to provide another
+implementation for `i32`, like multiplication. It is not yet clear, how to
+resolve this issue in the future.
+
+```{.rust caption="Monoid type class and implementation for addition." label=monoid}
+trait Monoid {
+  fn append(&self, other: &Self) -> Self;
+  fn neutral() -> Self;
+
+  #[law]
+  fn associativity(&self, b: &Self, c: &Self) -> bool { ... }
+  #[law]
+  fn left_identity(&self) -> bool { ... }
+  #[law]
+  fn right_identity(&self) -> bool { ... }
+}
+impl Monoid for i32 {
+  fn append(&self, other: &i32) -> i32 {
+    *self + *other
+  }
+  fn neutral() -> Self { 0 }
+}
+```
 
 # Discussion \label{discussion}
 
