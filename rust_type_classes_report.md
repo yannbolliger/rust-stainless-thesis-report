@@ -23,13 +23,13 @@ abstract class Equals[T] {
   def notEquals(x: T, y: T): Boolean = !equals(x, y)
 
   @law
-  def law_reflexive(x: T): Boolean =
+  def reflexive(x: T): Boolean =
     equals(x, x)
   @law
-  def law_symmetric(x: T, y: T): Boolean =
+  def symmetric(x: T, y: T): Boolean =
     equals(x, y) == equals(y, x)
   @law
-  def law_transitive(x: T, y: T, z: T): Boolean =
+  def transitive(x: T, y: T, z: T): Boolean =
     !(equals(x, y) && equals(y, z)) || equals(x, z)
 }
 ```
@@ -52,25 +52,23 @@ trait Equals {
   }
 
   #[law]
-  fn law_reflexive(x: &Self) -> bool {
+  fn reflexive(x: &Self) -> bool {
     x.equals(x)
   }
   #[law]
-  fn law_symmetric(x: &Self, y: &Self) -> bool {
+  fn symmetric(x: &Self, y: &Self) -> bool {
     x.equals(y) == y.equals(x)
   }
   #[law]
-  fn law_transitive(x: &Self, y: &Self, z: &Self) -> bool {
+  fn transitive(x: &Self, y: &Self, z: &Self) -> bool {
     !(x.equals(y) && y.equals(z)) || x.equals(z)
   }
 }
-
 impl Equals for i32 {
   fn equals(&self, y: &i32) -> bool {
     *self == *y
   }
 }
-
 impl<T: Equals> Equals for List<T> {
   fn equals(&self, other: &List<T>) -> bool {
     match (self, other) {
@@ -88,21 +86,21 @@ existing features of the Rust-frontend as well as a short architecture overview
 is given. The added features are introduced in the user-perspective in
 \ref{features} and their internal implementation is described in
 \ref{implementation}. Lastly, I discuss problems with the current state of the
-code base as well as prospects for future work, \ref{discussion}.
+code-base as well as prospects for future work, \ref{discussion}.
 
 # Background \label{background}
 
 ## Existing features
 
-The targeted Rust fragment underlies some strict restrictions: all code has to
-be functional and immutable. The only allowed side-effect is `panic!`. Before
-this project, references, heap allocated objects called _boxes_ and recursive
-data types were forbidden as well. Nonetheless, the majority of features was
-already supported, like extraction of most of the basic syntax, top-level
-functions and their bodies, integer and boolean expressions and operations,
-pattern matching, type parameters and generics, etc.
+The targeted Rust fragment underlies strict restrictions: all code has to be
+functional and immutable and the only allowed side-effect is `panic!`. Before
+this project, references, heap allocated objects called _boxes_ and therefore
+recursive data types were impossible. Nonetheless, the majority of features
+existed already, like extraction of most of the syntax, top-level functions and
+their bodies, integer and boolean expressions/operations, pattern matching, type
+parameters and generics, etc.
 
-```{.rust label="code3" caption="Integer operations in Rust."}
+```{.rust label="code3" caption="Verifiable integer operations in Rust."}
 pub fn i32_ops(x: i32, y: i32) {
   assert!(x + y == y + x);
   assert!(x + x == 2 * x);
@@ -113,17 +111,15 @@ pub fn i32_ops(x: i32, y: i32) {
 }
 ```
 
-Support for _algebraic data types (ADTs)_ was also present, including tuples
-(without their pattern matching) and generics. In Rust, ADTs are `enum`s, tuples
-and `struct`s. They are extracted to Stainless ADTs:
+_Algebraic data types (ADTs)_ were supported, including tuples (without their
+pattern matching) and generics. ADTs in Rust are `enum`s, tuples and `struct`s.
 
 ```{.rust caption="An ADT example in Rust."}
 enum Maybe<T> {
   Nothing,
-  Just { value: T },
+  Just { value: T }
 }
-
-fn get_or_else<T>(maybe: Maybe<T>, default: T) -> T {
+fn get_or<T>(maybe: Maybe<T>, default: T) -> T {
   match maybe {
     Maybe::Nothing => default,
     Maybe::Just { value } => value,
@@ -131,17 +127,17 @@ fn get_or_else<T>(maybe: Maybe<T>, default: T) -> T {
 }
 ```
 
-To state pre- and postconditions on functions, like Scala's `require` and
-`ensuring` the crate `libstainless`, contains two attributes that can be added
-to functions: `pre` and `post`, in short _specs_. The expression of a spec is
-normal Rust code, but the design goal is that specs should have no influence on
-the function body. This poses an unsolved problem, because normal Rust code has
-to satisfy the type- _and_ borrow-checks, which can be difficult if some
-expression in a spec consumes an object. As a work-around, it is allowed to add
-multiple specs of the same kind which is equivalent to multiple
-`&&`-concatenated expressions.
+To state pre- and postconditions, in short _specs_, on functions like in Scala
+with `require` and `ensuring`, the crate `libstainless` contains two attributes
+that can be added to functions: `pre` and `post`. The expression in a spec is
+regular Rust code, but it must have no influence on the function body and it
+must be able to express anything a Scala spec could. This poses an unsolved
+problem, because Rust code has to type- _and_ borrow-check, which can be
+difficult if some expression in a spec consumes an object. As a work-around, one
+can add multiple specs of the same kind to a function which is equivalent to
+multiple `&&`-concatenated expressions.
 
-```{.rust caption="Example of function specs."}
+```{.rust caption="Example of multiple function specs."}
 #[pre(x >= 0)]
 #[pre(x < 10)]
 #[post(ret >= 0)]
@@ -155,20 +151,19 @@ pub fn fact(x: i32) -> i32 {
 
 The Rust-frontend is a pipeline of different stages: macros, early compilation,
 extraction, serialisation and verification. The programmer depends on
-`libstainless` which contains the macros for the attributes like specs and
-flags. The frontend can then be run as a `cargo` task.
+`libstainless` which contains the macros for the spec-attributes and flags. The
+frontend is invoked as a `cargo` task.
 
-Rustc is linked as library to the frontend and, at the start of the cargo task,
-its driver executes the first few phases of compilation, until the AST (on which
-macro expansion is performed) is converted to the _High-Level Intermediate
-Representation (HIR)_. This tree results after type- and borrow-checking have
-been performed. Hence, the frontend can assume that types and ownership are
-checked.
+`rustc` is linked as library to the frontend and, upon invocation of the cargo
+task, its driver executes the first few phases of regular compilation. I.e. it
+parses the program, expands macros on the _abstract syntax tree (AST)_ and does
+type- and borrow-checking. The resulting tree is called _High-Level Intermediate
+Representation (HIR)_ and it satisfies the type and ownership system.
 
-After that, the extraction phase of the frontend converts the HIR to Stainless
-AST trees that are serialised to a binary format. Lastly, a JVM instance of
-Stainless with a custom frontend ingests the serialisation format and with only
-minor transformations feeds the trees to the verification pipeline.
+The extraction phase of the frontend then converts the HIR to Stainless ASTs
+that are serialised to a binary format. Lastly, a JVM instance of Stainless with
+a custom frontend ingests the serialised trees and, with minor transformations,
+feeds them to the regular verification.
 
 # New Features \label{features}
 
@@ -178,10 +173,10 @@ feature-by-feature.
 
 ## Notation Improvements
 
-Some small features were added to ease notation in some examples: `let` bindings
-can now explicitly state a type, it is possible to pattern match on tuples and
-the support for tuple `struct`s was extended to allow accessing fields by their
-numerical identifier.
+Some small features were added to ease notation: `let` bindings can now
+explicitly state a type, it is possible to pattern match on tuples and support
+for tuple `struct`s was extended to allow accessing fields by their numerical
+identifier.
 
 ```{.rust caption="Notational extensions."}
 pub enum Option<T> {
@@ -200,7 +195,7 @@ match (t, Option::Some(-1)) {
 Still under the restriction of strict immutability everywhere, it is now
 possible to immutably borrow objects, pass immutable references around and
 allocate objects on the heap with `Box::new`. This enables recursive data types
-like the functional linked-list.
+like the typical, functional linked-list.
 
 ```{.rust caption="Linked-list as recursive ADT."}
 pub enum List<T> {
@@ -209,11 +204,10 @@ pub enum List<T> {
 }
 ```
 
-There is much more one can do with references. For example, the problem of
-borrow-checking the spec expressions is less severe because most functions that
-only read an object now only need a reference to it. Hence, many specs that
-needed multiple attributes can be written as a boolean expression. Any layer of
-referencing is allowed.
+Additionally, the problem of borrow-checking the spec expressions becomes less
+severe because functions that only read an object can now take a reference
+instead of consuming it. Hence, many specs that needed multiple attributes can
+be written as a single boolean expression. Any layer of referencing is allowed.
 
 ```{.rust caption="Taking a double reference as argument."}
 fn dont_consume(option: &IntOption) -> bool {}
@@ -222,16 +216,15 @@ fn dont_consume_2(option: &&IntOption) -> bool {}
   does_not_consume(&o) &&
   does_not_consume_2(&&o)
 )]
-fn with_spec(o: IntOption) {}
+fn this_consumes(o: IntOption) {}
 ```
 
 ## Recursive proofs
 
 In Stainless, recursive proofs often require the programmer to state the
-induction variable with a `decreases` statement. This helps Stainless to infer
-the so called _measure_ of the proof. That feature was introduced as an
-additional spec attribute on functions which makes it possible to verify
-recursive functions.
+induction variable with a `decreases` call. This helps Stainless to infer the so
+called _measure_ of the proof. That feature was introduced as an additional spec
+attribute on functions which makes it possible to verify recursive functions.
 
 ```{.rust caption="Measure attribute."}
 #[measure(self)]
@@ -245,13 +238,12 @@ fn size<T>(l: &List<T>) -> u32 {
 
 ## Stainless Sets
 
-For reasoning about properties of lists and sets, Stainless has an internal
-notion of an infinite set and exposes its logical operations in
-`stainless.collections`. Analogously, all set operations available in Scala were
-added as methods on the type `Set<T>` in `libstainless`. Though unlike for
-Scala, there is no runtime implementation available, the methods panic when run.
-But, they serve for example for proving correctness of sorted insert method on a
-list:
+To reason about contents of lists, Stainless has an infinite set type and
+exposes its logical operations in `stainless.collections`. Analogously, all set
+operations available in Scala were added as methods on the type `Set<T>` in
+`libstainless`. Though unlike for Scala, there is no runtime implementation
+available, the methods panic when run. But, they serve for example for proving
+correctness of a sorted insert on a list:
 
 ```{.rust caption="Specification of an insert function."}
 #[measure(l)]
@@ -272,14 +264,12 @@ fn sorted_ins(l: &List<i32>, e: i32) -> List<i32>;
 
 ## Implementation Block Methods
 
-To add methods on a type in Rust, one can define them in a block called `impl`.
-These methods are then callable on instances of the type. With this project it
-is now possible to extract such methods to Stainless and also to add specs on
-methods. Further, as Rust allows multiple implementation blocks for a type, this
-is also supported. We can now define the previous list functions directly,
-Listing \ref{implblocks}. Additionally, the features introduced so far suffice
-to port and prove the insertion sort (\ref{insertion}) and the binary search
-benchmark in Rust.
+To add methods on a type in Rust one can define them in an `impl` block. The
+methods are then callable on instances of that type. This project enables
+extraction of such methods, and their specs, to Stainless. As Rust allows
+multiple implementation blocks for a type, this is also supported. With this, we
+can define the previously displayed list functions as methods (Listing
+\ref{implblocks}).
 
 ```{.rust caption="Methods on the list implementation." label="implblocks"}
 impl<T> List<T> {
@@ -298,15 +288,18 @@ impl List<i32> {
 }
 ```
 
+The features introduced so far suffice to port the insertion sort
+(\ref{insertion}) and binary search benchmark to Rust.
+
 ## Type Classes and Laws
 
 The final new features are type classes with attached laws, as described in
 \ref{intro}. Not only can the frontend extract classes and objects from Rust
 traits and implementations, but it also infers, which type class instance needs
 to be called at each call site of a trait method. Additionally, the laws
-specified on the trait will be checked by Stainless for each implementation. For
+specified on a trait will be proven by Stainless for each implementation. As
 illustration, take an example violation of the Liskov Substitution principle
-[@liskov] with the following rectangle trait:
+[@liskov] with the following trait:
 
 ```{.rust caption="Example trait with laws."}
 trait Rectangle {
@@ -345,10 +338,9 @@ impl Rectangle for Rect {
 }
 ```
 
-Without the laws being proven, it would be tempting to add another
-implementation for a square. However, Stainless checks the laws for each
-implementation, therefore, the square will not pass and the principle violation
-has been caught before causing more harm.
+Without the laws, it would be tempting to add a square implementation. But that
+changes both dimensions at once violating the laws. Stainless detects this and
+therefore, the square does not pass, the bug is caught.
 
 ```{.rust caption="Example implementation violating the laws."}
 struct Square { width: u32 }
@@ -367,136 +359,129 @@ impl Rectangle for Square {
 
 # Implementation \label{implementation}
 
-The overall architecture of the code-base has not changed. All new features were
+The overall architecture of the code-base has not changed. New features were
 implemented as extensions to the existing infrastructure.
 
 ## `let` Type Ascriptions and Tuple Pattern Matching [^pr1]
 
-Both of these features were implemented by simply adding a case in the pattern
-extraction function. Once matched, the subpatterns of both cases are easily
-dealt with by a simple recursion. For tuples, the leaf pattern type
-`TyKind::Tuple`[^tuple-path] was needed and for the ascriptions the pattern kind
+Both features were implemented by simply adding a case in the pattern match
+extraction code. Once matched, the subpatterns of both cases are easily dealt
+with by recursing once. For tuples, the leaf pattern type
+`TyKind::Tuple`[^tuple-path] was needed and for ascriptions the pattern kind
 `PatKind::AscribeUserType`[^pat-path].
 
 [^pr1]:
-    [PR#60 on Github](https://github.com/epfl-lara/rust-stainless/pull/60);
-    [PR#61 on Github](https://github.com/epfl-lara/rust-stainless/pull/61)
+    [PR#60](https://github.com/epfl-lara/rust-stainless/pull/60) and
+    [PR#61 on Github](https://github.com/epfl-lara/rust-stainless/pull/61).
 
-[^pat-path]: `rustc_hair::hair::pattern::PatKind::AscribeUserType`
+[^pat-path]: `rustc_hair:hair:pattern:PatKind:AscribeUserType`
 [^tuple-path]: `rustc_middle::ty::TyKind::Tuple`
 
 ## Tuple Struct ADTs [^pr7]
 
-[^pr7]: [PR#35 on Github](https://github.com/epfl-lara/rust-stainless/pull/35)
+[^pr7]: [PR#35 on Github](https://github.com/epfl-lara/rust-stainless/pull/35).
 
-The extraction of tuple `struct`s of Rust to Stainless ADTs was enabled by
-solving a smaller naming problem. Stainless's backend Z3 does not allow purely
-numerical identifiers for fields of ADTs, which clashed with the numerical
-naming scheme of fields in Rust's tuple structs, e.g. `tuple.0`. This was solved
-by simply prepending an underscore to such identifiers, i.e. `0` becomes `_0`.
+Extraction of Rust's tuple `struct`s was improved by solving a small naming
+problem. Stainless's backend Z3 does not allow purely numerical identifiers for
+ADT fields, which clashed with the numerical names of tuple struct fields in
+Rust, e.g. `example.0`. The solution was to prepend an underscore to such
+identifiers: `0` becomes `_0`.
 
 ## Immutable Boxes and References by Erasure [^pr3]
 
 [^pr3]:
-    [PR#30 on Github](https://github.com/epfl-lara/rust-stainless/pull/30);
-    [PR#45 on Github](https://github.com/epfl-lara/rust-stainless/pull/45)
+    [PR#30](https://github.com/epfl-lara/rust-stainless/pull/30) and
+    [PR#45 on Github](https://github.com/epfl-lara/rust-stainless/pull/45).
 
-Support of these two features relies on following the assumptions about the Rust
-fragment the frontend supports:
+These two features rely on the following assumptions about the allowed Rust
+fragment:
 
-- it is impossible to create mutable values or references
-- the only allowed references are immutable borrows and immutable boxes
-- the only allowed binding modes are immutable, aliasable by-reference, called
-  _shared borrows_ by rustc or by-value.
+- it is impossible to create mutable values or references,
+- the only allowed references are immutable borrows and immutable boxes,
+- the only allowed binding modes are immutable, aliasable, by-reference (called
+  _shared borrows_ by `rustc`) or by-value.
 
-If the above holds, then it should be safe to treat immutable references as the
-objects they refer to. Therefore, boxes and references work by erasure. That is
-to say that everywhere an expression like `ExprKind::Borrow`[^expr-kind] or a
-type like `TyKind::Ref`[^ty-kind] occurs and satisfies the above conditions, it
-is simply extracted to the expression or type it contains. The same goes for
-calls to `Box::new`.
+If the above holds, then it should be safe to erase immutable references and
+treat them as the objects they refer to. Hence, everywhere an expression like
+`ExprKind::Borrow`[^expr-kind] or a type like `TyKind::Ref`[^ty-kind] occurs and
+satisfies the above conditions, it is simply extracted to the expression or type
+that it contains or refers to. The same goes for calls to `Box::new`.
 
-[^expr-kind]: `rustc_mir_build::thir::ExprKind::{Borrow, Deref}`
+[^expr-kind]: `rustc_hair::hair::ExprKind::{Borrow, Deref}`
 [^ty-kind]: `rustc_middle::ty::TyKind::Ref`
 
 ## Measure Attribute [^pr2]
 
-[^pr2]: [PR#31 on Github](https://github.com/epfl-lara/rust-stainless/pull/31)
+[^pr2]: [PR#31 on Github](https://github.com/epfl-lara/rust-stainless/pull/31).
 
-As described in \ref{intro}, it is a design goal to be able to state bodies of
-specs in Rust code without interfering with the actual function's code, in
-particular without having an influence on the borrow-checking of the function's
-body. To circumvent the borrow checker, the spec-attributes are desugared by a
-proc-macro to nested functions inside the actual function. These nested
+A design goal of specs, as described in \ref{intro}, is to state their
+expressions in Rust code without having an influence on the borrow-checking of
+actual the function. To circumvent the borrow checker, the spec attributes are
+desugared by a macro to nested functions inside the actual function. The nested
 functions duplicate the parameters of their parent. In that way, new bindings
-are created that cannot interfere with the outer body but have the same types
-and identifiers, which makes it simple to extract them to Stainless's `require`,
-and `ensuring`.
+are created without interference but with the same types and identifiers --
+simplifying extraction to Stainless's `require` and `ensuring`.
 
-To extend that and support the `#[measure()]` attribute, a proc-macro was added
-to `libstainless`, as well as the corresponding code that extracts a `decreases`
-tree from it. Most functionality was already present for pre- and postconditions
-and could only be extended by a third case.
+To support the `#[measure()]` attribute, a macro was added, as well as the code
+that extracts a `decreases` call it. Most functionality was already present for
+conditions and could only be extended by another case.
 
-The only differences are that there can be at most one measure attribute per
-function, which is easily checked in the extraction, and that the return type of
-the generated function can be anything, unlike the conditions that always return
-a boolean. The latter poses a problem because the macro has no understanding of
-what type the given expression is. Therefore, the generated function just
-returns `()` by appending a `;` on the expression. Later in the extraction, the
-_HIR_ will contain information about the type of that last expression and only
-there the type of the measure is inferred.
+The only differences between conditions and measure are that there can be at
+most one measure per function, which is easily ensured in extraction, and the
+return type of the generated measure function can be anything, whereas for
+conditions it's always boolean. This poses a problem because macros have no
+notion of types, they just see tokens. Therefore, the generated function just
+returns `()` by appending a `;` to the expression. Later in extraction, the
+_HIR_ will contain the type of that expression and there the type of the measure
+is inferred.
 
 ## Stainless Set Operations [^pr4]
 
-[^pr4]: [PR#37 on Github](https://github.com/epfl-lara/rust-stainless/pull/37)
+[^pr4]: [PR#37 on Github](https://github.com/epfl-lara/rust-stainless/pull/37).
 
-In the extraction of function calls, the set operations are detected as being
-part of the _standard items_ -- items that are specially marked e.g. some Rust
-language features like panics, and that have special cases for extraction. Set
-operations are simply extracted to their corresponding set operation tree in
-Stainless.
+The set operations from `libstainless::Set` are detected in function call
+extraction as being part of the _standard items_ -- items that are specially
+marked and extracted, e.g. some Rust language features like panic. Set operation
+calls are simply extracted to their Stainless equivalent.
 
-Apart from its simplicity, the current implementation made visible two
-disadvantages. The first one concerns the detection of standard items by `DefId`
-from other crates. The extraction code only knows the names/paths of the
-functions it should detect, like `stainless::Set::singleton`. However, rustc
-does not seem to have a way of querying items from other crates by name, only by
-id. Therefore, the extraction code has to enumerate all `DefId`s from the
-`stainless` crate and compare them by name to the desired ones, until it has
-found all the needed items.
+The described implementation made two disadvantages visible. The first one
+concerns the detection of standard items from other crates by `DefId`. The
+extraction phase only knows the names/paths of the functions to detect, e.g.
+`stainless::Set::singleton`. However, `rustc` does not seem to have an API to
+query items from other crates _by name_, only by `DefId`. Therefore, the
+frontend has to enumerate all `DefId`s from the `stainless` crate and compare
+them by name to the desired ones, until all needed items are found.
 
-The other disadvantage of the current `Set` is that while it has a derived
-implementation of the `PartialEq` trait, the extraction code does not recognise
-calls to `PartialEq::eq` as being equivalent to the primitive equality operator
-`==`. Hence, it is not capable of extracting a Stainless `Equals` tree for that
-type and one has to resort to using `Set::subset_of` in both directions.
+The other disadvantage hints at the larger issue of not recognising standard
+traits, see \ref{discussion}. While `Set` has a derived implementation of
+`PartialEq`, the frontend does not recognise calls to `PartialEq::eq` as being
+equivalent to the primitive equality `==` and hence, does not extract them as
+Stainless's equality operator. Therefore, to check equality on sets, one has to
+resort to using `Set::subset_of` in both directions.
 
-## Implementation Block Methods [^pr5]
+## Implementation Block Methods \label{implblocksref} [^pr5]
 
-[^pr5]: [PR#47 on Github](https://github.com/epfl-lara/rust-stainless/pull/47)
+[^pr5]: [PR#47 on Github](https://github.com/epfl-lara/rust-stainless/pull/47).
 
-Other than abstract methods and laws, i.e. functions on traits and their
-implementations which will be covered in \ref{typecls}, it is not necessary to
-extract methods from normal `impl` blocks as Stainless _methods_. As there is no
-inheritance outside of the type classes and instances, it is simpler to extract
-normal methods like top-level functions that have as first parameter their
-receiver type. In fact, this is also how the Rust compiler represents those
-methods, therefore extraction to Stainless functions is straightforward and can
-reuse the same code like top-level functions.
+Other than abstract methods and laws, i.e. trait methods covered in
+\ref{typecls}, it is not necessary to extract methods on regular `impl` blocks
+as Stainless _methods_. As there is no inheritance outside of the type classes
+and instances, it is simpler to extract normal methods like top-level functions
+that have as first parameter their receiver. In fact, `rustc` also represents
+those methods that way, therefore extraction to Stainless functions is
+straightforward and can reuse the same code as top-level functions.
 
-One complication for the specs arose because of the nested functions. That
-approach failed for methods because nested functions in Rust cannot use
-arguments nor type parameters from their surrounding function, but methods need
-the `self` parameter. To solve this issue, I rely on the restriction that
-function/method names need to be unique in a scope in Rust. In this case, each
-method is uniquely identified by its parent `impl` and its name. This makes it
-possible to desugar the specs to sibling functions on that `impl` block and
-encode the name of the spec'd function in the name of the generated sibling
-function. The example shows the generated naming, the number serves to
-distinguish multiple specs of the same kind:
+A complication arose for the specs that are desugared to nested functions. That
+approach failed for methods, because in Rust nested functions cannot access
+arguments nor type parameters from the surrounding function, but our methods
+need the `self` parameter. To solve the issue, I rely on the restriction that
+function/method names in Rust are unique in a scope. Thus, a method is uniquely
+identified by its parent `impl` and its name. This makes it possible to desugar
+the specs to sibling functions on the same `impl` block and encode the name of
+the spec'd function in the name of the generated sibling, as shown in Listing
+\ref{sibling}. The number distinguishes multiple specs of the same kind.
 
-```{.rust caption="Attribute becomes a sibling function."}
+```{.rust caption="Attribute becomes a sibling function." label=sibling}
 #[post(ret > 0)] // this attribute
 fn append(&self, a: i32) -> i32 {}
 
@@ -506,11 +491,10 @@ fn __post_1_append(&self, a: i32, ret: i32) -> bool {
 }
 ```
 
-One disadvantage of this solution is that there are now two separate ways of
-encoding specs for certain kinds of functions with Rust macros. On the other
-hand, both types share them same extraction code and this approach makes it
-possible to add specs on functions that are nested inside a method, as this
-example shows.
+This solution has the disadvantage that there are now two separate ways of
+encoding specs for functions with Rust macros. At least, both ways share the
+same extraction code. And on the other hand, the solution enables specs on
+functions that are nested inside a method, as this example shows:
 
 ```{.rust caption="Nested function in a method with specs."}
 impl NiceStruct {
@@ -534,142 +518,139 @@ impl NiceStruct {
     [PR#59](https://github.com/epfl-lara/rust-stainless/pull/59) and
     [PR#52](https://github.com/epfl-lara/rust-stainless/pull/52) on Github.
 
-### Classes Extraction
+### Class Extraction
 
-First, the Scala frontend of Stainless that is used by the pipeline had to be
-slightly adapted to ingest serialised _class definitions_ alongside the ADTs and
-functions it already received. Additionally, a new flag, the `#[law]` attribute,
-had to be added on all phases of the pipeline.
+First, the custom Scala frontend of Stainless used by our pipeline had to be
+slightly adapted to ingest _class definitions_ alongside the ADTs and functions
+it already supports. Additionally, a new `#[law]` flag was added in all phases
+of the pipeline.
 
-The classes extraction introduces a distinction between normal `impl` blocks as
-discussed and `impl for Trait` blocks. The former are unchanged while the latter
-need to be extracted as type class implementations, i.e. classes or _case
-objects_. Of course, traits have to be extracted as _abstract classes_.
+Class extraction introduces a distinction between regular `impl` blocks as
+discussed in \ref{implblocksref}, and `impl for Trait` blocks, that need to be
+extracted as type class implementations, i.e. _case classes_ or _case objects_.
+Of course, traits have to be extracted as _abstract classes_.
 
-A difference between Rust and Scala is that Rust operates on _trait bounds_
-while Scala uses inheritance. Furthermore, Rust traits don't need a type
-parameter to designate the type they act on because they have the intrinsic
-`Self`, whereas Scala type classes always have at least one type parameter.
-Fortunately, Rustc internally treats the self type parameter like a regular type
-parameter, therefore it is already concatenated with possible other type
-parameters and the problem is solved. As Listing \ref{clstranslation} shows, the
-trait bounds on implementations are converted to evidence parameters. If an
-implementation has no trait bounds, then it can be extracted as a ground case
-object.
+Internally, Rust represents an `impl for Trait` block with a _trait bound_ on
+the block, while Scala uses inheritance with `extends`. Furthermore, Rust traits
+don't have an explicit type parameter designating the type they act on because
+of the intrinsic `Self`, whereas Scala type classes always have at least one
+type parameter. Fortunately, `rustc` internally treats the `Self` type parameter
+like a regular type parameter, therefore it is already concatenated with
+possible other type parameters and the problem is solved. As Listing
+\ref{clstranslation} shows, the trait bounds on type parameters of
+implementations are converted to evidence parameters. If an implementation has
+no type parameters, it can be extracted as a ground case object.
 
 ```{.rust caption="Examples of translated type classes." label="clstranslation"}
 trait Equals { ... }
 // => abstract class Equals[Self]
+
 trait Other<X, Y> { ... }
 // => abstract class Other[Self, X, Y]
+
 impl Equals for i32 { ... }
 // => case object i32asEquals extends Equals[i32]
+
 impl<T: Equals> Equals for List<T> { ... }
 // => case class ListasEquals[T](ev0: Equals[T])
 //    extends Equals[List[T]]
 ```
 
-### Methods and Receiver Extraction
+### Method and Receiver Extraction
 
 Now that there are classes, it is also necessary to distinguish _function calls_
-from _method calls_ in the extracted trees. Most of the extraction could be
-achieved by adding some more flags like `abstract` and `methodOf(ClassX)` to
-methods. However, to signal to Stainless that a method is overriding another
-one, they need to have same symbol.
+from _method calls_. Most of that distinction could be achieved by adding some
+flags like `abstract` and `methodOf(ClassX)` to methods. However, to signal to
+Stainless that a method is overriding another one, they need to have same
+symbol, which had to be ensured on the Scala side of the pipeline.
 
-The challenge for method calls is that they require a receiver instance to be
+The challenge of method calls is to resolve the receiver instance they are
 called on. For example, Listing \ref{code1} shows a call to `this.equals` inside
-the type class. In Rust, this is implicitly resolved i.e. implementations of
-traits just need to be _in scope_ to be recognised. Therefore, the extraction
-has to do the instance resolution itself. It keeps a map from all method symbols
-to their _class definition_, i.e. the trait. In that way, a method call can be
-distinguished from a function call at call site by looking up the function's
-symbol in the map.
+the type class. In Rust, this is implicitly resolved i.e. trait implementations
+just need to be _in scope_ to be used. Therefore, extraction has to resolve
+receiver instances itself. To do so, it keeps a map of all method symbols to
+their _class definition_. In that way, a method call can be distinguished from a
+function call at call site by looking up the function's symbol in the map.
 
-Instance resolution takes a triple of class identifier, receiver type and
-additional types as wells as the current class context to resolve the needed
+Instance resolution then takes a triple of class identifier, receiver type and
+additional types, as wells as the current surrounding class to resolve the
 receiver instance. For example, inside a type class, the `this` instance is
 accessible, inside classes with evidence parameters, the evidence instances are
-available and the ground case objects are always in scope. As a last resort,
+available and ground case objects are always in scope. As a last resort,
 instance resolution recursively checks whether it can create a new instance of a
 class with by providing it the required evidence arguments. This happens for
 example, if an external function in Listing \ref{code2} called `equals` on a
-list of `i32`. That would get translated to
-`ListasEquals[i32](i32asEquals).equals`.
+`List<i32>`, it would get translated to `ListasEquals[i32](i32asEquals).equals`.
 
 ### Caveats \label{caveats}
 
-While the described implementation is able to extract all the necessary
-information and submit it to Stainless, there are some drawbacks, that are not
-yet resolved. At the moment, it's not possible to add specs on methods of type
-classes other than laws because it is not permitted to add additional methods on
-trait implementations in Rust. This leads to Stainless not being able to prove
-one of the properties in the `Equals` implementation of list, because it cannot
-infer the measure that it should use. That problem will have to be resolved by
-unifying the way in which specs are encoded by the macros.
+While the described implementation is stable and working, there are some
+drawbacks, that are not yet resolved. At the moment, it's not possible to add
+specs (other than laws) on type class methods, because Rust does not permit
+additional methods on trait implementations. This leads to Stainless not being
+able to prove one of the properties in the list implementation of Listing
+\ref{code2}, because it cannot infer the measure. That problem could be solved
+by unifying the way in which specs are encoded by the macros.
 
-The second missing facet is type class inheritance. Stainless models this as
-inheritance with `extends` and Rust uses trait bounds on the subtraits. For the
-sake of simplicity, it will be implemented not as translating the trait bounds
-to inheritance but to additional evidence parameters, for which the
+The second missing facet is type class inheritance. Stainless uses inheritance
+to extend a type class, while Rust uses trait bounds on subtraits. For
+simplicity, the frontend could in the future translate the trait bounds to
+additional evidence parameters instead of inheritance, for which the
 infrastructure is already in place.
 
-Another unresolved problem concerns static methods on type classes. In Rust, one
-can explicitly call a method of a trait like so `<T as Monoid>::neutral()` –
-even if it's not an instance method. Here as well, the nearest solution would be
-to add evidence parameters on the function featuring that call and calling the
-method on the evidence argument.
+Here as well, the nearest solution would be to add evidence parameters on the
+function featuring that call and calling the method on the evidence argument.
 
 The last restriction is due to Rust's type system. Traits cannot have multiple
 implementations of the same type. That is a problem if one wants to implement a
-`Monoid` type class. For example, one could want to have two implementations for
-`i32`, one for addition and one for multiplication. In Rust, there is a
-work-around for that. Using marker structs as additional type parameters on the
-type class, like shown in the Appendix \ref{monoid2}, allows the compiler to
-distinguish between operations. Support for that would have to be added in the
-Rust-frontend by extending the handling of type parameters in top-level
-functions and traits.
+`Monoid` type class. For example, one could want two implementations for `i32`,
+one for addition,one for multiplication. The Rust work-around for that is to use
+marker structs as additional type parameters on the type class, like shown in
+the Appendix \ref{monoid2}. That allows the compiler to distinguish between
+implementations. Support for that in the Rust-frontend could be implemented by
+handling type parameters of top-level functions with evidence parameters and
+extending the second-level type parameters of traits.
 
 # Discussion \label{discussion}
 
-Having already discussed the missing parts and drawbacks of the type classes
-implementation, I will now turn to discuss the general state and some larger
-issues of the Rust-frontend after this project. There are two problems that
-manifested themselves multiple times during this project.
+Having discussed the missing parts and drawbacks of the type classes
+implementation, I will now turn to the general state and some larger issues of
+the Rust-frontend after this project. There are two problems that manifested
+themselves multiple times during the project.
 
-Even before the project it was clear, that the borrow-checker and the specs do
+Even before the project it was clear that the borrow-checker and the specs do
 not work well together. This was confirmed by the unresolved problem of specs in
 type classes (see \ref{caveats}) but it also made expressing some laws on
-example type classes nearly impossible. Therefore, one has to ask whether giving
-the spec expressions in Rust and having them type-check is providing more
-utility than it causes harm. A radically different approach would be to state
-specs and laws in some _domain specific language_ that does not go through the
-Rust compiler.
+example type classes nearly impossible if they involved consuming functions. The
+question is whether stating the spec expressions in Rust and letting them
+type-check is providing more utility than it causes harm? A radically different
+approach would be to use a _domain specific language_ for specs, avoiding all
+contact with the Rust compiler.
 
-The second usability limit of the frontend with type classes is that it does not
-_understand_ the traits of Rust's standard library. One can now provide a
-separate definition of the equality trait for example but the Rust-frontend is
-not capable of verifying any laws on traits that are not part of the currently
-compiled crate. However, being able to use the actual standard traits and
-attaching laws to them would be an immense productivity gain.
+A limitation of the frontend with type classes is that it does not _understand_
+Rust's standard library traits. One can now provide separate definitions of such
+traits like `Equals` but the Rust-frontend is not capable of verifying
+properties on traits that are not part of the currently compiled crate. However,
+being able to use actual standard library traits and attaching laws to them
+would be an immense productivity gain. This presents an interesting opportunity
+for future work.
 
-Some features could provide a lot of value without being prohibitively difficult
-to implement now. With the addition of references, it could become possible to
-implement some string operations and expressions. Although, borrow-checking
-could still be an issue as long as there is no way of cloning objects. Support
-for Stainless's real numbers could be added, even though their semantics differ
-from the floating point numbers that Rust has. Another small improvement would
-be to extract projection types. This would allow methods and functions with
-receiver type `T` to be applied on references `&T`.
+Some smaller features could provide value without being prohibitively difficult
+to implement now. With references, it could be possible to implement some string
+operations and expressions. Though, borrow-checking could still be an issue as
+long as there is no way of cloning objects. Another small addition would be
+projection types. Extracting those would allow methods and functions with
+receiver type `T` to be applied to references `&T`.
 
-For future work, there are bigger challenges that would in turn provide even
-more utility to the project like support for Rust's own arrays, slices or
-vectors, instead of the rather unidiomatic linked-list shown in this report. An
-idea could be to extract these things to Stainless's _functional arrays_.
-Without doubt the most useful feature however, would be to add support for
-imperative code and mutability. A simultaneous project on Stainless explores a
-_full imperative phase_ for Scala. Building upon that and extracting imperative
-Rust could therefore be the ultimate goal for the Rust-frontend project.
+A bigger challenge for future work providing in turn more utility would be
+support for Rust's own arrays, slices or vectors. One could try to extract those
+to Stainless's _functional arrays_ instead of using the unidiomatic linked-list
+of this report.
+
+Without doubt the most useful feature however, would be support for imperative
+code and mutability. A simultaneous project on Stainless explores a _full
+imperative phase_ for Scala. Building upon that and extracting imperative Rust
+code could therefore be the ultimate goal for the Rust-frontend project.
 
 # Conclusion
 
