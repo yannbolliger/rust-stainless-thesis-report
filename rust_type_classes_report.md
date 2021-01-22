@@ -594,22 +594,19 @@ by unifying the way in which specs are encoded by the macros.
 
 The second missing facet is type class inheritance. Stainless uses inheritance
 to extend a type class, while Rust uses trait bounds on subtraits. For
-simplicity, the frontend could in the future translate the trait bounds to
+simplicity, the frontend could in the future translate these trait bounds to
 additional evidence parameters instead of inheritance, for which the
 infrastructure is already in place.
-
-Here as well, the nearest solution would be to add evidence parameters on the
-function featuring that call and calling the method on the evidence argument.
 
 The last restriction is due to Rust's type system. Traits cannot have multiple
 implementations of the same type. That is a problem if one wants to implement a
 `Monoid` type class. For example, one could want two implementations for `i32`,
-one for addition,one for multiplication. The Rust work-around for that is to use
-marker structs as additional type parameters on the type class, like shown in
-the Appendix \ref{monoid2}. That allows the compiler to distinguish between
+one for addition, one for multiplication. The Rust work-around for that is to
+use marker structs as additional type parameters on the type class, like shown
+in the Appendix \ref{monoid2}. That allows the compiler to distinguish between
 implementations. Support for that in the Rust-frontend could be implemented by
 handling type parameters of top-level functions with evidence parameters and
-extending the second-level type parameters of traits.
+extending the type parameter extraction of traits to the second level.
 
 # Discussion \label{discussion}
 
@@ -654,13 +651,30 @@ code could therefore be the ultimate goal for the Rust-frontend project.
 
 # Conclusion
 
+Building on a solid foundation of existing infrastructure, in this semester
+project I added multiple features to the Rust-frontend of Stainless. Some are
+more small improvements for the programmer, others really introduce new
+possibilities like the immutable references, the implementation blocks and
+especially the type classes.
+
+The given examples show that the current implementation of the type class
+extraction is a valid proof-of-concept, even if there are still some rough edges
+that need polishing. Indeed, type class inheritance and handling trait bounds on
+top-level functions will again improve the utility of type class extraction.
+
+The project also shed light on promising paths for future work. Among them,
+especially making it possible to extract items from other crates or storing
+already extracted items for future use could provide good value to users. The
+other promising direction is to target the new imperative phase of Scala
+Stainless.
+
 # References
 
 <!-- prettier-ignore -->
 ::: {#refs}
 :::
 
-\clearpage \newpage
+\newpage
 
 # Appendix
 
