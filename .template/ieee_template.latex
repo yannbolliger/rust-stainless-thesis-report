@@ -253,12 +253,11 @@ $endif$
 $if(author)$
 \author{
     $for(author)$
-        \IEEEauthorblockN{$author.name$},
+        \IEEEauthorblockN{$author.name$} \\
         \IEEEauthorblockA{%
             $author.affiliation$ \\
-            $author.location$ \\
-            $author.email$}
-        $sep$ \and
+            $author.location$}
+            $sep$ \and
     $endfor$
 }
 $endif$
@@ -307,6 +306,7 @@ $endif$
 $if(lof)$
 \listoffigures
 $endif$
+
 $body$
 
 $if(natbib)$

@@ -5,10 +5,9 @@ title: |
   \Large Master Semester Project Report
 
 author:
-  - name: Yann Bolliger
-    affiliation: EPFL
-    location: Lausanne, Switzerland
-    email: yann.bolliger@epfl.ch
+  - name: Yann Bolliger, supervised by Georg Schmid
+    affiliation: "Lab for Automated Reasoning and Analysis, LARA, EPFL"
+    location: 'Lausanne, Switzerland, \today'
 
 abstract: |
   This semester project substantially extends the fragment of Rust code that is
