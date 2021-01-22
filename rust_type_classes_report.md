@@ -653,7 +653,7 @@ code could therefore be the ultimate goal for the Rust-frontend project.
 
 Building on a solid foundation of existing infrastructure, in this semester
 project I added multiple features to the Rust-frontend of Stainless. Some are
-more small improvements for the programmer, others really introduce new
+just small improvements for the programmer, others really introduce new
 possibilities like the immutable references, the implementation blocks and
 especially the type classes.
 
@@ -662,11 +662,10 @@ extraction is a valid proof-of-concept, even if there are still some rough edges
 that need polishing. Indeed, type class inheritance and handling trait bounds on
 top-level functions will again improve the utility of type class extraction.
 
-The project also shed light on promising paths for future work. Among them,
-especially making it possible to extract items from other crates or storing
-already extracted items for future use could provide good value to users. The
-other promising direction is to target the new imperative phase of Scala
-Stainless.
+The project also shed light on promising paths for future work. Especially,
+making it possible to extract items from other crates or storing already
+extracted items for future use could provide good value to users. The other
+promising direction is to target the new imperative phase of Scala Stainless.
 
 # References
 
