@@ -134,12 +134,15 @@ $endfor$
 $endif$
 $if(listings)$
 \usepackage{listings}
+\usepackage[font=small]{caption}
 \usepackage{.template/listings-rust}
 \lstset{
   language=Rust,
   breaklines=true,
   basicstyle=\scriptsize\ttfamily,
-  captionpos=b,
+  captionpos=t,
+  frame=tb,
+  belowcaptionskip=4pt,
   tabsize=2
 }
 \newcommand{\passthrough}[1]{\lstset{mathescape=false}#1\lstset{mathescape=true}}
