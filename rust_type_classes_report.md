@@ -347,7 +347,7 @@ impl Rectangle for Rect {
 
 Without the laws being proven, it would be tempting to add another
 implementation for a square. However, Stainless checks the laws for each
-implementation, therfore, the square will not pass and the principle violation
+implementation, therefore, the square will not pass and the principle violation
 has been caught before causing more harm.
 
 ```{.rust caption="Example implementation violating the laws."}
@@ -476,27 +476,25 @@ type and one has to resort to using `Set::subset_of` in both directions.
 
 [^pr5]: [PR#47 on Github](https://github.com/epfl-lara/rust-stainless/pull/47)
 
-Other than abstract methods and laws, i.e. functions specified on traits and
-their implementations which will be covered in \ref{typecls}, it is not
-necessary to extract methods from normal `impl` blocks as Stainless methods. As
-there is no inheritance outside of the type classes and their implementations,
-it is simpler to extract normal methods like top-level functions, that have as
-first parameter their receiver type. In fact, this is also how the Rust compiler
-represents those methods, therefore the extraction to Stainless functions is
-straightforward and can reuse the same code like top-level functions.
+Other than abstract methods and laws, i.e. functions on traits and their
+implementations which will be covered in \ref{typecls}, it is not necessary to
+extract methods from normal `impl` blocks as Stainless _methods_. As there is no
+inheritance outside of the type classes and instances, it is simpler to extract
+normal methods like top-level functions that have as first parameter their
+receiver type. In fact, this is also how the Rust compiler represents those
+methods, therefore extraction to Stainless functions is straightforward and can
+reuse the same code like top-level functions.
 
-One complication arose for the way of attaching specs to functions which was
-done with nested functions.
-
-The nested function approach fails for methods because nested functions in Rust
-cannot use arguments nor type parameters from their surrounding function but
-methods need the `self` parameter. To solve this issue I rely on the restriction
-that function/method names need to be unique in a scope in Rust. In this case,
-each method is uniquely identified by its parent `impl` and its name. This makes
-it possible to desugar the specs to sibling functions on that `impl` block and
+One complication for the specs arose because of the nested functions. That
+approach failed for methods because nested functions in Rust cannot use
+arguments nor type parameters from their surrounding function, but methods need
+the `self` parameter. To solve this issue, I rely on the restriction that
+function/method names need to be unique in a scope in Rust. In this case, each
+method is uniquely identified by its parent `impl` and its name. This makes it
+possible to desugar the specs to sibling functions on that `impl` block and
 encode the name of the spec'd function in the name of the generated sibling
-function. The example shows how the generated spec-function is named, the number
-serves to distinguish multiple specs of the same type:
+function. The example shows the generated naming, the number serves to
+distinguish multiple specs of the same kind:
 
 ```{.rust caption="Attribute becomes a sibling function."}
 #[post(ret > 0)] // this attribute
@@ -514,14 +512,88 @@ hand, both types share them same extraction code and this approach makes it
 possible to add specs on functions that are nested inside a method, as this
 example shows.
 
+```{.rust caption="Nested function in a method with specs."}
+impl NiceStruct {
+  fn foo(&self) -> bool {
+    #[pre(x > 0 && x < 100 && y > 0 && y < 100)]
+    #[post(ret > 0)]
+    fn bar(x: i32, y: i32) -> i32 { x * y }
+    ...
+  }
+}
+```
+
 ## Type Classes and Laws \label{typecls} [^pr6]
 
 [^pr6]:
     In order of dependency:
-    [PR#57 on Github](https://github.com/epfl-lara/rust-stainless/pull/57);
-    [PR#58 on Github](https://github.com/epfl-lara/rust-stainless/pull/58);
-    [PR#59 on Github](https://github.com/epfl-lara/rust-stainless/pull/59);
-    [PR#52 on Github](https://github.com/epfl-lara/rust-stainless/pull/52)
+    [PR#57](https://github.com/epfl-lara/rust-stainless/pull/57),
+    [PR#58](https://github.com/epfl-lara/rust-stainless/pull/58),
+    [PR#59](https://github.com/epfl-lara/rust-stainless/pull/59) and
+    [PR#52](https://github.com/epfl-lara/rust-stainless/pull/52) on Github.
+
+### Classes Extraction
+
+First, the Scala frontend of Stainless that is used by the pipeline had to be
+slightly adapted to ingest serialised _class definitions_ alongside the ADTs and
+functions it already received. Additionally, a new flag, the `#[law]` attribute,
+had to be added on all phases of the pipeline.
+
+The classes extraction introduces a distinction between normal `impl` blocks as
+discussed and `impl for Trait` blocks. The former are unchanged while the latter
+need to be extracted as type class implementations, i.e. classes or _case
+objects_. Of course, traits have to be extracted as _abstract classes_.
+
+A difference between Rust and Scala is that Rust operates on _trait bounds_
+while Scala uses inheritance. Furthermore, Rust traits don't need a type
+parameter to designate the type they act on because they have the intrinsic
+`Self`, whereas Scala type classes always have at least one type parameter.
+Fortunately, Rustc internally treats the self type parameter like a regular type
+parameter, therefore it is already concatenated with possible other type
+parameters and the problem is solved. As Listing \ref{clstranslation} shows, the
+trait bounds on implementations are converted to evidence parameters. If an
+implementation has no trait bounds, then it can be extracted as a ground case
+object.
+
+```{.rust caption="Examples of translated type classes." label="clstranslation"}
+trait Equals { ... }
+// => abstract class Equals[Self]
+trait Other<X, Y> { ... }
+// => abstract class Other[Self, X, Y]
+impl Equals for i32 { ... }
+// => case object i32asEquals extends Equals[i32]
+impl<T: Equals> Equals for List<T> { ... }
+// => case class ListasEquals[T](ev0: Equals[T])
+//    extends Equals[List[T]]
+```
+
+### Methods and Receiver Extraction
+
+Now that there are classes, it is also necessary to distinguish _function calls_
+from _method calls_ in the extracted trees. Most of the extraction could be
+achieved by adding some more flags like `abstract` and `methodOf(ClassX)` to
+methods. However, to signal to Stainless that a method is overriding another
+one, they need to have same symbol.
+
+The challenge for method calls is that they require a receiver instance to be
+called on. For example, Listing \ref{code1} shows a call to `this.equals` inside
+the type class. In Rust, this is implicitly resolved i.e. implementations of
+traits just need to be _in scope_ to be recognised. Therefore, the extraction
+has to do the instance resolution itself. It keeps a map from all method symbols
+to their _class definition_, i.e. the trait. In that way, a method call can be
+distinguished from a function call at call site by looking up the function's
+symbol in the map.
+
+Instance resolution takes a triple of class identifier, receiver type and
+additional types as wells as the current class context to resolve the instance a
+method is called on. For example, inside a type class, the `this` instance is
+accessible, inside classes with evidence parameters, the evidence instances are
+available and the ground case objects are always in scope. As a last resort,
+instance resolution recursively checks whether it can create a new instance of a
+class with evidence parameters if arguments for all parameters are available.
+This happens for example, if an external function in Listing \ref{code2} called
+`equals` on a list of `i32`. That would get translated to
+`ListasEquals[i32](i32asEquals).equals`.
 
 ### Caveats \label{caveats}
 
