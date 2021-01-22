@@ -622,31 +622,13 @@ method on the evidence argument.
 
 The last restriction is due to Rust's type system. Traits cannot have multiple
 implementations of the same type. That is a problem if one wants to implement a
-`Monoid` type class for example. While it is possible to state the trait and the
-laws like in Listing \ref{monoid}, it's not possible to provide another
-implementation for `i32`, like multiplication. A solution could be to use marker
-structs as additional type parameters on the type class to distinguish between
-operations.
-
-```{.rust caption="Monoid type class and implementation for addition." label=monoid}
-trait Monoid {
-  fn append(&self, other: &Self) -> Self;
-  fn neutral() -> Self;
-
-  #[law]
-  fn associativity(&self, b: &Self, c: &Self) -> bool { ... }
-  #[law]
-  fn left_identity(&self) -> bool { ... }
-  #[law]
-  fn right_identity(&self) -> bool { ... }
-}
-impl Monoid for i32 {
-  fn append(&self, other: &i32) -> i32 {
-    *self + *other
-  }
-  fn neutral() -> Self { 0 }
-}
-```
+`Monoid` type class. For example, one could want to have two implementations for
+`i32`, one for addition and one for multiplication. In Rust, there is a
+work-around for that. Using marker structs as additional type parameters on the
+type class, like shown in the Appendix \ref{monoid2}, allows the compiler to
+distinguish between operations. Support for that would have to be added in the
+Rust-frontend by extending the handling of type parameters in top-level
+functions and traits.
 
 # Discussion \label{discussion}
 
@@ -657,11 +639,12 @@ manifested themselves multiple times during this project.
 
 Even before the project it was clear, that the borrow-checker and the specs do
 not work well together. This was confirmed by the unresolved problem of specs in
-type classes \ref{caveats} but it also made expressing some laws on example type
-classes nearly impossible. Therefore, one has to ask whether giving the spec
-expressions in Rust and having them type-check is providing more utility than it
-causes harm. A radically different approach would be to state specs and laws in
-some _domain specific language_ that does not go through the Rust compiler.
+type classes (see \ref{caveats}) but it also made expressing some laws on
+example type classes nearly impossible. Therefore, one has to ask whether giving
+the spec expressions in Rust and having them type-check is providing more
+utility than it causes harm. A radically different approach would be to state
+specs and laws in some _domain specific language_ that does not go through the
+Rust compiler.
 
 The second usability limit of the frontend with type classes is that it does not
 _understand_ the traits of Rust's standard library. One can now provide a
@@ -705,7 +688,7 @@ Rust could therefore be the ultimate goal for the Rust-frontend project.
 The original Scala benchmark, as taken from
 [the Stainless repository](https://github.com/epfl-lara/stainless/blob/master/frontends/benchmarks/verification/valid/InsertionSort.scala).
 
-```{.scala caption="The Scala benchmark from "}
+```{.scala caption="Insertion Sort in Scala."}
 import stainless.annotation._
 import stainless.lang._
 
@@ -767,12 +750,12 @@ object InsertionSort {
 }
 ```
 
-The translated Rust test case as taken from
+The translated Rust test case, as taken from
 [the frontend repository](https://github.com/epfl-lara/rust-stainless/blob/master/stainless_frontend/tests/pass/insertion_sort.rs).
 
 \newpage
 
-```{.rust caption="The Rust test case."}
+```{.rust caption="Insertion Sort in Rust."}
 extern crate stainless;
 use stainless::*;
 
@@ -839,9 +822,79 @@ impl List<i32> {
     }
   }
 }
-#[external]
 pub fn main() {
   let list = List::Cons(5, Box::new(List::Cons(2, Box::new(List::Cons(4, Box::new(List::Cons(5, Box::new(List::Cons(-1, Box::new(List::Cons(8, Box::new(List::Nil))))))))))));
   assert!(list.sort().is_sorted())
+}
+```
+
+## Monoid Example with Marker Structs \label{monoid2}
+
+```{.rust caption="Example of a monoid type class working around the trait type limitation."}
+extern crate stainless;
+use stainless::*;
+
+pub trait Op {}
+struct Add;
+struct Mul;
+impl Op for Add {}
+impl Op for Mul {}
+
+pub trait Monoid<O: Op>: Sized {
+  fn append(&self, other: &Self) -> Self;
+  fn neutral() -> Self;
+
+  // This is needed because of the missing type
+  // class inheritance. And we need equality in
+  // the laws.
+  fn equals(&self, other: &Self) -> bool;
+  #[law]
+  fn assoc(&self, b: &Self, c: &Self) -> bool {
+    self.append(b).append(c).equals(
+      &self.append(&b.append(c))
+    )
+  }
+  #[law]
+  fn left_identity(&self) -> bool {
+    Self::neutral().append(self).equals(self)
+  }
+  #[law]
+  fn right_identity(&self) -> bool {
+    self.append(&Self::neutral()).equals(self)
+  }
+}
+
+impl Monoid<Add> for i32 {
+  fn append(&self, other: &i32) -> i32 {
+    *self + *other
+  }
+  fn neutral() -> Self { 0 }
+  fn equals(&self, other: &i32) -> bool {
+    *self == *other
+  }
+}
+
+impl Monoid<Mul> for i32 {
+  fn append(&self, other: &i32) -> i32 {
+    *self * *other
+  }
+  fn neutral() -> Self { 1 }
+  fn equals(&self, other: &i32) -> bool {
+    *self == *other
+  }
+}
+
+pub enum List<T> { Nil, Cons(T, Box<List<T>>) }
+
+pub fn combine<O: Op, T: Monoid<O>>(l: &List<T>) -> T {
+  match l {
+    List::Nil => <T as Monoid<O>>::neutral(),
+    List::Cons(h, t) => (*h).append(&combine(&**t)),
+  }
+}
+pub fn main() {
+  let list = List::Cons(5, Box::new(List::Cons(2, Box::new(List::Cons(4, Box::new(List::Cons(5, Box::new(List::Cons(-1, Box::new(List::Cons(8, Box::new(List::Nil))))))))))));
+  assert!(combine::<Add, _>(&list) == 23);
+  assert!(combine::<Mul, _>(&list) == -1600)
 }
 ```
