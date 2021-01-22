@@ -1,20 +1,21 @@
 # Introduction \label{intro}
 
-The purpose of project is to extend the Rust-frontend to Stainless,
+The goal of this project is to extend the Rust-frontend to Stainless,
 `rust-stainless`[^repo] by Georg Schmid, written in Rust. Stainless[^stainless]
-is a formal verification tool for Scala, written in Scala. The goal of the
-frontend is to extract a subset of the Rust language, translate it to
-Stainless's intermediate representation and reuse its verification pipeline.
+is a formal verification tool for Scala, written in Scala. The Rust-frontend is
+capable of extracting a subset of the Rust language, translating it to
+Stainless's intermediate representation and submitting it to Stainless's
+verification pipeline.
 
 [^stainless]: [stainless.epfl.ch](https://stainless.epfl.ch/)
 [^repo]:
     [epfl-lara/rust-stainless on Github](https://github.com/epfl-lara/rust-stainless)
 
 While the main architecture and infrastructure of the frontend already existed,
-this project adds numerous features. In particular, the primary goal of the
-project was to add the capability to extract type classes in the Scala-Stainless
-sense from Rust's traits and their implementations. To illustrate that, consider
-Listing \ref{code1} that describes equality as an abstract class.
+this project adds numerous features. In particular, the primary goal was to add
+enable extraction of type classes in the Scala-Stainless sense from Rust's
+traits and their implementations. To illustrate that, consider Listing
+\ref{code1} that describes equality as an abstract class in Scala.
 
 ```{.scala label="code1" caption="Type class with attached laws in Scala."}
 abstract class Equals[T] {
@@ -80,15 +81,14 @@ impl<T: Equals> Equals for List<T> {
     }
   }
 }
-
 ```
 
 The rest of this report is structured as follows. In \ref{background}, the
 existing features of the Rust-frontend as well as a short architecture overview
-is given. The added features are introduced on a conceptual, user-perspective in
-\ref{features} and their implementation is described in \ref{implementation}.
-Lastly, I discuss problems with the current state as well as options for future
-work, \ref{discussion}.
+is given. The added features are introduced in the user-perspective in
+\ref{features} and their internal implementation is described in
+\ref{implementation}. Lastly, I discuss problems with the current state of the
+code base as well as prospects for future work, \ref{discussion}.
 
 # Background \label{background}
 
@@ -96,11 +96,11 @@ work, \ref{discussion}.
 
 The targeted Rust fragment underlies some strict restrictions: all code has to
 be functional and immutable. The only allowed side-effect is `panic!`. Before
-the project, references, heap allocated objects called _boxes_ and recursive
-data types were also forbidden. Nonetheless, the majority of features was
+this project, references, heap allocated objects called _boxes_ and recursive
+data types were forbidden as well. Nonetheless, the majority of features was
 already supported, like extraction of most of the basic syntax, top-level
 functions and their bodies, integer and boolean expressions and operations,
-pattern matching, type parameters and generics, see Listing \ref{code3}.
+pattern matching, type parameters and generics, etc.
 
 ```{.rust label="code3" caption="Integer operations in Rust."}
 pub fn i32_ops(x: i32, y: i32) {
@@ -113,7 +113,7 @@ pub fn i32_ops(x: i32, y: i32) {
 }
 ```
 
-Support for _algebraic data types (ADTs)_ was als present, including tuples
+Support for _algebraic data types (ADTs)_ was also present, including tuples
 (without their pattern matching) and generics. In Rust, ADTs are `enum`s, tuples
 and `struct`s. They are extracted to Stainless ADTs:
 
