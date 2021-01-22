@@ -175,6 +175,196 @@ minor transformations feeds the trees to the verification pipeline.
 In this section, the code needed for Listing \ref{code2} and for the translated
 insertion sort benchmark (Appendix \ref{insertion}) is introduced
 feature-by-feature.
+
+## Notation Improvements
+
+Some small features were added to ease notation in some examples: `let` bindings
+can now explicitly state a type, it is possible to pattern match on tuples and
+the support for tuple `struct`s was extended to allow accessing fields by their
+numerical identifier.
+
+```{.rust caption="Notational extensions."}
+pub enum Option<T> {
+  None,
+  Some(T),
+}
+let t: u32 = (2, 3).0;
+match (t, Option::Some(-1)) {
+  (a, Option::None) => {}
+  (_, Option::Some(b)) => {}
+}
+```
+
+## Immutable References and Heap Allocation
+
+Still under the restriction of strict immutability everywhere, it is now
+possible to immutably borrow objects, pass immutable references around and
+allocate objects on the heap with `Box::new`. This enables recursive data types
+like the functional linked-list.
+
+```{.rust caption="Linked-list as recursive ADT."}
+pub enum List<T> {
+  Nil,
+  Cons(T, Box<List<T>>),
+}
+```
+
+There is much more one can do with references. For example, the problem of
+borrow-checking the spec expressions is less severe because most functions that
+only read an object now only need a reference to it. Hence, many specs that
+needed multiple attributes can be written as a boolean expression. Any layer of
+referencing is allowed.
+
+```{.rust caption="Taking a double reference as argument."}
+fn dont_consume(option: &IntOption) -> bool {}
+fn dont_consume_2(option: &&IntOption) -> bool {}
+#[pre(
+  does_not_consume(&o) &&
+  does_not_consume_2(&&o)
+)]
+fn with_spec(o: IntOption) {}
+```
+
+## Recursive proofs
+
+In Stainless, recursive proofs often require the programmer to state the
+induction variable with a `decreases` statement. This helps Stainless to infer
+the so called _measure_ of the proof. That feature was introduced as an
+additional spec attribute on functions which makes it possible to verify
+recursive functions.
+
+```{.rust caption="Measure attribute."}
+#[measure(self)]
+fn size<T>(l: &List<T>) -> u32 {
+  match l {
+    List::Nil => 0,
+    List::Cons(_, tail) => 1 + size(tail),
+  }
+}
+```
+
+## Stainless Sets
+
+For reasoning about properties of lists and sets, Stainless has an internal
+notion of an infinite set and exposes its logical operations in
+`stainless.collections`. Analogously, all set operations available in Scala were
+added as methods on the type `Set<T>` in `libstainless`. Though unlike for
+Scala, there is no runtime implementation available, the methods panic when run.
+But, they serve for example for proving correctness of sorted insert method on a
+list:
+
+```{.rust caption="Specification of an insert function."}
+#[measure(l)]
+fn is_sorted(l: &List<i32>) -> bool;
+#[measure(l)]
+fn contents(l: &List<i32>) -> stainless::Set<i32>;
+
+#[pre(is_sorted(l))]
+#[measure(l)]
+#[post(
+size(&ret) == size(l) + 1 &&
+is_sorted(&ret) &&
+contents(&ret).is_subset_of(&contents(l).add(&e)) &&
+contents(l).add(&e).is_subset_of(&contents(&ret))
+)]
+fn sorted_ins(l: &List<i32>, e: i32) -> List<i32>;
+```
+
+## Implementation Block Methods
+
+To add methods on a type in Rust, one can define them in a block called `impl`.
+These methods are then callable on instances of the type. With this project it
+is now possible to extract such methods to Stainless and also to add specs on
+methods. Further, as Rust allows multiple implementation blocks for a type, this
+is also supported. We can now define the previous list functions directly,
+Listing \ref{implblocks}. Additionally, the features introduced so far suffice
+to port and prove the insertion sort (\ref{insertion}) and the binary search
+benchmark in Rust.
+
+```{.rust caption="Methods on the list implementation." label="implblocks"}
+impl<T> List<T> {
+  #[measure(self)]
+  pub fn size(&self) -> u32 { ... }
+}
+impl List<i32> {
+  #[measure(self)]
+  pub fn is_sorted(&self) -> bool { ... }
+
+  #[pre(self.is_sorted())]
+  #[measure(self)]
+  #[post(...)]
+  pub fn sorted_insert(self, e: i32) -> List<i32>
+  { ... }
+}
+```
+
+## Type Classes and Laws
+
+The final new features are type classes with attached laws, as described in
+\ref{intro}. Not only can the frontend extract classes and objects from Rust
+traits and implementations, but it also infers, which type class instance needs
+to be called at each call site of a trait method. Additionally, the laws
+specified on the trait will be checked by Stainless for each implementation. For
+illustration, take an example violation of the Liskov Substitution principle
+[@liskov] with the following rectangle trait:
+
+```{.rust caption="Example trait with laws."}
+trait Rectangle {
+  fn width(&self) -> u32;
+  fn height(&self) -> u32;
+  fn set_width(&self, width: u32) -> Self;
+  fn set_height(&self, height: u32) -> Self;
+
+  #[law]
+  fn preserve_height(&self, any: u32) -> bool {
+    self.set_width(any).height() == self.height()
+  }
+  #[law]
+  fn preserve_width(&self, any: u32) -> bool {
+    self.set_height(any).width() == self.width()
+  }
+}
+```
+
+The trait defines four methods and states that a change to the width should not
+change the height and vice versa. Clearly, the following implementation of a
+rectangle holds these properties.
+
+```{.rust caption="Example implementation of the trait."}
+struct Rect { width: u32, height: u32 }
+
+impl Rectangle for Rect {
+  fn width(&self) -> u32 { self.width }
+  fn height(&self) -> u32 { self.height }
+  fn set_width(&self, width: u32) -> Self {
+    Rect { width, height: self.height }
+  }
+  fn set_height(&self, height: u32) -> Self {
+    Rect { width: self.width, height }
+  }
+}
+```
+
+Without the laws being proven, it would be tempting to add another
+implementation for a square. However, Stainless checks the laws for each
+implementation, therfore, the square will not pass and the principle violation
+has been caught before causing more harm.
+
+```{.rust caption="Example implementation violating the laws."}
+struct Square { width: u32 }
+
+impl Rectangle for Square {
+  fn width(&self) -> u32 { self.width }
+  fn height(&self) -> u32 { self.width }
+  fn set_width(&self, width: u32) -> Self {
+    Square { width }
+  }
+  fn set_height(&self, height: u32) -> Self {
+    Square { width: height }
+  }
+}
+```
+
 # Implementation \label{implementation}
 
 The overall architecture of the code-base has not changed. All new features were
@@ -205,7 +395,31 @@ numerical identifiers for fields of ADTs, which clashed with the numerical
 naming scheme of fields in Rust's tuple structs, e.g. `tuple.0`. This was solved
 by simply prepending an underscore to such identifiers, i.e. `0` becomes `_0`.
 
-## Stainless Measure Attribute [^pr2]
+## Immutable Boxes and References by Erasure [^pr3]
+
+[^pr3]:
+    [PR#30 on Github](https://github.com/epfl-lara/rust-stainless/pull/30);
+    [PR#45 on Github](https://github.com/epfl-lara/rust-stainless/pull/45)
+
+Support of these two features relies on following the assumptions about the Rust
+fragment the frontend supports:
+
+- it is impossible to create mutable values or references
+- the only allowed references are immutable borrows and immutable boxes
+- the only allowed binding modes are immutable, aliasable by-reference, called
+  _shared borrows_ by rustc or by-value.
+
+If the above holds, then it should be safe to treat immutable references as the
+objects they refer to. Therefore, boxes and references work by erasure. That is
+to say that everywhere an expression like `ExprKind::Borrow`[^expr-kind] or a
+type like `TyKind::Ref`[^ty-kind] occurs and satisfies the above conditions, it
+is simply extracted to the expression or type it contains. The same goes for
+calls to `Box::new`.
+
+[^expr-kind]: `rustc_mir_build::thir::ExprKind::{Borrow, Deref}`
+[^ty-kind]: `rustc_middle::ty::TyKind::Ref`
+
+## Measure Attribute [^pr2]
 
 [^pr2]: [PR#31 on Github](https://github.com/epfl-lara/rust-stainless/pull/31)
 
@@ -233,38 +447,9 @@ returns `()` by appending a `;` on the expression. Later in the extraction, the
 _HIR_ will contain information about the type of that last expression and only
 there the type of the measure is inferred.
 
-## Immutable Boxes and References by Erasure [^pr3]
-
-[^pr3]:
-    [PR#30 on Github](https://github.com/epfl-lara/rust-stainless/pull/30);
-    [PR#45 on Github](https://github.com/epfl-lara/rust-stainless/pull/45)
-
-Support of these two features relies on following the assumptions about the Rust
-fragment the frontend supports:
-
-- it is impossible to create mutable values or references
-- the only allowed references are immutable borrows and immutable boxes
-- the only allowed binding modes are immutable, aliasable by-reference, called
-  _shared borrows_ by rustc or by-value.
-
-If the above holds, then it should be safe to treat immutable references as the
-objects they refer to. Therefore, boxes and references work by erasure. That is
-to say that everywhere an expression like `ExprKind::Borrow`[^expr-kind] or a
-type like `TyKind::Ref`[^ty-kind] occurs and satisfies the above conditions, it
-is simply extracted to the expression or type it contains. The same goes for
-calls to `Box::new`.
-
-[^expr-kind]: `rustc_mir_build::thir::ExprKind::{Borrow, Deref}`
-[^ty-kind]: `rustc_middle::ty::TyKind::Ref`
-
-## Stainless Set Type Operations [^pr4]
+## Stainless Set Operations [^pr4]
 
 [^pr4]: [PR#37 on Github](https://github.com/epfl-lara/rust-stainless/pull/37)
-
-All the set operations available for Scala in `stainless.collections` were added
-as methods on the type `Set<T>` in `libstainless`. Each method panics with
-`unimplemented!()` when run, although it would be simple to provide a runtime
-behaviour to these methods.
 
 In the extraction of function calls, the set operations are detected as being
 part of the _standard items_ -- items that are specially marked e.g. some Rust
@@ -296,10 +481,9 @@ their implementations which will be covered in \ref{typecls}, it is not
 necessary to extract methods from normal `impl` blocks as Stainless methods. As
 there is no inheritance outside of the type classes and their implementations,
 it is simpler to extract normal methods like top-level functions, that have as
-first parameter their `Self` type. In fact, this is also how the Rust compiler
+first parameter their receiver type. In fact, this is also how the Rust compiler
 represents those methods, therefore the extraction to Stainless functions is
-straightforward and can reuse exactly the same code as top-level function
-extraction.
+straightforward and can reuse the same code like top-level functions.
 
 One complication arose for the way of attaching specs to functions which was
 done with nested functions.
