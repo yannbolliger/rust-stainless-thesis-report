@@ -587,14 +587,14 @@ distinguished from a function call at call site by looking up the function's
 symbol in the map.
 
 Instance resolution takes a triple of class identifier, receiver type and
-additional types as wells as the current class context to resolve the instance a
-method is called on. For example, inside a type class, the `this` instance is
+additional types as wells as the current class context to resolve the needed
+receiver instance. For example, inside a type class, the `this` instance is
 accessible, inside classes with evidence parameters, the evidence instances are
 available and the ground case objects are always in scope. As a last resort,
 instance resolution recursively checks whether it can create a new instance of a
-class with evidence parameters if arguments for all parameters are available.
-This happens for example, if an external function in Listing \ref{code2} called
-`equals` on a list of `i32`. That would get translated to
+class with by providing it the required evidence arguments. This happens for
+example, if an external function in Listing \ref{code2} called `equals` on a
+list of `i32`. That would get translated to
 `ListasEquals[i32](i32asEquals).equals`.
 
 ### Caveats \label{caveats}
@@ -608,18 +608,25 @@ one of the properties in the `Equals` implementation of list, because it cannot
 infer the measure that it should use. That problem will have to be resolved by
 unifying the way in which specs are encoded by the macros.
 
-The second missing facet of type classe is type class inheritance. Stainless
-models that as inheritance and Rust uses trait bounds on subtraits. For the sake
-of simplicity, it will be implemented not as translating the trait bounds to
-inheritance but to additional evidence parameters, for which the infrastructure
-is already in place.
+The second missing facet is type class inheritance. Stainless models this as
+inheritance with `extends` and Rust uses trait bounds on the subtraits. For the
+sake of simplicity, it will be implemented not as translating the trait bounds
+to inheritance but to additional evidence parameters, for which the
+infrastructure is already in place.
+
+Another unresolved problem concerns static methods on type classes. In Rust, one
+can explicitly call a method of a trait like so `<T as Monoid>::neutral()` –
+even if it's not an instance method. Here as well, the nearest solution would be
+to add evidence parameters on the function featuring that call and calling the
+method on the evidence argument.
 
 The last restriction is due to Rust's type system. Traits cannot have multiple
 implementations of the same type. That is a problem if one wants to implement a
 `Monoid` type class for example. While it is possible to state the trait and the
 laws like in Listing \ref{monoid}, it's not possible to provide another
-implementation for `i32`, like multiplication. It is not yet clear, how to
-resolve this issue in the future.
+implementation for `i32`, like multiplication. A solution could be to use marker
+structs as additional type parameters on the type class to distinguish between
+operations.
 
 ```{.rust caption="Monoid type class and implementation for addition." label=monoid}
 trait Monoid {
@@ -643,18 +650,43 @@ impl Monoid for i32 {
 
 # Discussion \label{discussion}
 
-Further work:
+Having already discussed the missing parts and drawbacks of the type classes
+implementation, I will now turn to discuss the general state and some larger
+issues of the Rust-frontend after this project. There are two problems that
+manifested themselves multiple times during this project.
 
-- String extraction
-- Floating point OPs are missing
-- projection types when applying methods to refs
+Even before the project it was clear, that the borrow-checker and the specs do
+not work well together. This was confirmed by the unresolved problem of specs in
+type classes \ref{caveats} but it also made expressing some laws on example type
+classes nearly impossible. Therefore, one has to ask whether giving the spec
+expressions in Rust and having them type-check is providing more utility than it
+causes harm. A radically different approach would be to state specs and laws in
+some _domain specific language_ that does not go through the Rust compiler.
 
-two big problems for usability of type classes:
+The second usability limit of the frontend with type classes is that it does not
+_understand_ the traits of Rust's standard library. One can now provide a
+separate definition of the equality trait for example but the Rust-frontend is
+not capable of verifying any laws on traits that are not part of the currently
+compiled crate. However, being able to use the actual standard traits and
+attaching laws to them would be an immense productivity gain.
 
-- Discrepancy between own, spec'd traits with laws and std::traits
-- Borrow checking in laws and specs messes up
+Some features could provide a lot of value without being prohibitively difficult
+to implement now. With the addition of references, it could become possible to
+implement some string operations and expressions. Although, borrow-checking
+could still be an issue as long as there is no way of cloning objects. Support
+for Stainless's real numbers could be added, even though their semantics differ
+from the floating point numbers that Rust has. Another small improvement would
+be to extract projection types. This would allow methods and functions with
+receiver type `T` to be applied on references `&T`.
 
-Further: mutability and vectors (instead of ad-hoc, linked lists)
+For future work, there are bigger challenges that would in turn provide even
+more utility to the project like support for Rust's own arrays, slices or
+vectors, instead of the rather unidiomatic linked-list shown in this report. An
+idea could be to extract these things to Stainless's _functional arrays_.
+Without doubt the most useful feature however, would be to add support for
+imperative code and mutability. A simultaneous project on Stainless explores a
+_full imperative phase_ for Scala. Building upon that and extracting imperative
+Rust could therefore be the ultimate goal for the Rust-frontend project.
 
 # Conclusion
 
