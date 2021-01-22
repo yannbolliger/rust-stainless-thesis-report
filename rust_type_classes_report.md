@@ -12,8 +12,8 @@ verification pipeline.
     [epfl-lara/rust-stainless on Github](https://github.com/epfl-lara/rust-stainless)
 
 While the main architecture and infrastructure of the frontend already existed,
-this project adds numerous features. In particular, the primary goal was to add
-enable extraction of type classes in the Scala-Stainless sense from Rust's
+this project adds numerous features. In particular, the primary goal was to
+enable extraction of type classes in the Scala Stainless sense from Rust's
 traits and their implementations. To illustrate that, consider Listing
 \ref{code1} that describes equality as an abstract class in Scala.
 
@@ -39,7 +39,7 @@ classes [@algb] with the `@law` annotation, hence it ensures that implementors
 hold the contract set by the type class.
 
 The same is now possible in the Rust-frontend. In other words, the code in
-Listing \ref{code2} is now supported, although with some drawbacks, discussed in
+Listing \ref{code2} is now supported, although with some drawbacks discussed in
 \ref{caveats}. Furthermore, the newly added features also permitted to translate
 and prove two benchmarks from the Scala Stainless repository into Rust:
 insertion sort and binary search.
@@ -86,7 +86,7 @@ existing features of the Rust-frontend as well as a short architecture overview
 is given. The added features are introduced in the user-perspective in
 \ref{features} and their internal implementation is described in
 \ref{implementation}. Lastly, I discuss problems with the current state of the
-code-base as well as prospects for future work, \ref{discussion}.
+code-base as well as prospects for future work \ref{discussion}.
 
 # Background \label{background}
 
@@ -96,9 +96,9 @@ The targeted Rust fragment underlies strict restrictions: all code has to be
 functional and immutable and the only allowed side-effect is `panic!`. Before
 this project, references, heap allocated objects called _boxes_ and therefore
 recursive data types were impossible. Nonetheless, the majority of features
-existed already, like extraction of most of the syntax, top-level functions and
-their bodies, integer and boolean expressions/operations, pattern matching, type
-parameters and generics, etc.
+existed already, like the extraction of most of the syntax, top-level functions
+and their bodies, integer and boolean expressions/operations, pattern matching,
+type parameters and generics, etc.
 
 ```{.rust label="code3" caption="Verifiable integer operations in Rust."}
 pub fn i32_ops(x: i32, y: i32) {
@@ -154,7 +154,7 @@ extraction, serialisation and verification. The programmer depends on
 `libstainless` which contains the macros for the spec-attributes and flags. The
 frontend is invoked as a `cargo` task.
 
-`rustc` is linked as library to the frontend and, upon invocation of the cargo
+`rustc` is linked as a library to the frontend and, upon invocation of the cargo
 task, its driver executes the first few phases of regular compilation. I.e. it
 parses the program, expands macros on the _abstract syntax tree (AST)_ and does
 type- and borrow-checking. The resulting tree is called _High-Level Intermediate
@@ -295,7 +295,7 @@ The features introduced so far suffice to port the insertion sort
 
 The final new features are type classes with attached laws, as described in
 \ref{intro}. Not only can the frontend extract classes and objects from Rust
-traits and implementations, but it also infers, which type class instance needs
+traits and implementations, but it also infers which type class instance needs
 to be called at each call site of a trait method. Additionally, the laws
 specified on a trait will be proven by Stainless for each implementation. As
 illustration, take an example violation of the Liskov Substitution principle
@@ -396,7 +396,7 @@ identifiers: `0` becomes `_0`.
 These two features rely on the following assumptions about the allowed Rust
 fragment:
 
-- it is impossible to create mutable values or references,
+- it's impossible to create mutable values or references,
 - the only allowed references are immutable borrows and immutable boxes,
 - the only allowed binding modes are immutable, aliasable, by-reference (called
   _shared borrows_ by `rustc`) or by-value.
@@ -478,8 +478,8 @@ need the `self` parameter. To solve the issue, I rely on the restriction that
 function/method names in Rust are unique in a scope. Thus, a method is uniquely
 identified by its parent `impl` and its name. This makes it possible to desugar
 the specs to sibling functions on the same `impl` block and encode the name of
-the spec'd function in the name of the generated sibling, as shown in Listing
-\ref{sibling}. The number distinguishes multiple specs of the same kind.
+the actual function in the name of the generated sibling spec, as shown in
+Listing \ref{sibling}. The number distinguishes multiple specs of the same kind.
 
 ```{.rust caption="Attribute becomes a sibling function." label=sibling}
 #[post(ret > 0)] // this attribute
@@ -526,7 +526,7 @@ it already supports. Additionally, a new `#[law]` flag was added in all phases
 of the pipeline.
 
 Class extraction introduces a distinction between regular `impl` blocks as
-discussed in \ref{implblocksref}, and `impl for Trait` blocks, that need to be
+discussed in \ref{implblocksref}, and `impl for Trait` blocks that need to be
 extracted as type class implementations, i.e. _case classes_ or _case objects_.
 Of course, traits have to be extracted as _abstract classes_.
 
@@ -561,7 +561,7 @@ impl<T: Equals> Equals for List<T> { ... }
 Now that there are classes, it is also necessary to distinguish _function calls_
 from _method calls_. Most of that distinction could be achieved by adding some
 flags like `abstract` and `methodOf(ClassX)` to methods. However, to signal to
-Stainless that a method is overriding another one, they need to have same
+Stainless that a method is overriding another one, they need to have the same
 symbol, which had to be ensured on the Scala side of the pipeline.
 
 The challenge of method calls is to resolve the receiver instance they are
@@ -578,14 +578,14 @@ receiver instance. For example, inside a type class, the `this` instance is
 accessible, inside classes with evidence parameters, the evidence instances are
 available and ground case objects are always in scope. As a last resort,
 instance resolution recursively checks whether it can create a new instance of a
-class with by providing it the required evidence arguments. This happens for
-example, if an external function in Listing \ref{code2} called `equals` on a
-`List<i32>`, it would get translated to `ListasEquals[i32](i32asEquals).equals`.
+class by providing it the required evidence arguments. This happens for example,
+if an external function in Listing \ref{code2} called `equals` on a `List<i32>`,
+it would get translated to `ListasEquals[i32](i32asEquals).equals`.
 
 ### Caveats \label{caveats}
 
 While the described implementation is stable and working, there are some
-drawbacks, that are not yet resolved. At the moment, it's not possible to add
+drawbacks, that are not yet resolved. At the moment it's not possible to add
 specs (other than laws) on type class methods, because Rust does not permit
 additional methods on trait implementations. This leads to Stainless not being
 able to prove one of the properties in the list implementation of Listing
@@ -618,7 +618,7 @@ implementation, I will now turn to the general state and some larger issues of
 the Rust-frontend after this project. There are two problems that manifested
 themselves multiple times during the project.
 
-Even before the project it was clear that the borrow-checker and the specs do
+Even before the project, it was clear that the borrow-checker and the specs do
 not work well together. This was confirmed by the unresolved problem of specs in
 type classes (see \ref{caveats}) but it also made expressing some laws on
 example type classes nearly impossible if they involved consuming functions. The
