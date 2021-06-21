@@ -1,9 +1,20 @@
-\documentclass[a4paper,twoside]{article}
-\usepackage[a4paper]{geometry}
+\documentclass[a4paper]{report}
 
-% \usepackage[a4paper,showframe]{geometry} % add showframe for debug
+\usepackage[
+  a4paper,
+  lmargin=3cm,
+  rmargin=3cm,
+  bmargin=2.5cm,
+  % showframe, % add showframe for debug
+]{geometry}
 
-\usepackage[pagestyles]{titlesec}
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\leftmark}
+\rhead{\thepage}
+
 \usepackage[all]{nowidow} % avoid orphan lines
 
 % Extra colours; need to be first
@@ -55,10 +66,6 @@
 % Caption styling
 \usepackage[justification=centering]{caption}
 
-% Layout
-\usepackage{chngpage}
-\usepackage{rotating}
-
 % Line spacing
 \linespread{1.1}
 
@@ -103,12 +110,9 @@
   tabsize=2
 }
 
-
-
 % Tables
 % \newcommand{\heading}[1]{\multicolumn{1}{c}{\textbf{#1}}}
 % \newcommand{\vheading}[1]{\rotatebox[origin=c]{90}{~\textbf{#1}~}}
-
 
 % To centre table too wide
 % credit: http://tex.stackexchange.com/a/27099/77356
@@ -137,17 +141,6 @@
   \fi
 }
 \makeatother
-
-\newpagestyle{mystyle_no_header}{
-  \setfoot[\thepage][][]{}{}{\thepage}
-}
-
-\newpagestyle{mystyle}{
-  % \sethead[][][\firsttitlemarks\ifthesubsection{\thesubsection~\subsectiontitle}{\thesection~\sectiontitle}]{\firsttitlemarks\ifthesubsection{\thesubsection~\subsectiontitle}{\thesection~\sectiontitle}}{}{}
-  \sethead[\thesection~\sectiontitle][][]{}{}{\thesection~\sectiontitle}
-  % \setfoot[][][\thepage]{\thepage}{}{}
-  \setfoot[\thepage][][]{}{}{\thepage}
-}
 
 % Additional macros
 \newcommand{\TODO}[1]{\textcolor{YellowOrange}{(TODO: #1)}} % for inline TODO
