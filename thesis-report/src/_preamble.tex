@@ -1,3 +1,187 @@
-\documentclass{article}
-\title{My Title}
+\documentclass[a4paper,twoside]{article}
+\usepackage[a4paper]{geometry}
+
+% \usepackage[a4paper,showframe]{geometry} % add showframe for debug
+
+\usepackage[pagestyles]{titlesec}
+\usepackage[all]{nowidow} % avoid orphan lines
+
+% Extra colours; need to be first
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+\definecolor{light-gray}{gray}{0.95}
+
+% Basic packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+% Bibtex+cite
+\usepackage{cite}
+\usepackage{url}
+\usepackage[nottoc,numbib]{tocbibind}
+
+% URL
+\usepackage[
+  colorlinks=true,
+  urlcolor=MidnightBlue,
+  citecolor=black,
+  linkcolor=.
+]{hyperref}
+
+% Lists
+\usepackage{scrextend}
+\addtokomafont{labelinglabel}{\sffamily}
+\usepackage[inline]{enumitem} % for enumerate* environment.
+
+% Maths & symbols
+\usepackage{mathtools}
+\usepackage{amssymb}
+
+% Spacing
+\usepackage{xspace}
+
+% Graphics
+\usepackage{graphicx}
+
+% Table
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+
+% Floating placement
+\usepackage{placeins}
+% use \FloatBarrier before a \section to ensure all floating are displayed
+% before the new section
+
+% Caption styling
+\usepackage[justification=centering]{caption}
+
+% Layout
+\usepackage{chngpage}
+\usepackage{rotating}
+
+% Line spacing
+\linespread{1.1}
+
+% Listings
+\usepackage{listings,multicol}
+\usepackage{listings-rust}
+
+\lstset{
+  basicstyle=\small\ttfamily,
+  style=boxed,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\bfseries\color{MidnightBlue},
+}
+
+\lstdefinestyle{short}{
+  numbers=none,
+  framerule=0pt,
+  xleftmargin=5pt
+}
+
+% Use code in description item, Based on http://tex.stackexchange.com/a/181325/77356
+\newcommand*{\lstitem}[1]{
+  \setbox0\hbox{\textbf{\Inline{#1}}}
+  \item[\usebox0]
+}
+
+% For long listings
+\lstdefinestyle{LongCode}{
+  %aboveskip=1ex,
+  %belowskip=1ex,
+  breaklines=true,
+  postbreak=\raisebox{0ex}[0ex][0ex]{\ensuremath{\color{red}\hookrightarrow}},
+  breakautoindent=false,
+  %breakatwhitespace=false,
+  %columns=fullflexible,
+  multicols=0,
+  framerule=0pt,
+  framexrightmargin=0em,
+  framexleftmargin=0em,
+  % numbers=left,
+  % numberstyle=\footnotesize\sffamily,
+  tabsize=2
+}
+
+
+
+% Tables
+% \newcommand{\heading}[1]{\multicolumn{1}{c}{\textbf{#1}}}
+% \newcommand{\vheading}[1]{\rotatebox[origin=c]{90}{~\textbf{#1}~}}
+
+
+% To centre table too wide
+% credit: http://tex.stackexchange.com/a/27099/77356
+\makeatletter
+\newcommand*{\centerfloat}{%
+  \parindent \z@
+  \leftskip \z@ \@plus 1fil \@minus \textwidth
+  \rightskip\leftskip
+  \parfillskip \z@skip}
+\makeatother
+
+% For some reason page margin are swapped when having a title page with a
+% different geometry. We fix that manually by 1) swapping the margin and
+% 2) swapping the page number position (page style)
+% credit: http://tex.stackexchange.com/a/36016/77356
+\makeatletter
+\newcommand*{\flipmargins}{%
+  \clearpage
+  \setlength{\@tempdima}{\oddsidemargin}%
+  \setlength{\oddsidemargin}{\evensidemargin}%
+  \setlength{\evensidemargin}{\@tempdima}%
+  \if@reversemargin
+    \normalmarginpar
+  \else
+    \reversemarginpar
+  \fi
+}
+\makeatother
+
+\newpagestyle{mystyle_no_header}{
+  \setfoot[\thepage][][]{}{}{\thepage}
+}
+
+\newpagestyle{mystyle}{
+  % \sethead[][][\firsttitlemarks\ifthesubsection{\thesubsection~\subsectiontitle}{\thesection~\sectiontitle}]{\firsttitlemarks\ifthesubsection{\thesubsection~\subsectiontitle}{\thesection~\sectiontitle}}{}{}
+  \sethead[\thesection~\sectiontitle][][]{}{}{\thesection~\sectiontitle}
+  % \setfoot[][][\thepage]{\thepage}{}{}
+  \setfoot[\thepage][][]{}{}{\thepage}
+}
+
+% Additional macros
+\newcommand{\TODO}[1]{\textcolor{YellowOrange}{(TODO: #1)}} % for inline TODO
+%\newcommand{\TODO}[1]{\textcolor{YellowOrange}{(TODO)}} % for inline TODO
+% \newcommand{\TODO}[1]{\underline{(#1)}} % for inline TODO, PRINTING
+\newcommand{\URL}[2]{#2:\xspace\href{#1}{#1}}
+\newcommand{\RefSec}[1]{Section~\ref{#1}}
+\newcommand{\RefTable}[1]{Table~\ref{#1}}
+\newcommand{\RefApp}[1]{Appendix~\ref{#1}}
+\newcommand{\RefFig}[1]{Figure~\ref{#1}}
+\newcommand{\RefCode}[1]{Listing~\ref{#1}}
+\newcommand{\BigO}[1]{\mathcal{O}(#1)}
+\newcommand{\ActorRef}{\InlineS{ActorRef}\ }
+\newcommand{\stt}[1]{\texttt{\small{#1}}}
+%\newcommand{\stt}[1]{\InlineS{#1}}
+
+
+%%% Pandoc commands
+
+\newcommand{\passthrough}[1]{#1}
+\providecommand{\tightlist}{
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+}
+\DeclareRobustCommand{\href}[2]{#2\footnote{\url{#1}}}
+
+%%%
+
+\title{Formal Verification of Rust with Stainless}
+
+\date{
+  {\small Version 1.0}\\
+  July 2021
+}
+
+\author{Yann Bolliger}
+
 \begin{document}
