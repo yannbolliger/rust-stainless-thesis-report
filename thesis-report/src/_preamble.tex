@@ -15,6 +15,16 @@
 \lhead{\leftmark}
 \rhead{\thepage}
 
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \rhead{\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+}
+
+\usepackage{titlesec}
+\titleformat{\chapter}[hang]
+{\normalfont\huge\bfseries}{\thechapter}{1em}{}
+
 \usepackage[all]{nowidow} % avoid orphan lines
 
 % Extra colours; need to be first
