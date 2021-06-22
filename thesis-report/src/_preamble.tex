@@ -28,7 +28,7 @@
 % Bibtex+cite
 \usepackage{cite}
 \usepackage{url}
-\usepackage[nottoc,numbib]{tocbibind}
+\usepackage[nottoc]{tocbibind}
 
 % URL
 \usepackage[
@@ -68,6 +68,21 @@
 
 % Line spacing
 \linespread{1.1}
+
+% fancy quotes
+\usepackage{framed}
+
+\let\oldquote=\quote
+\let\endoldquote=\endquote
+\renewenvironment{quote}[1][\hsize]{
+  \def\FrameCommand
+  {
+      {\color[gray]{0.90}\vrule width 5pt}
+      \hspace{0pt}
+  }
+  \MakeFramed{\hsize#1\advance\hsize-\width\FrameRestore}
+  \begin{oldquote}
+}{\end{oldquote}\endMakeFramed}
 
 % Listings
 \usepackage{listings,multicol}
