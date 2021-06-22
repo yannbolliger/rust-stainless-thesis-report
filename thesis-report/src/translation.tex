@@ -12,10 +12,10 @@ verifier backend.
 
 All of the following underlies the assumption that the input Rust code
 is \emph{safe} and ``well-behaved''. That is we consider the
-\emph{safe subset}\cite[section "Unsafety"]{rustref}
+\emph{safe subset} \cite[section "Unsafety"]{rustref}
 of the 2018 edition of Rust and we assume single-threaded
 execution. In particular, our translation requires the absence of
-\emph{interior mutability}\cite[section "Interior Mutability"]{rustref}
+\emph{interior mutability} \cite[section "Interior Mutability"]{rustref}
 of types, that is all types are immutable through shared
 references. This can be enforced by prohibiting the use of \emph{smart
 pointers} like the ones from \passthrough{\lstinline!std::cell!}.
