@@ -442,6 +442,7 @@ used thanks to the borrow checker. Hence, the translation is correct for
 mutable references as well.
 
 \subsection{Translation for verification}
+\label{sec:aliasing-restrictions}
 
 Our translation results in correct Scala runtime semantics, but the goal
 of the translation was to ultimately verify the Scala program with
@@ -514,12 +515,12 @@ checker has made sure they are not aliased. Hence, the resulting program
 contains no aliasing of mutable types but still preserves correct
 runtime semantics.
 
-\subsubsection{\texorpdfstring{\texttt{move} is the
-identity}{move is the identity}}
+\subsubsection{move is the identity}
 
-First, we'll show that our \passthrough{\lstinline!move!} operator --
+Here, we show that our \passthrough{\lstinline!move!} operator --
 though very useful to work with Stainless -- is not necessary to the
-semantical correctness of the translation.
+semantical correctness of the translation and may be omitted by implementations
+that do not need to comply with Stainless' aliasing restrictions.
 
 \begin{quote}
 Under the assumption that the original Rust program type \& borrow
@@ -577,6 +578,7 @@ we may as well share the objects. We conclude that the
 programs with no mutation.
 
 \subsection{Cloning is copying}
+\label{sec:clone-is-copy}
 
 Unlike the built-in implicit copy that occurs for Rust types marked with
 the \passthrough{\lstinline!Copy!} trait, a clone always happens
@@ -593,39 +595,111 @@ equivalent to performing a deep copy. Thus,
 \passthrough{\lstinline!copy!} operator.
 \end{quote}
 
-Derived \passthrough{\lstinline!Clone!} instances for aggregate types
-like structs recursively call \passthrough{\lstinline!clone!} on all the
-fields and return a new struct with the cloned fields. For copyable
-types, especially primitive types, the clone is trivially a bitwise copy
-like for \href{https://doc.rust-lang.org/std/clone/trait.Clone.html}{\lstinline!Copy!.}
-For shared references, we have already shown that copying
-them is equivalent to a deep copy of the referenced object. By a simple
-inductive argument, if all the field's \passthrough{\lstinline!Clone!}
-instances are equivalent to deep copies, then the struct's instance is
-equivalent to a deep copy as well. Hence, as long as all component types
-recursively are copyable types or have derived
-\passthrough{\lstinline!Clone!} instances, the top-level instance is
-equivalent to a deep copy.
+Derived \passthrough{\lstinline!Clone!} instances for aggregate types like
+structs recursively call \passthrough{\lstinline!clone!} on all the fields and
+return a new struct with the cloned fields. For copyable types, especially
+primitive types, the clone is trivially a bitwise copy like for
+\lstinline!Copy!.\footnote{\url{https://doc.rust-lang.org/std/clone/trait.Clone.html}}
+For shared references, we have already shown (see
+\RefSec{sec:correctness-by-value}) that copying them is equivalent to a deep
+copy of the referenced object. By a simple inductive argument, if all the
+field's \passthrough{\lstinline!Clone!} instances are equivalent to deep copies,
+then the struct's instance is equivalent to a deep copy as well. Hence, as long
+as all component types recursively are copyable types or have derived
+\passthrough{\lstinline!Clone!} instances, the top-level instance is equivalent
+to a deep copy.
 
 In the translation, we can therefore check that assumption and if it
 holds, we translate calls to \passthrough{\lstinline!Clone::clone!} with
 our \passthrough{\lstinline!copy!} operator that is the identity in
 completely functional programs or performs a deep copy otherwise.
 
-\clearpage
-\TODO{
-  End of written out part. The next section has to wait for the implementation
-  to catch up with the translation described.
-}
-\section{Usability}
 
-Currently, the \emph{real} implementation greatly differs from what is
-described here.
 
-In the implementation, we optimise some cases: - immutable references
-are erased - immutable local vars are not wrapped - immutable fn params
-are not wrapped - move \& copy are modelled with the
-\passthrough{\lstinline!freshCopy!} primitive of Stainless
+
+
+
+
+\section{Implementation optimisations}
+
+Even if the translation presented in this chapter serves to add mutability
+features to Rust-Stainless, we would like to preserve the well-functioning parts
+of the frontend that deal with functional, immutable Rust code. To that end, we
+present certain optimisations and implementation specifities of the general
+translation  that increase the usability of the frontend for functional Rust
+code. Like before, we will show that all the deviations from the translation
+keep the overall correctness guarantees. For more details on the implementation,
+please refer to \RefChapter{implementation} or the code
+itself.\footnote{\url{https://github.com/epfl-lara/rust-stainless/pull/164}}
+
+\subsection{Immutable bindings and references}
+
+The most important optimisation in the implementation is that immutable bindings
+(local variables, function parameters) are not wrapped in mutable cells.
+Morever, shared references i.e. immutable references are erased, like boxes, and
+the values/data of the underlying binding is used directly.
+
+It is possible to perform that optimisation thanks to excellent compiler support
+of the Rust compiler, that provides type information for all expressions. With
+that, it is  possible to distinguish immutable values and shared references at
+all times from  possibly mutable ones that need to be wrapped in cells.
+
+To convince ourselves of the correctness of this optimisation, we first note
+that only mutable data can be borrowed mutably. In other words, only for mutable
+data do we need the reference sharing in the translation to propagate changes
+back to the original binding. For immutable data, there are no changes in the
+first place. Secondly, it is safe to directly use actual immutable values
+instead of references, even if the values get copied at some points, as we have
+already shown in \RefSec{sec:correctness-by-value}. Therefore, it is correct to
+erase shared references and use their referred value directly.
+
+\subsection{Preventing aliasing}
+
+We have already seen how our two theoretical operators \lstinline!move! and
+\lstinline!copy! are used to emit code that complies with Stainless' aliasing
+restrictions (\RefSec{sec:aliasing-restrictions}). We have also argued that
+\lstinline!copy! \emph{must} perform a semantical deep copy, while
+\lstinline!move! \emph{may} do a deep copy but might also be the identity. For
+our Stainless-backed implementation, we use a special Stainless primitive to
+implement both operators: \lstinline!freshCopy[T](t: T): T!, performs a
+semantical deep copy of its argument. Because our implementation only serves to
+verify Rust code, it does not matter that we deep copy data that is not strictly
+required to be copied.
+
+With that, the extraction implementation decides at all places of the code where
+data is used by value whether to insert a \lstinline!freshCopy! based on the
+data's type. Types that are mutable references or that contain mutable
+references, like \lstinline!Option<&mut T>!, are not \lstinline!freshCopy!'d.
+Otherwise, we omit the copy for types that are primitive types in both Rust and
+on the JVM: booleans, numbers, unit, characters, and panics/\lstinline!Nothing!.
+Additionally, we don't insert \lstinline!freshCopy! around some control
+structures for which we know by design that a \lstinline!freshCopy! will be
+inserted inside the structure, for example for \lstinline!match!, we know that
+the resulting value of each arm will be copied and therefore don't need to copy
+the entire match expression.
+
+For cloning, the same procedure is applied. conveniently, the Rust compiler does
+not derive \lstinline!Clone! instances for types that are or contain mutable
+references.\footnote{\href{}{\texttt{\color{MidnightBlue}https://doc.rust-lang.org/std/clone/trait.Clone.html\#impl-Clone-121}}}
+Therefore, it is sufficient to check our assumption from
+\RefSec{sec:clone-is-copy} to make sure that all types for which clone is
+translated will get a \lstinline!freshCopy! inserted.
+
+To summarise, we deeply copy some of the moves to prevent aliasing in the
+resulting code. But, we never copy mutable references because for them, the Rust
+compiler has made sure that there are no aliases. Lastly, we do the same for
+cloning because we made sure that only clone operations are extracted for which
+these semantics are correct.
+
+
+
+
+\begin{itemize}
+\item nested mutable cells are flattened
+\end{itemize}
+
+
+
 
 \subsection{Functional fragment}
 
