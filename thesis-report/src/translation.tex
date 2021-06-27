@@ -142,8 +142,8 @@ assert(x.value._0.value == 123) // fails
 \end{lstlisting}
 
 To avoid such problems, we introduce two operators in the translation:
-\passthrough{\lstinline!move[T](t: T)!} and
-\passthrough{\lstinline!copy[T](t: T)!}. They can be thought of as
+\passthrough{\lstinline!move[T](t: T): T!} and
+\passthrough{\lstinline!copy[T](t: T): T!}. They can be thought of as
 top-level functions that perform a deep copy of their argument. An
 implementation for these operators could be based on type classes for
 example, but we'll not go into more implementation details of the

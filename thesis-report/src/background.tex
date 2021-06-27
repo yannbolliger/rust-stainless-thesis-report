@@ -53,7 +53,7 @@ These two terms have been used in Rust but were replaced by \emph{place
 expressions} and \emph{value expressions}. Value expressions represent
 actual values and are defined by exclusion from place expressions. Place
 expressions evaluate to a \emph{place} in Rust which is essentially a
-memory location. \cite{rustref}
+memory location.~\cite{rustref}
 
 \begin{quote}
 {[}Place{]} expressions are paths which refer to local variables,
@@ -117,13 +117,17 @@ let b = a;
 One departure from these almost \emph{use once} \citep{use-once} variables are
 copyable types. Types that implement the \passthrough{\lstinline!Copy!} trait in
 Rust get copy semantics rather than move semantics. The compiler automatically
-handles primitive types (numeric types, \passthrough{\lstinline!char!},
-\passthrough{\lstinline!bool!}) but also shared references and and tuples of
-copyable types as copyable \cite[section "Special types and traits"]{rustref}.
-When data of these types is used, it's implicitly copied and the original
-binding and data stay valid and independent.
+implements this for primitive types (numeric types cf. \RefCode{lst:copy},
+\passthrough{\lstinline!char!}, \passthrough{\lstinline!bool!}) but also shared
+references and tuples of copyable types \cite[section "Special
+types and traits"]{rustref}. When data of these types is used, it's implicitly
+copied and the original binding and data stay valid and independent.
 
-\begin{lstlisting}
+\begin{lstlisting}[
+  language=Rust,
+  label=lst:copy,
+  caption={Copy semantics of the \lstinline!i32! type.}
+]
 let a = 123;
 let mut b = a;
 b += 1;
@@ -132,7 +136,7 @@ b += 1;
 
 For types that are not copyable, we are still able to explicitly create
 copies of objects by implementing the \passthrough{\lstinline!Clone!}
-trait and calling the \passthrough{\lstinline!clone!} method.
+trait and calling the \passthrough{\lstinline!Clone::clone!} method.
 
 \subsubsection{References}
 
