@@ -323,7 +323,7 @@ i.e.~aliased state that is mutated, in the original program. It may seem
 that this is an unnecessarily strict assumption for our translation.
 But, Rust's ownership system is so fundamental to the language that it
 is impossible to define Rust's semantics without borrow checking
-\TODO{citation needed}. Consider the \RefCode{lst:move-err}. Because
+\cite{krust}. Consider the \RefCode{lst:move-err}. Because
 \passthrough{\lstinline!y!} moves out \passthrough{\lstinline!x!} on
 line 3, \passthrough{\lstinline!x!} can never be reused and it is not
 defined what \passthrough{\lstinline!x!} would evaluate to if the code
@@ -680,7 +680,8 @@ the entire match expression.
 
 For cloning, the same procedure is applied. conveniently, the Rust compiler does
 not derive \lstinline!Clone! instances for types that are or contain mutable
-references.\footnote{\href{}{\texttt{\color{MidnightBlue}https://doc.rust-lang.org/std/clone/trait.Clone.html\#impl-Clone-121}}}
+references.\footnote{\href{}{\texttt{\color{MidnightBlue}
+https://doc.rust-lang.org/std/clone/trait.Clone.html\#impl-Clone-121 }}}
 Therefore, it is sufficient to check our assumption from
 \RefSec{sec:clone-is-copy} to make sure that all types for which clone is
 translated will get a \lstinline!freshCopy! inserted.
@@ -694,9 +695,7 @@ these semantics are correct.
 
 
 
-\begin{itemize}
-\item nested mutable cells are flattened
-\end{itemize}
+\subsection{Nested Mutable Cells}
 
 
 
