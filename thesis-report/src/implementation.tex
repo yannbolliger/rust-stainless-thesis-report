@@ -1,0 +1,205 @@
+\section{Background}
+
+\subsection{Rust compiler}
+
+Our tool translates Rust code to Stainless. To make this manageable and minimise
+the amount of work the translation needs to do, we heavily rely on the Rust
+compiler \cite{rustc-guide}, \passthrough{\lstinline!rustc!}. Normally, the
+compiler would take Rust source code as input and produce an executable binary.
+This process involves multiple phases in each of which the high-level input
+source is transformed or \emph{lowered} into a more low-level representation.
+We'll continue by giving a brief overview of the compile process.
+
+The Rust compiler always operates at the level of a single crate. That
+is, each crate is compiled separately and maybe linked to other crates
+only after compilation. This means that the \emph{intermediate
+representations} like the HIR described afterwards are only available
+for items of the current crate. The exception is for some metadata of
+public items like function signatures that need to be accessible across
+crates.
+
+The first two phases of the compile process are concerned with
+transforming the input source into a token stream -- lexing -- and then
+into an \emph{abstract syntax tree (AST)} -- parsing. First syntactical
+validations, name resolutions and macro expansion are performed on the
+AST. While the AST is already a representation of the program, it still
+maps directly to the source code and can be seen as a data
+representation of the source text.
+
+The first intermediate representation (IR) constructed from the AST is
+the \emph{high-level IR (HIR)}. This is the first IR in that it contains
+much less high-level features, because many have been desugared. The HIR
+is used to type check the program. In that process an even lower-level
+IR is created, the \emph{typed HIR (THIR)}. Still in the form of a tree,
+this IR contains the full explicit type information.
+
+The THIR is subsequently used to construct the \emph{mid-level IR (MIR)}
+that has the form of a \emph{control-flow graph (CFG)}. Such a graph is
+a diagram that consists of \emph{basic blocks} of code and arrows
+between them that represent all the possible paths the control flow can
+take. The MIR still has generic types but because it is a CFG it is much
+more convenient for performing things like liveness analysis,
+optimisations, and most importantly, the borrow check of the program.
+
+The last phase of compilation is the \emph{code generation} phase. In
+that step the generic code is \emph{monomorphised} i.e.~copied and
+output for each type it is instantiated with. Then a special IR for the
+compiler backend framework \emph{LLVM} \cite{llvm} is generated. LLVM
+will perform much more performance optimisations and finally generate
+the assembly code.
+
+\section{System Overview}
+
+\subsection{Design}
+
+\subsubsection{Components}
+
+The Rust-Stainless verification system consists of multiple components,
+most of which are implemented as their own Rust crate. Each component
+modularly fulfils a step in the overarching goal of taking Rust code,
+transforming it for Stainless and getting a verification result back. In
+that sense, Rust-Stainless is an alternative frontend to Stainless for
+Rust, much like the Rust compiler is an alternative frontend to LLVM.
+
+Rust-Stainless itself has a frontend and a backend.
+\lstinline!stainless_frontend! is the frontend crate of the tool and contains
+two executables with which the tool is started and which deal with command line
+arguments. The subcommand for the Cargo build tool \passthrough{\lstinline!cargo
+stainless!} is the most common way of running Rust-Stainless. Internally, it
+calls the second stand-alone binary \lstinline!rustc_to_stainless! which runs
+the actual frontend of the tool.
+
+The programmer also sees another interface of Rust-Stainless, its
+library \lstinline!libstainless!. The library needs to be
+imported as \passthrough{\lstinline!extern crate stainless;!} in all
+code that is to be verified. It provides the user-facing parts of
+Rust-Stainless like the specification macros and some built-in Stainless
+types useful for specification: an immutable generic set and map.
+
+The main work of the translation is performed by the
+\passthrough{\lstinline!stainless\_extraction!} crate. The frontend
+calls the method \passthrough{\lstinline!extract\_crate!} which
+retrieves the HIR from the compiler and translates it to Stainless AST
+with the help of another crate,
+\passthrough{\lstinline!stainless\_data!}. The latter contains the
+auto-generated Rust definitions of the Stainless ASTs as well as code to
+serialise them to a binary format.
+
+Finally, \passthrough{\lstinline!stainless\_backend!} is responsible for
+spawning and interacting with a JVM subprocess of the actual Stainless
+executable. The executable consist of the normal Stainless verification
+pipeline but with a custom entry-point called
+\passthrough{\lstinline!Noxt-Frontend!}. ``Noxt'' stands for \emph{no
+extraction} which means it takes as input serialised trees instead of
+extracting trees from the Scala compiler output.
+
+\begin{quote}
+\TODO{diagram for this}
+\end{quote}
+
+\subsubsection{Pipeline}
+
+Knowing the system's components, we can trace the path of an exemplary
+program through the pipeline in more detail. This will allow us to
+understand some of the design decisions made.
+
+\begin{lstlisting}[
+  language=Rust,
+  caption={Example Rust program with a post-condition.},
+  label={lst:example}
+]
+extern crate stainless;
+use stainless::*;
+
+struct A(i32);
+
+#[post(ret.0 >= 0)]
+fn f(a: A) -> A {
+  A(a.0 * a.0)
+}
+\end{lstlisting}
+
+In \RefCode{lst:example}, the Stainless library is added as an external crate
+and then imported such that the post-condition specification attribute
+\passthrough{\lstinline!\#[post()]!} is available. The attribute is implemented
+as a procedural macro \TODO{footnote or cite} and will be expanded to a closure
+inside the function (\RefCode{lst:example2}).
+
+\begin{lstlisting}[
+  language=Rust,
+  caption={Desugared post-condition.},
+  label={lst:example2}
+]
+fn f(a: A) -> A {
+  #[clippy::stainless::post]
+  |a: A, ret: A| -> bool {ret.0 >= 0};
+  A(a.0 * a.0)
+}
+\end{lstlisting}
+
+Rust-Stainless leverages the heavy lifting done by the Rust compiler. The
+frontend invokes the compiler via the \passthrough{\lstinline!rustc\_driver!}
+library and runs all the phases until all analyses are complete and pass,
+otherwise the tool fails with the error given by
+\passthrough{\lstinline!rustc!}. In particular, the compiler does the lexing,
+parsing, macro expansion and IR construction. Secondly, the compiler type and
+borrow checks the program. This way, we achieve our strong assumption from
+\RefSec{correctness-claim} because Rust-Stainless only continues if all checks
+pass.
+
+Once analysis is complete, the extraction module is invoked on the HIR.
+As Rust's compile model prescribes that the HIR is only ever constructed
+for the current crate, our toll also only translates the current crate.
+We further examine that limitation of our implementation in \RefSec{impl-limitations}.
+
+The extraction traverses all the \emph{items} of the crate, that is
+top-level functions, structs, enums, \passthrough{\lstinline!impl!}
+blocks and their methods as well as traits. It directly constructs
+Stainless definitions for datatypes. For function and method bodies, the
+extraction works on the THIR, which is guaranteed to exist as the type
+check passed. This representation is very well suited for translation to
+Stainless AST because it is still in the form of an AST but all the type
+information is explicit and implicit features like method calls and
+dereferences have been resolved or desugared. That way, the THIR is the
+representation that is the closest to Stainless AST which makes
+translation simpler. The downside of working with the THIR instead of
+the MIR is that lifetime resolution is performed on the MIR. Hence, in
+the THIR there is no way of knowing the exact point where a binding or
+reference ends its lifetime. This is a serious limitation if one needs
+the lifetimes in the translation, for example for some other encoding of
+mutability as explored in \RefSec{impl-limitations}.
+
+\begin{itemize}
+\tightlist
+\item
+  THIR listing
+\end{itemize}
+
+If all the THIR can be translated to Stainless AST without errors,
+i.e.~there are no unsupported features in the program, the AST is
+serialised to the custom binary format that is used by Stainless'
+caching mechanism. At this point, the program consists of a list of
+functions, a list of ADTs and a list of classes.
+
+\begin{lstlisting}[language=Scala]
+sealed case class A(_0: MutCell[Int])
+sealed case class MutCell[T @mutable]((value: T @mutable) @var)
+@pure
+def f(a: A): A = {
+  freshCopy(A(MutCell[Int](a._0.value * a._0.value)))
+} ensuring {
+  (ret: A) => ret._0.value >= 0
+}
+\end{lstlisting}
+
+Either the user specified to export the AST in which case the binary
+format is simply written to a file, or the Stainless backend is started.
+Rust-Stainless spawns a subprocess with the
+\passthrough{\lstinline!Noxt-Frontend!} of Stainless and communicates
+with it via standard input and output. The subprocess reads the AST from
+a temporary file, performs some minor transformation and passes it
+through the verification pipeline. In the end, it reports back the
+results in JSON format such that Rust-Stainless can print them.
+
+\section{Limitations}
+\label{impl-limitations}
