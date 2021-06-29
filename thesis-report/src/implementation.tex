@@ -152,28 +152,24 @@ As Rust's compile model prescribes that the HIR is only ever constructed
 for the current crate, our toll also only translates the current crate.
 We further examine that limitation of our implementation in \RefSec{impl-limitations}.
 
-The extraction traverses all the \emph{items} of the crate, that is
-top-level functions, structs, enums, \passthrough{\lstinline!impl!}
-blocks and their methods as well as traits. It directly constructs
-Stainless definitions for datatypes. For function and method bodies, the
-extraction works on the THIR, which is guaranteed to exist as the type
-check passed. This representation is very well suited for translation to
-Stainless AST because it is still in the form of an AST but all the type
-information is explicit and implicit features like method calls and
-dereferences have been resolved or desugared. That way, the THIR is the
-representation that is the closest to Stainless AST which makes
-translation simpler. The downside of working with the THIR instead of
-the MIR is that lifetime resolution is performed on the MIR. Hence, in
-the THIR there is no way of knowing the exact point where a binding or
-reference ends its lifetime. This is a serious limitation if one needs
-the lifetimes in the translation, for example for some other encoding of
-mutability as explored in \RefSec{impl-limitations}.
+The extraction traverses all the \emph{items} of the crate, that is top-level
+functions, structs, enums, \passthrough{\lstinline!impl!} blocks and their
+methods as well as traits. It directly constructs Stainless definitions for
+datatypes. For function and method bodies, the extraction works on the THIR,
+which is guaranteed to exist as the type check passed. The body of our example
+function in THIR can be seen in \RefApp{apx:thir-example}.
 
-\begin{itemize}
-\tightlist
-\item
-  THIR listing
-\end{itemize}
+The HIR is very well suited for translation to Stainless AST because it is still
+in the form of an AST but all the type information is explicit and implicit
+features like method calls and dereferences have been resolved or desugared.
+That way, the THIR is the representation that is the closest to Stainless AST
+which makes translation simpler. The downside of working with the THIR instead
+of the MIR is that lifetime resolution is performed on the MIR. Hence, in the
+THIR there is no way of knowing the exact point where a binding or reference
+ends its lifetime. This is a serious limitation if one needs the lifetimes in
+the translation, for example for some other encoding of mutability as explored
+in \RefSec{impl-limitations}.
+
 
 If all the THIR can be translated to Stainless AST without errors,
 i.e.~there are no unsupported features in the program, the AST is
