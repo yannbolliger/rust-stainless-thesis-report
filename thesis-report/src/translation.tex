@@ -639,25 +639,47 @@ JVM before the garbage collector passes, but it will never be read or
 used thanks to the borrow checker. Hence, the translation is correct for
 mutable references as well.
 
-\subsection{Translation for Verification}
+
+
+
+
+\section{Implementation}
+
+The translation presented so far results in correct Scala runtime semantics, but
+the motivation behind the translation was to ultimately use it to verify the
+Scala program with the Stainless verifier. Intuitively, we submit the translated
+program to Stainless, get a verification result and deduce verification
+properties for the Rust program from that. The approach is correct because both
+programs exhibit the same runtime semantics, as we have shown. However,
+Stainless does not support the entire Scala language. In particular, it has some
+limitations concerning mutability. Therefore, we adapt the general translation
+step-by-step to yield Scala programs that are accepted by Stainless.
+
+This section presents the changes made to the translation to reach compatibility
+with Stainless on a coarse-grained theoretical level. Like before, we will show
+that all the deviations from the general translation uphold the overall
+correctness. For more low-level implementation details and an overview of the
+entire system please refer to \RefChapter{implementation}.
+
+
+
+
+\subsection{Translation without Aliasing}
 \label{sec:aliasing-restrictions}
 
-Our translation results in correct Scala runtime semantics, but the goal
-of the translation was to ultimately verify the Scala program with
-Stainless. Intuitively, we give the translated Scala program to
-Stainless, get a verification result and deduce verification properties
-for the Rust program from that. The approach is correct because, both
-programs exhibit the same runtime semantics, as we have shown. However,
-the Stainless verifier does not support the entire Scala language. In
-particular, it has some limitations concerning mutability. Stainless
-follows a simple but strict aliasing rule:
+The main difference between Scala and the supported imperative fragment of
+Stainless \cite[section "Imperative"]{stainless-doc} is that Stainless imposes
+aliasing restrictions on the program. The restrictions enable a simple but
+strict aliasing invariant:
 
 \begin{quote}
 {[}For{]} each object in the system, each path of pointers reaches a
 distinct area of the heap. \cite[p.~59]{regb}
 \end{quote}
 
-Concretely, the following restrictions apply to mutable types:
+Concretely, the following restrictions apply to mutable types, i.e. types that
+may contain \lstinline!var! fields or type parameters marked with
+\lstinline!@mutable!:
 
 \begin{itemize}
 \tightlist
@@ -815,19 +837,17 @@ completely functional programs or performs a deep copy otherwise.
 
 
 
-\section{Implementation}
+\subsection{Optimisations}
 
-Even if the translation presented in this chapter serves to add mutability
-features to Rust-Stainless, we would like to preserve the well-functioning parts
-of the frontend that deal with functional, immutable Rust code. To that end, we
-present certain optimisations and implementation specifities of the general
-translation  that increase the usability of the frontend for functional Rust
-code. Like before, we will show that all the deviations from the translation
-keep the overall correctness guarantees. For more details on the implementation,
-please refer to \RefChapter{implementation} or the code
-itself.\footnote{\url{https://github.com/epfl-lara/rust-stainless/pull/164}}
+Even if the translation presented here serves to add mutability features to
+Rust-Stainless, we would like to preserve the well-functioning parts of the
+frontend that deal with functional, immutable Rust code. To that end, the
+implemented translation contains certain optimisations to the general
+translation that increase the usability of Rust-Stainless for functional Rust
+code.
 
-\subsection{Immutable Bindings and References}
+
+\subsubsection{Immutable Bindings and References}
 
 The most important optimisation in the implementation is that immutable bindings
 (local variables, function parameters) are not wrapped in mutable cells.
@@ -848,7 +868,7 @@ instead of references, even if the values get copied at some points, as we have
 already shown in \RefSec{sec:correctness-by-value}. Therefore, it is correct to
 erase shared references and use their referred value directly.
 
-\subsection{Preventing Aliasing}
+\subsubsection{Preventing Aliasing}
 
 We have already seen how our two theoretical operators \lstinline!move! and
 \lstinline!copy! are used to emit code that complies with Stainless' aliasing
@@ -890,12 +910,12 @@ these semantics are correct.
 
 
 
-\subsection{Nested Mutable Cells}
+\subsubsection{Nested Mutable Cells}
 
 
 
 
-\subsection{Functional Fragment}
+\subsection{Functional Fragment / Usability}
 
 Functional/immutable programs make use of sharing. For functional Rust
 programs it may be necessary to \passthrough{\lstinline!Clone::clone!}

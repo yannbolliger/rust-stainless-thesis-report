@@ -1,30 +1,36 @@
+The Rust-Stainless tool is developed as a Rust open source software
+project.\footnote{\url{https://github.com/epfl-lara/rust-stainless/}} It
+contains approximately 12K lines of Rust code and over 70 files or 3K lines Rust
+code test examples. Most features described here are available on the
+\lstinline!master! branch, except for the mutability translation that can be
+found on the \lstinline!mutable-cells!
+branch.\footnote{\url{https://github.com/epfl-lara/rust-stainless/pull/164}}
+
 \section{Background}
 
 \subsection{Rust Compiler}
 
-Our tool translates Rust code to Stainless. To make this manageable and minimise
-the amount of work the translation needs to do, we heavily rely on the Rust
-compiler \cite{rustc-guide}, \passthrough{\lstinline!rustc!}. Normally, the
-compiler would take Rust source code as input and produce an executable binary.
-This process involves multiple phases in each of which the high-level input
-source is transformed or \emph{lowered} into a more low-level representation.
-We'll continue by giving a brief overview of the compile process.
+To make the translation of Rust code manageable and minimise the amount of
+busy-work the tool needs to do, it heavily relies on the Rust compiler
+\cite{rustc-guide}, \passthrough{\lstinline!rustc!}. The compiler takes Rust
+source code as input and produces an executable binary. This process involves
+multiple phases in each of which the high-level input source is transformed or
+\emph{lowered} into a more low-level representation. We will proceed by giving a
+brief overview of the compilation process.
 
-The Rust compiler always operates at the level of a single crate. That
-is, each crate is compiled separately and maybe linked to other crates
-only after compilation. This means that the \emph{intermediate
-representations} like the HIR described afterwards are only available
-for items of the current crate. The exception is for some metadata of
-public items like function signatures that need to be accessible across
-crates.
+The Rust compiler always operates on a single crate. That is, each crate is
+compiled separately and maybe linked to other crates only after compilation.
+This means that the \emph{intermediate representations} described afterwards are
+only available for items of the current crate. The exception is for some
+metadata of public items like function signatures that need to be accessible
+across crates.
 
-The first two phases of the compile process are concerned with
-transforming the input source into a token stream -- lexing -- and then
-into an \emph{abstract syntax tree (AST)} -- parsing. First syntactical
-validations, name resolutions and macro expansion are performed on the
-AST. While the AST is already a representation of the program, it still
-maps directly to the source code and can be seen as a data
-representation of the source text.
+The first two compilation phases are concerned with transforming the input text
+source into a token stream -- lexing -- and then into an \emph{abstract syntax
+tree (AST)} -- parsing. First syntactical validations, name resolutions and
+macro expansion are performed on the AST. While the AST is already a
+representation of the program, it still maps directly to the source code and can
+be seen as a data structure representation of the source text.
 
 The first intermediate representation (IR) constructed from the AST is
 the \emph{high-level IR (HIR)}. This is the first IR in that it contains
@@ -175,27 +181,33 @@ If all the THIR can be translated to Stainless AST without errors,
 i.e.~there are no unsupported features in the program, the AST is
 serialised to the custom binary format that is used by Stainless'
 caching mechanism. At this point, the program consists of a list of
-functions, a list of ADTs and a list of classes.
+functions, a list of ADTs and a list of classes (\RefCode{lst:stainless-trees}).
 
-\begin{lstlisting}[language=Scala]
+\begin{lstlisting}[
+  language=Scala,
+  label={lst:stainless-trees},
+  caption={Extracted Stainless ADTs and functions, printed as code.}
+]
 sealed case class A(_0: MutCell[Int])
 sealed case class MutCell[T @mutable]((value: T @mutable) @var)
-@pure
-def f(a: A): A = {
+
+@pure def f(a: A): A = {
   freshCopy(A(MutCell[Int](a._0.value * a._0.value)))
 } ensuring {
   (ret: A) => ret._0.value >= 0
 }
 \end{lstlisting}
 
-Either the user specified to export the AST in which case the binary
-format is simply written to a file, or the Stainless backend is started.
-Rust-Stainless spawns a subprocess with the
-\passthrough{\lstinline!Noxt-Frontend!} of Stainless and communicates
-with it via standard input and output. The subprocess reads the AST from
-a temporary file, performs some minor transformation and passes it
-through the verification pipeline. In the end, it reports back the
-results in JSON format such that Rust-Stainless can print them.
+Either the user specified to export the AST in which case the binary format is
+simply written to a file, or the Stainless backend is started. Rust-Stainless
+spawns a subprocess with the \passthrough{\lstinline!Noxt-Frontend!} of
+Stainless and communicates with it via standard input and output. The subprocess
+reads the AST from a temporary file, performs some minor transformation and
+passes it through the verification pipeline. In the end, it reports back the
+results in JSON format such that Rust-Stainless can print them. In the case of
+the example, Stainless tells us that there is a problem: the multiplication on
+line 5 of \RefCode{lst:stainless-trees} could overflow and therefore, the
+post-condition does not hold.
 
 \section{Limitations}
 \label{impl-limitations}
