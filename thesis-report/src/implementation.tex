@@ -1,6 +1,6 @@
 \section{Background}
 
-\subsection{Rust compiler}
+\subsection{Rust Compiler}
 
 Our tool translates Rust code to Stainless. To make this manageable and minimise
 the amount of work the translation needs to do, we heavily rely on the Rust
@@ -52,8 +52,6 @@ the assembly code.
 
 \subsection{Design}
 
-\subsubsection{Components}
-
 The Rust-Stainless verification system consists of multiple components,
 most of which are implemented as their own Rust crate. Each component
 modularly fulfils a step in the overarching goal of taking Rust code,
@@ -97,7 +95,7 @@ extracting trees from the Scala compiler output.
 \TODO{diagram for this}
 \end{quote}
 
-\subsubsection{Pipeline}
+\subsection{Pipeline}
 
 Knowing the system's components, we can trace the path of an exemplary
 program through the pipeline in more detail. This will allow us to

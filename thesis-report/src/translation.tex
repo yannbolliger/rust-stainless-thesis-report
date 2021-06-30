@@ -24,7 +24,7 @@ the program in which a variable is live is called its \emph{lifetime}.
 The concept of \emph{liveness} is important in Rust as we will see
 because it is central to the analysis of reference and borrow checking.
 
-\subsection{Value categories}
+\subsection{Value Categories}
 
 In programming languages that expose memory management to the programmer
 like C and Rust, one needs to distinguish between different \emph{value
@@ -77,7 +77,7 @@ of assignments and as operands of mutable borrows. The consequence is
 that any field of any struct in Rust is \emph{possibly} mutable
 depending on the binding of that instance.
 
-\subsection{Owning \& referencing data}
+\subsection{Owning and Referencing Data}
 
 \subsubsection{Ownership}
 
@@ -175,7 +175,7 @@ for statically building a proof that data in memory is either
 \emph{collectively shared}, but not both.
 \end{quote}
 
-\subsection{Rust compared to Scala}
+\subsection{Rust Compared to Scala}
 
 \subsubsection{Mutability}
 
@@ -562,7 +562,7 @@ More formally, we examine the three ways in which data can be accessed
 in Rust to argue that our translation results in correct Scala runtime
 semantics.
 
-\paragraph{By value}
+\subsubsection{By value}
 \label{sec:correctness-by-value}
 
 If data is \emph{used} by value in Rust, it transfers ownership to the
@@ -611,7 +611,7 @@ The above holds for tuples, arrays and user-defined
 copyable types like raw pointers and function pointers are not supported
 by the translation nor our extraction implementation.
 
-\paragraph{By reference}
+\subsubsection{By reference}
 
 The counterpart of \emph{using} data and transferring its ownership is
 to take references to places. Our translation does that by using the
@@ -827,7 +827,7 @@ keep the overall correctness guarantees. For more details on the implementation,
 please refer to \RefChapter{implementation} or the code
 itself.\footnote{\url{https://github.com/epfl-lara/rust-stainless/pull/164}}
 
-\subsection{Immutable bindings and references}
+\subsection{Immutable Bindings and References}
 
 The most important optimisation in the implementation is that immutable bindings
 (local variables, function parameters) are not wrapped in mutable cells.
@@ -848,7 +848,7 @@ instead of references, even if the values get copied at some points, as we have
 already shown in \RefSec{sec:correctness-by-value}. Therefore, it is correct to
 erase shared references and use their referred value directly.
 
-\subsection{Preventing aliasing}
+\subsection{Preventing Aliasing}
 
 We have already seen how our two theoretical operators \lstinline!move! and
 \lstinline!copy! are used to emit code that complies with Stainless' aliasing
@@ -895,7 +895,7 @@ these semantics are correct.
 
 
 
-\subsection{Functional fragment}
+\subsection{Functional Fragment}
 
 Functional/immutable programs make use of sharing. For functional Rust
 programs it may be necessary to \passthrough{\lstinline!Clone::clone!}
