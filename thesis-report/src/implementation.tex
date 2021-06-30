@@ -122,8 +122,10 @@ fn f(a: A) -> A {
 In \RefCode{lst:example}, the Stainless library is added as an external crate
 and then imported such that the post-condition specification attribute
 \passthrough{\lstinline!\#[post()]!} is available. The attribute is implemented
-as a procedural macro \TODO{footnote or cite} and will be expanded to a closure
-inside the function (\RefCode{lst:example2}).
+as a procedural macro\footnote{Procedural macros invoke user-provided code at
+compilation-time and hence, allow for more complex transformations of the AST
+inside a macro. \cite[section "Procedural Macros"]{rustref}} and will be
+expanded to a closure inside the function (\RefCode{lst:example2}).
 
 \begin{lstlisting}[
   language=Rust,
