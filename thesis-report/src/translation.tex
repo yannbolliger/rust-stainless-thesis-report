@@ -11,24 +11,45 @@ translation together with the current state of the Stainless verifier backend.
 
 
 \section{Background}
-We start by introducing some programming language concepts more or less specific
-to Rust that will be needed to gather the subtleties of our translation.
+We start by introducing some programming language and compiler concepts that
+will be needed to gather the subtleties of our translation. Some of the concepts
+are general and apply  to many languages, nonetheless we present all of them in
+the context of Rust and its compiler.
 
 \subsection{Liveness}
 
-A variable is said to be \emph{live} if it holds a value that may be
-used at any future point of the program.\cite{wiki:live-vars}
-Otherwise, that variable is said to be \emph{dead}. This is for example
-the case if the variable is reassigned before the next read. The part of
-the program in which a variable is live is called its \emph{lifetime}.
-The concept of \emph{liveness} is important in Rust as we will see
-because it is central to the analysis of reference and borrow checking.
+\emph{Liveness} is a general concept in programming languages and can be
+determined by a \emph{data-flow analysis}. In Rust, the concept is particularly
+important because it is central to the analysis of borrow checking. As liveness
+applies to variables, we first need to know the defintion of variables in
+Rust:
+
+\begin{quote}
+A variable is a component of a stack frame, either a named function parameter,
+an anonymous temporary, or a named local variable. \cite[section
+"Variables"]{rustref}
+\end{quote}
+
+A variable is said to be \emph{live} if it holds a value that may be used at any
+future point of the program \cite{wiki:live-vars}. Otherwise, that variable is
+said to be \emph{dead}. This is for example the case if the variable is
+reassigned before the next read. The part of the program in which a variable is
+live is called its \emph{lifetime}. The same applies to references in Rust, a
+reference is live if it will be used at any a future point of all possible
+execution paths.
+
+Fields are not considered variables in Rust, rather they are a part of the
+variable their corresponding struct is bound to. Hence, fields inherit the
+liveness of their struct's variable unless they are themselves bound to a local
+variable e.g. via a pattern match.
+
+
 
 \subsection{Value Categories}
 
 In programming languages that expose memory management to the programmer
 like C and Rust, one needs to distinguish between different \emph{value
-categories} of a variable: \cite{wiki:lvalues}
+categories} of a variable:
 
 \begin{itemize}
 \tightlist
@@ -39,14 +60,14 @@ categories} of a variable: \cite{wiki:lvalues}
   the left-hand side of an assignment.
 \item
   \emph{rvalues} are expressions or temporary values that do not
-  persist. They are on the right-hand side of an assignment.
+  persist. They are on the right-hand side of an assignment \cite{wiki:lvalues}.
 \end{itemize}
 
 These two terms have been used in Rust but were replaced by \emph{place
-expressions} and \emph{value expressions}. Value expressions represent
-actual values and are defined by exclusion from place expressions. Place
-expressions evaluate to a \emph{place} in Rust which is essentially a
-memory location.~\cite{rustref}
+expressions} and \emph{value expressions}. Value expressions represent actual
+values and are defined by exclusion from place expressions. Place expressions
+evaluate to a \emph{place} which is essentially a memory
+location~\cite{rustref}.
 
 \begin{quote}
 {[}Place{]} expressions are paths which refer to local variables,
@@ -690,16 +711,16 @@ may contain \lstinline!var! fields or type parameters marked with
   another argument.
 \item
   More generally, ``it is forbidden to assign a mutable variable to a
-  new identifier.'' \cite[p.~59]{regb}
+  new identifier'' \cite[p.~59]{regb}.
 \item
   And lastly, ``a function cannot return an object that shares memory
-  locations with one of its parameters'' \cite[p.~59]{regb}
+  locations with one of its parameters'' \cite[p.~59]{regb}.
 \end{itemize}
 
 As our translation uses mutable cells everywhere, virtually all
 resulting types are mutable and fall under these restrictions. On the
 other hand, the motivation of Stainless' aliasing restrictions is to
-make its imperative code elimination phase work. \cite{regb} The
+make its imperative code elimination phase work \cite{regb}. The
 transformation relies on the fact, that there is only a single path to a
 mutable object, so changes to the object are correctly detected when the
 path is used. However, the restrictions are quite severe and there are
