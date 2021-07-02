@@ -1,10 +1,19 @@
 The Rust-Stainless tool is developed as a Rust open source software
-project.\footnote{\url{https://github.com/epfl-lara/rust-stainless/}} It
-contains approximately 12K lines of Rust code and over 70 files or 3K lines Rust
-code test examples. Most features described here are available on the
+project.\footnote{\url{https://github.com/epfl-lara/rust-stainless/}} It was
+created by Georg Schmid to explore a new frontend to Stainless for the Rust
+language. This thesis project substantially extends the fragment of Rust code
+that the tool supports. With the thesis' completion, the source repository
+contains approximately 12K lines of Rust code and over 70 files or 3K lines of
+Rust test examples. Most features described here are available on the
 \lstinline!master! branch, except for the mutability translation that can be
 found on the \lstinline!mutable-cells!
 branch.\footnote{\url{https://github.com/epfl-lara/rust-stainless/pull/164}}
+
+Before presenting the design of the tool and some details of its implementation,
+we provide some  background on the Rust compiler and its phases. Then we will
+see what language features the tool was already capable of extracting before
+this thesis project and what new features have been introduced.
+
 
 \section{Background}
 
@@ -208,6 +217,223 @@ results in JSON format such that Rust-Stainless can print them. In the case of
 the example, Stainless tells us that there is a problem: the multiplication on
 line 5 of \RefCode{lst:stainless-trees} could overflow and therefore, the
 post-condition does not hold.
+
+
+
+\section{Extraction}
+
+\subsection{Supported Rust features}
+
+\subsubsection{Existing features}
+
+The initial fragment of the Rust language that the tool could extract
+and translate underlay strict restrictions: all code needed to be
+functional, immutable and the only allowed side-effect was
+\passthrough{\lstinline"panic!"}. References, heap allocation with boxes
+and with it recursive data types were impossible.
+
+Apart from that, the majority of the language was already supported,
+i.e.~most of the control flow syntax, top-level functions with bodies,
+integer and boolean expressions, string literals, pattern matching, type
+parameters, generics, etc. \emph{Algebraic data types (ADTs)} were
+supported, including tuples (without pattern matching) and generics.
+
+Function specifications (specs), that is pre- and postconditions, could
+be stated with the two attributes from the
+\passthrough{\lstinline!libstainless!} crate:
+\passthrough{\lstinline!pre!} and \passthrough{\lstinline!post!}. The
+argument of a spec is a regular Rust expression that needs to type and
+borrow check, but it must have no effect on any variables of the
+function body.
+
+In the absence of references, the borrow checking of spec expressions
+posed a problem because oftentimes the expression would consume a
+function parameter of moved type multiple times which does not borrow
+check. As a work-around, one could add multiple specs of the same kind
+to a function which is equivalent to multiple
+\passthrough{\lstinline!\&\&!}-concatenated expressions. With all that,
+an example of supported and verified Rust code is the following:
+
+\begin{lstlisting}[language=Rust]
+pub fn i32_ops(x: i32, y: i32) {
+  assert!(x + y == 2 * x);
+  if x >= 0 && x < 1<<30 {
+    assert!(x == (x + x) / 2);
+  }
+}
+
+enum Maybe<T> {
+  Nothing,
+  Just { value: T }
+}
+
+fn get_or<T>(maybe: Maybe<T>, default: T) -> T {
+  match maybe {
+    Maybe::Nothing => default,
+    Maybe::Just { value } => value,
+  }
+}
+
+#[pre(x >= 0)]
+#[pre(x < 10)]
+#[post(ret >= 0)]
+pub fn fact(x: i32) -> i32 {
+  if x <= 0 { 1 }
+  else { fact(x - 1) * x }
+}
+\end{lstlisting}
+
+\subsubsection{New features}
+
+We turn to give an overview of all the language features that were added
+to the extraction in the course of this thesis project except for the
+mutability which has been introduced in \RefChapter{translation}. The
+features described here have been merged to the
+\passthrough{\lstinline!master!} branch of the project by a series of
+pull requests. You can find more implementation details about each
+feature in said pull requests.
+
+\paragraph{Syntactical and Notational Improvements}
+
+Support was added for:
+
+\begin{itemize}
+\item
+  \passthrough{\lstinline!else if!} expressions,
+\item
+  \passthrough{\lstinline!let!} bindings with a user-specified type
+  annotation, \passthrough{\lstinline!let t: u16 = 1;!},
+\item
+  pattern matching on tuples,
+\item
+  accessing tuple struct fields by their numerical identifier,
+  \passthrough{\lstinline!A(2, 3).0!},
+\item
+  usage of the \passthrough{\lstinline!return!} keyword at most points
+  of a function (but not in if conditions and guards),
+\item
+  \passthrough{\lstinline!usize!} and \passthrough{\lstinline!isize!}
+  integer types that have the size of a pointer on the targeted
+  platform,
+\item
+  \emph{struct update syntax,} a short-hand notation for creating a
+  struct from an existing one,
+
+\begin{lstlisting}[language=Rust]
+struct A { a: i32, b: bool, c: char }
+let x: A = A { a: 123, b: true, c: 'c' };
+let y: A = A { b: false, ..x }; // copies `x.b`, `x.c`
+\end{lstlisting}
+\item
+  crate local modules and imports, which includes the ability of
+  splitting up a crate into multiple files, and finally,
+\item
+  panics in expression locations like an arm of a pattern match.
+
+\begin{lstlisting}[language=Rust]
+match Option::Some(123) {
+  Option::Some(x) => x,
+  Option::None => panic!("no value"),
+}
+\end{lstlisting}
+\end{itemize}
+
+\paragraph{Immutable References and Heap Allocation}
+
+It is now possible to immutably borrow places, pass immutable references
+around and allocate data on the heap with
+\passthrough{\lstinline!Box::new!}. Although already presented in
+\RefChapter{translation}, we mention the feature here because it exists
+independently of the mutability translation. This enables recursive data
+types like the typical, functional linked-list.
+
+\begin{lstlisting}[language=Rust]
+pub enum List<T> {
+  Nil,
+  Cons(T, Box<List<T>>),
+}
+\end{lstlisting}
+
+Additionally, this eases the problem of borrow-checking spec expressions
+because expressions that only read data, like we assume most
+specifications do, can now take a reference instead of consuming the
+data.
+
+\paragraph{Measure attribute}
+
+Recursive proofs in Stainless often require the programmer to state the
+induction variable with a \passthrough{\lstinline!decreases!} call. This
+helps Stainless infer the so called \emph{measure} of the proof, with
+which it checks termination. The same feature was introduced as a new
+spec attribute which enables verification of recursive functions.
+
+\begin{lstlisting}[
+  language=Rust,
+  caption={Measure attribute.}
+]
+#[measure(l)]
+fn size<T>(l: &List<T>) -> u32 {
+  match l {
+    List::Nil => 0,
+    List::Cons(_, tail) => 1 + size(tail),
+  }
+}
+\end{lstlisting}
+
+\paragraph{Stainless library}
+
+As explained above, the \passthrough{\lstinline!libstainless!} crate is
+exposed to the programmer and contains helpers for specifying proofs and
+conditions. This is the equivalent of the
+\passthrough{\lstinline!stainless!} package in Scala. In addition to the
+pre-, post- and measure attributes the
+\passthrough{\lstinline!libstainless!} now offers an immutable, infinite
+set \passthrough{\lstinline!stainless::Set<T>!} and map
+\passthrough{\lstinline!stainless::Map<K, V>!} implementation.
+
+In extraction and verification, both of these types are translated to
+the Stainless built-in infinite set and map type. Hence, they are backed
+and well-understood by Stainless which enables their utility in proofs.
+At runtime of the verified program however, the collections are backed
+with a runnable implementation that relies on the
+\passthrough{\lstinline!im!} crate for the immutable set and map
+implementations. The Rust interface of the collections was designed so
+as to resemble the \passthrough{\lstinline!std::collections::HashSet!}
+and \passthrough{\lstinline!HashMap!} as closely as possible.
+
+\begin{lstlisting}[
+  language=Rust,
+  caption={The interface of the Stainless collections in Rust.}
+]
+Set<T> {
+  fn new() -> Self;
+  fn singleton(t: T) -> Self;
+  fn insert(&self, t: T) -> Self;
+  fn contains(&self, t: &T) -> bool;
+  fn union(self, other: Set<T>) -> Self;
+  fn intersection(self, other: Set<T>) -> Self;
+  fn difference(self, other: Set<T>) -> Self;
+  fn is_subset(&self, other: &Set<T>) -> bool;
+}
+Map<K, V> {
+  fn new() -> Self;
+  fn get(&self, key: &K) -> Option<&V>;
+  fn get_or<'a>(&'a self, key: &K, elze: &'a V);
+  /// Panics if the key is not in the map.
+  fn index(&self, key: &K) -> &V;
+  fn contains_key(&self, key: &K) -> bool;
+  fn insert(&self, key: K, val: V) -> Self;
+  fn remove(&self, key: &K) -> Self;
+}
+\end{lstlisting}
+
+Furthermore, the library provides a helper function
+\passthrough{\lstinline!implies!} that let's one write the logical
+implication $p \implies q \equiv \neg{p} \land q$ over boolean expressions.
+
+
+
+
 
 \section{Limitations}
 \label{impl-limitations}

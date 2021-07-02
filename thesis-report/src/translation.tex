@@ -245,12 +245,13 @@ detected at extraction of the code and abort the translation.
 \section{Translation}
 
 \subsection{General Translation}
+\label{sec:translation}
 
 The goal of our translation is to bridge the gaps between Rust's and
 Scala's memory model -- making places accessible in the program and
 allowing mutability of possibly all fields of structs. To achieve the
 first one and bring the ability of manipulating references to Scala, we
-introduce a special wrapper ADT, the mutable cell:
+introduce a special wrapper case class, the mutable cell:
 
 \begin{lstlisting}[language=Scala, style=short]
 case class MutCell[T](var value: t)
@@ -274,9 +275,10 @@ variables which is needed for both mutable and immutable variables. This
 approach also enables us to create references to data of primitive types
 like integers, something that is impossible directly in Scala.
 
-Likewise, all ADT and tuple fields are mutable cells with the type of
-the original field as the type argument of the cell. Thereby, we achieve
-our second goal from above -- all fields are \emph{possibly} mutable.
+Likewise, all \lstinline!struct!, \lstinline!enum!, and tuple fields are mutable
+cells with the type of the original field as the type argument of the cell.
+Thereby, we achieve our second goal from above -- all fields are \emph{possibly}
+mutable.
 
 \begin{lstlisting}[language=Rust, caption=Some example Rust code.]
 struct A<T> { a: T, b: i32 }
