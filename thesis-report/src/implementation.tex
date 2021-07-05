@@ -432,6 +432,192 @@ Furthermore, the library provides a helper function
 implication $p \implies q \equiv \neg{p} \land q$ over boolean expressions.
 
 
+\paragraph{External and Synthesised ADTs}
+
+Internally, the \lstinline!Map<K, V>! of the Stainless crate relies on
+the \passthrough{\lstinline!MutableMap!} of Scala Stainless with a value
+type of \passthrough{\lstinline!Option[V]!}. To perform that
+translation, the extraction needs to create trees of the
+\passthrough{\lstinline!Option!} type even if the
+\passthrough{\lstinline!std::option::Option!} doesn't occur in the
+program. Therefore, Rust-Stainless can now synthesise values and types
+for certain specific ADTs: the \passthrough{\lstinline!Option!}, tuples
+and mutable cells as described in \RefSec{sec:translation}.
+
+Related to the above, the frontend also supports extraction of
+crate-external ADTs like \passthrough{\lstinline!Option!} and
+\passthrough{\lstinline!std::result::Result!}. This means, the
+programmer can use the standard structures and they will be correctly
+translated, provided that no methods on these types are used. Other than
+ADT definitions that are available across crates, function bodies only
+live in the HIR which is only ever available for the currently compiled
+crate.
+
+\paragraph{Implementation Blocks, Traits and Laws}
+
+Methods on types are defined with \passthrough{\lstinline!impl!} blocks
+in Rust. There can be many such blocks for a certain type.
+Implementation blocks either just add methods on a type or they
+\emph{implement a trait}, that is they provide implementations for all
+the methods specified by the trait for a given type,
+\passthrough{\lstinline!impl TraitX for TypeA!}. The blocks may be
+generic i.e.~add methods to all instantiations of a polymorphic type
+(example \passthrough{\lstinline!Option<T>!}) or they may be specific to
+a certain instantiation (\passthrough{\lstinline!List<i32>!}).
+
+\begin{lstlisting}[language=Rust, caption={Rust trait with two implementations.}]
+trait Equals {
+  fn equals(&self, x: &Self) -> bool;
+  fn not_equals(&self, x: &Self) -> bool { !self.equals(x) }
+}
+impl Equals for i32 {
+  fn equals(&self, y: &i32) -> bool { *self == *y }
+}
+impl<T: Equals> Equals for List<T> {
+  fn equals(&self, other: &List<T>) -> bool { ... }
+}
+// A regular method on the List type.
+impl<T> List<T> {
+  #[measure(self)]
+  pub fn size(&self) -> u32 { ... }
+}
+\end{lstlisting}
+
+The Rust compiler automatically and implicitly resolves which method to
+call for any given receiver in the code. If no suitable implementation
+is in scope, it signals an error. A similar but nonetheless different
+mechanism is achieved in Scala by means of type classes. In regular
+Scala, the resolution of type class methods and instances is done
+through the \emph{implicits mechanism} of Scala. In Stainless, this
+resolution has to be done manually, but it remains possible to translate
+the Rust semantics of traits and implementations to Stainless by means
+of type classes.
+
+\begin{lstlisting}[language=Scala, caption={Type class with implementations in Scala.}]
+abstract class Equals[T] {
+  def equals(x: T, y: T): Boolean
+  def notEquals(x: T, y: T): Boolean = !this.equals(x, y)
+}
+case object i32asEquals extends Equals[Int] {
+  def equals(x: Int, y: Int): Boolean = x == y
+}
+// The argument for this class has to be manually provided.
+case class ListasEquals[T](ev0: Equals[T]) extends Equals[List[T]] {
+  def equals(x: List[T], y: List[T]): Boolean = ??? // will call `ev0.equals`
+}
+\end{lstlisting}
+
+The largest addition, other than mutability, of this thesis project is
+support for the features just described: implementation blocks and
+traits with implementations by means of type classes. Rust-Stainless not
+only extracts type classes and objects from Rust traits, but it also
+infers which type class instance to call at each method call site.
+Moreover, one can specify contracts on traits and methods. Whether they
+live in an implementation block or are abstract trait items, methods can
+state all the specification attributes like regular functions (as an
+example take the post attributes on \passthrough{\lstinline!width!} and
+\passthrough{\lstinline!height!} of \RefCode{lst:liskov1}).
+Additionally, one can attach \emph{laws} to traits i.e.~algebraic
+properties on type classes that ensure that implementors hold the
+contract set by the type class \cite[section "Specifying Algebraic
+Properties"]{stainless-doc}. Stainless proves correctness of these laws
+for each implementation of the trait. \RefCode{lst:liskov1} shows an
+exemplary violation of the Liskov Substitution principle \cite{liskov}.
+
+\begin{lstlisting}[language=Rust, caption={Example trait with laws.}, label={lst:liskov1}]
+trait Rectangle {
+  #[post(ret > 0)]
+  fn width(&self) -> u32;
+  #[post(ret > 0)]
+  fn height(&self) -> u32;
+
+  fn set_width(&self, width: u32) -> Self;
+  fn set_height(&self, height: u32) -> Self;
+
+  #[law]
+  fn preserve_height(&self, any: u32) -> bool {
+    self.set_width(any).height() == self.height()
+  }
+  #[law]
+  fn preserve_width(&self, any: u32) -> bool {
+    self.set_height(any).width() == self.width()
+  }
+}
+\end{lstlisting}
+
+The trait defines four methods and states with two laws that a change to
+the width should not change the height and vice versa. Clearly, the
+following implementation of a rectangle holds these properties.
+
+\begin{lstlisting}[language=Rust, caption={Example implementation of the trait.}]
+struct Rect { width: u32, height: u32 }
+impl Rectangle for Rect {
+  fn width(&self) -> u32 { self.width }
+  fn height(&self) -> u32 { self.height }
+  fn set_width(&self, width: u32) -> Self {
+    Rect { width, height: self.height }
+  }
+  fn set_height(&self, height: u32) -> Self {
+    Rect { width: self.width, height }
+  }
+}
+\end{lstlisting}
+
+Without the laws, it would be tempting to add a square implementation.
+However, that implementation changes both dimensions at once --
+violating the laws. Stainless detects this, the square implementation
+fails verification, and thereby the violation is caught.
+
+\begin{lstlisting}[language=Rust, caption={Example implementation violating the laws.}]
+struct Square { width: u32 }
+impl Rectangle for Square {
+  fn width(&self) -> u32 { self.width }
+  fn height(&self) -> u32 { self.width }
+  fn set_width(&self, width: u32) -> Self {
+    Square { width }
+  }
+  fn set_height(&self, height: u32) -> Self {
+    Square { width: height }
+  }
+}
+\end{lstlisting}
+
+Polymorphic type parameters can be bounded in Rust by trait bounds. For example,
+\lstinline!T: Equals! in \RefCode{lst:poly-bound} states that any \lstinline!T!
+admissible to the function (in other cases the implementation block) needs to
+implement the \passthrough{\lstinline!trait Equals!},
+i.e.~\lstinline!impl Equals for T! needs to be available. This pattern
+corresponds to the \emph{evidence parameter} pattern in Scala, with which the
+caller proves that the instantiated type satisfies the given constraint.
+Rust-Stainless is capable of extracting such trait bounds from top-level
+functions, trait implementations, and regular implementation blocks. It
+translates them to evidence arguments in Scala as shows \RefCode{lst:ev-params2}.
+
+\begin{lstlisting}[
+  language=Rust,
+  caption={Polymorphic function with a trait bound.},
+  label=lst:poly-bound
+]
+#[post(ret > 0)]
+pub fn fn_with_bound_and_spec<T: Equals>(x: &T, y: &T) -> i32 {
+  if x.eq(y) { 123 } else { 456 }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[
+  language=Scala,
+  caption={Translation of the trait bound as evidence parameter.},
+  label=lst:ev-params2
+]
+def fn_with_bound_and_spec(x: T, y: T, ev0: Equals[T]): Int = {
+  if (ev0.eq(x, y)) 123 else 456
+} ensures { _ > 0}
+\end{lstlisting}
+
+\begin{quote}
+\TODO{What about the fixes on the Stainless side?}
+\end{quote}
+
 
 
 
