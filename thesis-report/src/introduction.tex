@@ -1,0 +1,104 @@
+Everybody who has ever written a computer program knows, it never runs
+correctly at the first try. Writing correct software is a hard task, yet
+software dominates our lives the longer the more. While finding bugs in
+a student software project may be time-consuming but harmless, there are
+countless places where logical errors and worse, security bugs cannot be
+tolerated. These are usually systems where failure has too high of a
+cost in terms of money or even human safety, think a railway control
+system. Software errors are also intolerable in systems where
+\emph{upgrading} the software is costly or impossible like embedded
+systems or satellites.
+
+One type of system that combines both of the above are blockchains that power
+decentralised cryptocurrencies. Bitcoin \cite{bitcoin} and Ethereum
+\cite{ethereum} have become very popular and are valued at incredible amounts of
+money reaching into the hundreds of billion dollars at the time of writing. The
+problem with upgrading such distributed systems is that a majority of the
+participating machines needs to reach a consensus about the upgrade. This makes
+upgrading the two former blockchains nearly impossible and even systems that
+were designed with upgrades in mind like the Cosmos network \cite{cosmos} wish
+to minimise the number of upgrades required, hence the need for correct
+(blockchain) software.
+
+A very strict approach on writing correct software is to use tools that
+mathematically proof the program correct, called \emph{formal
+verification}. The Stainless verification framework is such a tool for
+the Scala programming language. It enables the user to \_.
+
+However, blockchains are not usually implemented in Scala, but rather in C++, Go
+or Rust for performance reasons. While Go achieves high performance despite its
+\emph{garbage collector}, C++ and Rust leave memory management to the
+programmer. For C++ this is the primary source of bugs and security problems,
+Rust however guarantees memory-safety by introducing a new \emph{data ownership
+paradigm} that is enforced by its compiler's \emph{borrow checking} phase. For
+these reasons, Rust is well-suited for implementing highly performant, correct
+and safe blockchain systems. One such a system is the \emph{inter-blockchain
+communication
+protocol\footnote{\url{https://github.com/informalsystems/ibc-rs}}} developed by
+Informal Systems.\footnote{\url{https://informal.systems}} But even if Rust
+provides type safety and memory safety at compile time, this does not guarantee
+correctness.
+
+With the vision of combining the safety guarantees of Rust with much
+stronger correctness guarantees of Stainless we present the
+\emph{Rust-Stainless} verification tool created by Georg Schmid.
+Rust-Stainless\footnote{Pun not intended, but -- needless to say -- welcome.}
+is a frontend to Stainless capable of extracting a subset of the Rust
+language, translating it to a Scala subset and verifying it with the
+Stainless verifier. This thesis project substantially extends the
+fragment of Rust the tool can translate with features including
+mutability, references and type classes.
+
+
+\subsection{Stainless verifier}
+
+\begin{itemize}
+\tightlist
+\item
+  Support for FP
+\item
+  Support for mutability (\& limitations)
+\end{itemize}
+
+\subsection{Rust language}
+
+\begin{itemize}
+\tightlist
+\item
+  intro to Rust
+
+  \begin{itemize}
+  \tightlist
+  \item
+    \emph{abstract data types} ADT: \passthrough{\lstinline!enum!},
+    \passthrough{\lstinline!struct!} and tuples
+  \end{itemize}
+\end{itemize}
+
+\subsection{Goal \& Contributions}
+
+\begin{itemize}
+\tightlist
+\item
+  Main contributions of project
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Theoretical mutability translation
+  \item
+    Advance extraction/translation by a lot
+
+    \begin{itemize}
+    \tightlist
+    \item
+      What was possible at the start of the project
+    \item
+      What at the end?
+    \end{itemize}
+  \item
+    Fix bugs on Stainless side
+  \item
+    Bring user perspective to the project from Informal
+  \end{itemize}
+\end{itemize}
