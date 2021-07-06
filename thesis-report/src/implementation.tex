@@ -111,6 +111,7 @@ extracting trees from the Scala compiler output.
 \end{quote}
 
 \subsection{Pipeline}
+\label{sec:pipeline}
 
 Knowing the system's components, we can trace the path of an exemplary
 program through the pipeline in more detail. This will allow us to
@@ -493,7 +494,11 @@ resolution has to be done manually, but it remains possible to translate
 the Rust semantics of traits and implementations to Stainless by means
 of type classes.
 
-\begin{lstlisting}[language=Scala, caption={Type class with implementations in Scala.}]
+\begin{lstlisting}[
+  language=Scala,
+  caption={Type class with implementations in Scala.},
+  label=lst:equals-scala
+]
 abstract class Equals[T] {
   def equals(x: T, y: T): Boolean
   def notEquals(x: T, y: T): Boolean = !this.equals(x, y)
@@ -618,6 +623,234 @@ def fn_with_bound_and_spec(x: T, y: T, ev0: Equals[T]): Int = {
 \TODO{What about the fixes on the Stainless side?}
 \end{quote}
 
+
+
+\subsection{Implementation details}
+
+\subsubsection{Extraction overview}
+
+As we have seen in \RefSec{sec:pipeline}, the big majority of the work
+performed by Rust-Stainless happens in the extraction of the HIR to
+Stainless AST. We can now take a more detailed look at the most
+interesting phase of our tool. The phase is implemented in the
+\passthrough{\lstinline!stainless\_extraction!} crate and the
+entry-point is the function \passthrough{\lstinline!extract\_crate!},
+which -- as discussed -- processes the single current crate for which
+\passthrough{\lstinline!rustc!} provides the HIR.
+
+Before dealing with the user code in the crate, the extraction needs to
+register some specially treated items that we call \emph{standard
+items.} These are Rust language features like panic, standard library
+items like \passthrough{\lstinline!Box<T>!} and
+\passthrough{\lstinline!Option<T>!}, but also all types and methods of
+\passthrough{\lstinline!libstainless!} like
+\passthrough{\lstinline!Set<T>!} and \passthrough{\lstinline!get\_or!}.
+Extraction needs to know the identifiers (the
+\passthrough{\lstinline!DefId!}s) of those items in order to recognise
+them in user code and trigger their specialised extraction procedures.
+Initially, we only know the \emph{paths} of the items to detect e.g.
+\passthrough{\lstinline!stainless::Set::new!} but that does not suffice
+because \passthrough{\lstinline!rustc!} does not have an API to query
+items from other crates \emph{by path} at the time of writing. All the
+lookups are done by \passthrough{\lstinline!DefId!}. Therefore, the
+implementation has to enumerate all \passthrough{\lstinline!DefId!}s
+from the \passthrough{\lstinline!std!} and
+\passthrough{\lstinline!stainless!} crate, compare them by name to the
+desired items and register them if needed. This approach is clearly a
+brute-force work-around around the lack of by-path lookups in
+\passthrough{\lstinline!rustc!} but as the number of crates to take into
+consideration is fixed and low, the lookup time is constant and
+extraction time is still low.
+
+With standard item detection done, the tool can now turn to user code.
+The main procedure of extraction enumerates all top-level
+items\footnote{\url{https://doc.rust-lang.org/nightly/nightly-rustc/rustc_hir/hir/enum.ItemKind.html}}
+of the crate like functions, structs, enums and traits. For enums and
+structs, the phase directly proceeds and translates the HIR definition
+to a Stainless ADT definition. Because enumeration order is undefined,
+all the top-level methods of the extraction follow the same idea:
+\passthrough{\lstinline!get\_or\_extract!}. That is, the first time an
+item is visited, it is extracted and its definition is stored in state,
+then on subsequent encounters the definition is simply retrieved.
+
+For functions, the extraction distinguishes between external, abstract
+and local functions but not between methods and functions because in the
+HIR the two are the same (with the first parameter of methods being the
+receiver). External and abstract functions are only extracted from the
+HIR as they only have a signature. For local functions, we query the
+body expression in THIR form from the compiler and extract it with the
+\passthrough{\lstinline!expr!} module. The
+\passthrough{\lstinline!extract\_expr!} method of that module takes a
+\passthrough{\lstinline!thir::Expr!} and returns a
+\passthrough{\lstinline!st::Expr!}, hence it is the entry-point of the
+actual translation.
+
+\subsubsection{Synthesisation}
+
+Multiple translations that Rust-Stainless performs rely on the ability
+to synthesise expressions of certain ADT types that do not necessarily
+occur in user code. For example for the Stainless map, we construct
+options (\passthrough{\lstinline!Some(v)!}), in other locations mutable
+cells and tuples e.g.~\passthrough{\lstinline!Tuple3(x, y, z)!}.
+Moreover, the fields of these ADTs also need to be available:
+\passthrough{\lstinline!tuple.\_0!} and
+\passthrough{\lstinline!cell.value!}.
+
+In implementing synthesisation, we observe a primary benefit of the
+\passthrough{\lstinline!get\_or\_extract!} pattern. For example, when
+some translation needs the option type, it triggers its synthesisation.
+But all synthesisation methods internally implement a
+\passthrough{\lstinline!get\_or\_create!} logic, i.e.~if the option type
+has already been either extracted from user code or synthesised by a
+former synthesisation call, it is simply reused and the demanded ADT
+expression can be built with its identifier. That way, we only
+synthesise ADT definitions on demand and we never run the risk of
+extracting one definition of option and synthesising a second one. The
+latter also shows why it is crucial to register and recognise standard
+items.
+
+\subsubsection{Type Class Extraction}
+
+Type class extraction introduces a distinction between regular
+\passthrough{\lstinline!impl!} blocks for which we simply extract the
+methods as top-level functions, and
+\passthrough{\lstinline!impl TraitX for TypeA!} blocks that need to be
+extracted as type class implementations, i.e.~\emph{case classes} or
+\emph{case objects}. Of course, traits are extracted as \emph{abstract
+classes}.
+
+Internally, Rust represents
+\passthrough{\lstinline!impl TraitX for TypeA!} blocks with a
+\emph{trait bound} on the block
+i.e.~\passthrough{\lstinline!Self: TraitX!}, while Scala uses
+inheritance (\passthrough{\lstinline!extends!}). Furthermore, Rust
+traits are implemented on the implicit \passthrough{\lstinline!Self!}
+type parameter, whereas Scala type classes always have at least one type
+parameter representing the type for which the class is implemented.
+Fortunately, \passthrough{\lstinline!rustc!} internally treats the
+\passthrough{\lstinline!Self!} like a regular type parameter, therefore
+it internally already has the Scala form. As \RefCode{lst:clstranslation}
+shows, the trait bounds on type parameters of implementations are
+converted to evidence parameters. If an implementation has no type
+parameter, it can be extracted as a ground case object.
+
+\noindent
+\begin{minipage}[t]{.49\textwidth}
+\begin{lstlisting}[
+  language=Rust,
+  showlines=true,
+  caption={Examples of traits and implementations with and without trait bounds.}
+]
+trait Equals { ... }
+
+trait Other<X, Y> { ... }
+
+impl Equals for i32 { ... }
+
+impl<T: Equals> Equals for List<T>
+  { ... }
+
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.49\textwidth}
+\begin{lstlisting}[
+  language=Scala,
+  caption={
+    Translation as type classes (\lstinline!abstract!) and implementations.
+    Trait bounds are translated as evidence parameters.},
+  label={lst:clstranslation}
+]
+abstract class Equals[Self] { ... }
+
+abstract class Other[Self, X, Y]
+  { ... }
+case object i32asEquals
+  extends Equals[Int] { ... }
+case class ListasEquals[T](
+  ev0: Equals[T]
+) extends Equals[List[T]] { ... }
+\end{lstlisting}
+\end{minipage}
+
+If there are classes, it is also necessary to distinguish \emph{function
+calls} from \emph{method calls}. This distinction is mostly achieved by
+adding flags like \passthrough{\lstinline!abstract!} and
+\passthrough{\lstinline!methodOf(i32asEquals)!} to methods. The
+challenge of method calls is to resolve the receiver instance they are
+called on. For example, \RefCode{lst:equals-scala} shows a call to
+\passthrough{\lstinline!this.equals!} inside the type class. In Rust,
+this is implicitly resolved but because our type class instances are
+only created in the extraction, the phase also has to resolve the
+receiver instances itself.
+
+Instance resolution takes a triple of class identifier, receiver type
+and type parameters, as well as the current surrounding class to resolve
+the receiver instance. For example, inside a type class, the
+\passthrough{\lstinline!this!} instance is accessible, inside classes
+with evidence parameters, the evidence instances are available and
+ground case objects are always in scope. As a last resort, instance
+resolution recursively checks whether it can create a new type class
+instance by providing it the required evidence arguments. This happens
+for example for \passthrough{\lstinline!List<i32>!}, which gets
+translated to
+\passthrough{\lstinline!ListasEquals[i32](i32asEquals).equals!} unless
+we are in the implementation of the class itself.
+
+\subsubsection{Spec Closure Encoding}
+
+In \RefSec{sec:pipeline} we already saw how our specification attributes
+on functions are desugared by the procedural macro of
+\passthrough{\lstinline!libstainless!} into an annotated closure nested
+inside the function (\RefCode{lst:example2}). The extraction phase
+recognises the closures by their attribute and translates them to
+Scala's \passthrough{\lstinline!require!},
+\passthrough{\lstinline!ensures!} and
+\passthrough{\lstinline!decreases!}. Stainless later checks on its own
+that the specification does not have any effects.
+
+The encoding with closures is the third spec encoding that we explored
+and implemented. It unifies the advantages of the two previous designs
+in that it works for \emph{all} kinds of functions, top-level,
+implementation methods and abstract or default trait methods, and that
+it can use type parameters of the original function. The first encoding
+desugared closures to inner functions in the original one. This served
+mainly to circumvent the borrow checker. The nested functions duplicated
+the parameters of their parent. In that way, new bindings were created
+without borrow interference with the actual parameters but with the same
+types and identifiers -- simple to extract to
+\passthrough{\lstinline!require!} and
+\passthrough{\lstinline!ensuring!}. The problem with that encoding was
+that it was neither able to use type parameters of the surrounding
+function, nor could it use the \passthrough{\lstinline!self!} parameter
+inside methods because neither are available to inner functions in Rust.
+Therefore, the second encoding was created only for methods in
+\passthrough{\lstinline!impl!} blocks. There, specs were desugared to
+sibling functions with a special name such that they could declare the
+\passthrough{\lstinline!self!} parameter. However, there were now two
+different encodings in use simultaneously and even the sibling functions
+fell short of accounting for spec attributes on methods in traits.
+
+To support specs on trait implementation methods, we needed to come back
+to a nested encoding because Rust does not allow additional items other
+than the specified methods in trait implementations. Nested closures
+would enable such an encoding and even allow to use surrounding type
+parameters at the cost of not being able to use the
+\passthrough{\lstinline!self!} parameter. Therefore, our encoding
+replaces \passthrough{\lstinline!self!} with a
+\passthrough{\lstinline!\_self: Self!} parameter on the closure which
+extraction will again correlate with the correct receiver.
+
+The last problem was that abstract trait methods do not have a body for
+adding a closure. A simple solution is to add a body with the spec
+closure and a panic to the method. Yet, that makes the method a default
+method which prevents the compiler of enforcing its implementation by
+all implementors -- something we did not want to sacrifice. We achieve
+the best of both worlds with conditional compilation. The spec closures
+are desugared with a \passthrough{\lstinline!cfg(stainless)!} attribute
+that makes them vanish on normal compilation, hence the compiler
+enforces implementation, but keeps them when the compiler is run with
+the \passthrough{\lstinline!stainless!} flag which happens at
+verification.
 
 
 
