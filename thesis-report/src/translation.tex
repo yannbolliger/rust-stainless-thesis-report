@@ -113,7 +113,7 @@ passed to a function, it will be \emph{moved out} of that binding. The
 binding is deinitialised and can never be reused, we say it behaves
 linearly \cite{oxide}. One can also see moving out as \emph{destructive
 read} \cite{islands-alias-protection} where the binding is dead after the read.
-In \RefCode{lst:move},
+In \autoref{lst:move},
 data is moved out of \passthrough{\lstinline!a!} and its
 ownership is transferred to \passthrough{\lstinline!b!}.
 
@@ -131,7 +131,7 @@ let b = a;
 One departure from these almost \emph{use once} \citep{use-once} variables are
 copyable types. Types that implement the \passthrough{\lstinline!Copy!} trait in
 Rust get copy semantics rather than move semantics. The compiler automatically
-implements this for primitive types (numeric types cf. \RefCode{lst:copy},
+implements this for primitive types (numeric types cf. \autoref{lst:copy},
 \passthrough{\lstinline!char!}, \passthrough{\lstinline!bool!}) but also shared
 references and tuples of copyable types \cite[section "Special
 types and traits"]{rustref}. When data of these types is used, it's implicitly
@@ -224,7 +224,7 @@ this value is just a reference to the object in the heap. This is very
 efficient for sharing immutable objects but retaining by-value
 semantics. But as a consequence, the by value passing of references
 closely resembles by reference passing if an object is mutable. The
-translation presented in \RefChapter{translation} will extensively exploit this fact.
+translation presented in \autoref{translation} will extensively exploit this fact.
 
 
 
@@ -544,7 +544,7 @@ i.e.~aliased state that is mutated, in the original program. It may seem
 that this is an unnecessarily strict assumption for our translation.
 But, Rust's ownership system is so fundamental to the language that it
 is impossible to define Rust's semantics without borrow checking
-\cite{krust}. Consider the \RefCode{lst:move-err}. Because
+\cite{krust}. Consider the \autoref{lst:move-err}. Because
 \passthrough{\lstinline!y!} moves out \passthrough{\lstinline!x!} on
 line 3, \passthrough{\lstinline!x!} can never be reused and it is not
 defined what \passthrough{\lstinline!x!} would evaluate to if the code
@@ -682,7 +682,7 @@ This section presents the changes made to the translation to reach compatibility
 with Stainless on a coarse-grained theoretical level. Like before, we will show
 that all the deviations from the general translation uphold the overall
 correctness. For more low-level implementation details and an overview of the
-entire system please refer to \RefChapter{implementation}.
+entire system please refer to \autoref{implementation}.
 
 
 
@@ -749,7 +749,7 @@ references and lastly, we \passthrough{\lstinline!move!} or
 blocks, unless they contain mutable references. The correctness of that
 approach follows from the same argument as the correctness of using
 \passthrough{\lstinline!move!} on moveable types and
-\passthrough{\lstinline!copy!} on copyable types (see \RefSec{sec:correctness-by-value}).
+\passthrough{\lstinline!copy!} on copyable types (see \autoref{sec:correctness-by-value}).
 
 To summarise, all types are \passthrough{\lstinline!move!}'d or
 \passthrough{\lstinline!copy!}'d when they could create an alias except
@@ -777,7 +777,7 @@ invalidating the original. By making the copy in a move, we avoid creating an
 alias to the source cell in the translation. But because the borrow checker
 guarantees that a moved out value is never used again, this unintentional alias
 will never be used and hence, does not matter for the correctness of the
-program. Recall \RefCode{lst:move-err} on line 3, the struct is moved out of
+program. Recall \autoref{lst:move-err} on line 3, the struct is moved out of
 \passthrough{\lstinline!x!} into \passthrough{\lstinline!y!}, that is without
 the \passthrough{\lstinline!move!} call an alias of
 \passthrough{\lstinline!x!}'s cell would be created. But the binding from
@@ -802,7 +802,7 @@ the identity and simply serves as a method to make verification work
 with a simple aliasing analysis.
 \end{quote}
 
-Consider \RefCode{lst:tuple-sharing}, the introduced sharing
+Consider \autoref{lst:tuple-sharing}, the introduced sharing
 i.e.~aliasing of the tuple object is fixed by adding the
 \passthrough{\lstinline!copy!} operator. But the aliasing only poses a
 problem because the tuple is later modified. If the tuple wasn't
@@ -844,7 +844,7 @@ return a new struct with the cloned fields. For copyable types, especially
 primitive types, the clone is trivially a bitwise copy like for
 \lstinline!Copy!.\footnote{\url{https://doc.rust-lang.org/std/clone/trait.Clone.html}}
 For shared references, we have already shown (see
-\RefSec{sec:correctness-by-value}) that copying them is equivalent to a deep
+\autoref{sec:correctness-by-value}) that copying them is equivalent to a deep
 copy of the referenced object. By a simple inductive argument, if all the
 field's \passthrough{\lstinline!Clone!} instances are equivalent to deep copies,
 then the struct's instance is equivalent to a deep copy as well. Hence, as long
@@ -888,14 +888,14 @@ data do we need the reference sharing in the translation to propagate changes
 back to the original binding. For immutable data, there are no changes in the
 first place. Secondly, it is safe to directly use actual immutable values
 instead of references, even if the values get copied at some points, as we have
-already shown in \RefSec{sec:correctness-by-value}. Therefore, it is correct to
+already shown in \autoref{sec:correctness-by-value}. Therefore, it is correct to
 erase shared references and use their referred value directly.
 
 \subsubsection{Preventing Aliasing}
 
 We have already seen how our two theoretical operators \lstinline!move! and
 \lstinline!copy! are used to emit code that complies with Stainless' aliasing
-restrictions (\RefSec{sec:aliasing-restrictions}). We have also argued that
+restrictions (\autoref{sec:aliasing-restrictions}). We have also argued that
 \lstinline!copy! \emph{must} perform a semantical deep copy, while
 \lstinline!move! \emph{may} do a deep copy but might also be the identity. For
 our Stainless-backed implementation, we use a special Stainless primitive to
@@ -921,7 +921,7 @@ not derive \lstinline!Clone! instances for types that are or contain mutable
 references.\footnote{\href{}{\texttt{\color{MidnightBlue}
 https://doc.rust-lang.org/std/clone/trait.Clone.html\#impl-Clone-121 }}}
 Therefore, it is sufficient to check our assumption from
-\RefSec{sec:clone-is-copy} to make sure that all types for which clone is
+\autoref{sec:clone-is-copy} to make sure that all types for which clone is
 translated will get a \lstinline!freshCopy! inserted.
 
 To summarise, we deeply copy some of the moves to prevent aliasing in the

@@ -133,13 +133,13 @@ fn f(a: A) -> A {
 }
 \end{lstlisting}
 
-In \RefCode{lst:example}, the Stainless library is added as an external crate
+In \autoref{lst:example}, the Stainless library is added as an external crate
 and then imported such that the post-condition specification attribute
 \passthrough{\lstinline!\#[post()]!} is available. The attribute is implemented
 as a procedural macro\footnote{Procedural macros invoke user-provided code at
 compilation-time and hence, allow for more complex transformations of the AST
 inside a macro \cite[section "Procedural Macros"]{rustref}.} and will be
-expanded to a closure inside the function (\RefCode{lst:example2}).
+expanded to a closure inside the function (\autoref{lst:example2}).
 
 \begin{lstlisting}[
   language=Rust,
@@ -160,20 +160,20 @@ otherwise the tool fails with the error given by
 \passthrough{\lstinline!rustc!}. In particular, the compiler does the lexing,
 parsing, macro expansion and IR construction. Secondly, the compiler type and
 borrow checks the program. This way, we achieve our strong assumption from
-\RefSec{correctness-claim} because Rust-Stainless only continues if all checks
+\autoref{correctness-claim} because Rust-Stainless only continues if all checks
 pass.
 
 Once analysis is complete, the extraction module is invoked on the HIR.
 As Rust's compile model prescribes that the HIR is only ever constructed
 for the current crate, our toll also only translates the current crate.
-We further examine that limitation of our implementation in \RefSec{impl-limitations}.
+We further examine that limitation of our implementation in \autoref{impl-limitations}.
 
 The extraction traverses all the \emph{items} of the crate, that is top-level
 functions, structs, enums, \passthrough{\lstinline!impl!} blocks and their
 methods as well as traits. It directly constructs Stainless definitions for
 datatypes. For function and method bodies, the extraction works on the THIR,
 which is guaranteed to exist as the type check passed. The body of our example
-function in THIR can be seen in \RefApp{apx:thir-example}.
+function in THIR can be seen in \autoref{apx:thir-example}.
 
 The HIR is very well suited for translation to Stainless AST because it is still
 in the form of an AST but all the type information is explicit and implicit
@@ -184,14 +184,14 @@ of the MIR is that lifetime resolution is performed on the MIR. Hence, in the
 THIR there is no way of knowing the exact point where a binding or reference
 ends its lifetime. This is a serious limitation if one needs the lifetimes in
 the translation, for example for some other encoding of mutability as explored
-in \RefSec{impl-limitations}.
+in \autoref{impl-limitations}.
 
 
 If all the THIR can be translated to Stainless AST without errors,
 i.e.~there are no unsupported features in the program, the AST is
 serialised to the custom binary format that is used by Stainless'
 caching mechanism. At this point, the program consists of a list of
-functions, a list of ADTs and a list of classes (\RefCode{lst:stainless-trees}).
+functions, a list of ADTs and a list of classes (\autoref{lst:stainless-trees}).
 
 \begin{lstlisting}[
   language=Scala,
@@ -216,7 +216,7 @@ reads the AST from a temporary file, performs some minor transformation and
 passes it through the verification pipeline. In the end, it reports back the
 results in JSON format such that Rust-Stainless can print them. In the case of
 the example, Stainless tells us that there is a problem: the multiplication on
-line 5 of \RefCode{lst:stainless-trees} could overflow and therefore, the
+line 5 of \autoref{lst:stainless-trees} could overflow and therefore, the
 post-condition does not hold.
 
 
@@ -224,6 +224,7 @@ post-condition does not hold.
 \section{Extraction}
 
 \subsection{Supported Rust features}
+\label{sec:supported-features}
 
 \subsubsection{Existing features}
 
@@ -288,7 +289,7 @@ pub fn fact(x: i32) -> i32 {
 
 We turn to give an overview of all the language features that were added
 to the extraction in the course of this thesis project except for the
-mutability which has been introduced in \RefChapter{translation}. The
+mutability which has been introduced in \autoref{translation}. The
 features described here have been merged to the
 \passthrough{\lstinline!master!} branch of the project by a series of
 pull requests. You can find more implementation details about each
@@ -344,7 +345,7 @@ match Option::Some(123) {
 It is now possible to immutably borrow places, pass immutable references
 around and allocate data on the heap with
 \passthrough{\lstinline!Box::new!}. Although already presented in
-\RefChapter{translation}, we mention the feature here because it exists
+\autoref{translation}, we mention the feature here because it exists
 independently of the mutability translation. This enables recursive data
 types like the typical, functional linked-list.
 
@@ -443,7 +444,7 @@ translation, the extraction needs to create trees of the
 \passthrough{\lstinline!std::option::Option!} doesn't occur in the
 program. Therefore, Rust-Stainless can now synthesise values and types
 for certain specific ADTs: the \passthrough{\lstinline!Option!}, tuples
-and mutable cells as described in \RefSec{sec:translation}.
+and mutable cells as described in \autoref{sec:translation}.
 
 Related to the above, the frontend also supports extraction of
 crate-external ADTs like \passthrough{\lstinline!Option!} and
@@ -521,12 +522,12 @@ Moreover, one can specify contracts on traits and methods. Whether they
 live in an implementation block or are abstract trait items, methods can
 state all the specification attributes like regular functions (as an
 example take the post attributes on \passthrough{\lstinline!width!} and
-\passthrough{\lstinline!height!} of \RefCode{lst:liskov1}).
+\passthrough{\lstinline!height!} of \autoref{lst:liskov1}).
 Additionally, one can attach \emph{laws} to traits i.e.~algebraic
 properties on type classes that ensure that implementors hold the
 contract set by the type class \cite[section "Specifying Algebraic
 Properties"]{stainless-doc}. Stainless proves correctness of these laws
-for each implementation of the trait. \RefCode{lst:liskov1} shows an
+for each implementation of the trait. \autoref{lst:liskov1} shows an
 exemplary violation of the Liskov Substitution principle \cite{liskov}.
 
 \begin{lstlisting}[language=Rust, caption={Example trait with laws.}, label={lst:liskov1}]
@@ -588,7 +589,7 @@ impl Rectangle for Square {
 \end{lstlisting}
 
 Polymorphic type parameters can be bounded in Rust by trait bounds. For example,
-\lstinline!T: Equals! in \RefCode{lst:poly-bound} states that any \lstinline!T!
+\lstinline!T: Equals! in \autoref{lst:poly-bound} states that any \lstinline!T!
 admissible to the function (in other cases the implementation block) needs to
 implement the \passthrough{\lstinline!trait Equals!},
 i.e.~\lstinline!impl Equals for T! needs to be available. This pattern
@@ -596,7 +597,7 @@ corresponds to the \emph{evidence parameter} pattern in Scala, with which the
 caller proves that the instantiated type satisfies the given constraint.
 Rust-Stainless is capable of extracting such trait bounds from top-level
 functions, trait implementations, and regular implementation blocks. It
-translates them to evidence arguments in Scala as shows \RefCode{lst:ev-params2}.
+translates them to evidence arguments in Scala as shows \autoref{lst:ev-params2}.
 
 \begin{lstlisting}[
   language=Rust,
@@ -629,7 +630,7 @@ def fn_with_bound_and_spec(x: T, y: T, ev0: Equals[T]): Int = {
 
 \subsubsection{Extraction overview}
 
-As we have seen in \RefSec{sec:pipeline}, the big majority of the work
+As we have seen in \autoref{sec:pipeline}, the big majority of the work
 performed by Rust-Stainless happens in the extraction of the HIR to
 Stainless AST. We can now take a more detailed look at the most
 interesting phase of our tool. The phase is implemented in the
@@ -729,7 +730,7 @@ type parameter, whereas Scala type classes always have at least one type
 parameter representing the type for which the class is implemented.
 Fortunately, \passthrough{\lstinline!rustc!} internally treats the
 \passthrough{\lstinline!Self!} like a regular type parameter, therefore
-it internally already has the Scala form. As \RefCode{lst:clstranslation}
+it internally already has the Scala form. As \autoref{lst:clstranslation}
 shows, the trait bounds on type parameters of implementations are
 converted to evidence parameters. If an implementation has no type
 parameter, it can be extracted as a ground case object.
@@ -777,7 +778,7 @@ calls} from \emph{method calls}. This distinction is mostly achieved by
 adding flags like \passthrough{\lstinline!abstract!} and
 \passthrough{\lstinline!methodOf(i32asEquals)!} to methods. The
 challenge of method calls is to resolve the receiver instance they are
-called on. For example, \RefCode{lst:equals-scala} shows a call to
+called on. For example, \autoref{lst:equals-scala} shows a call to
 \passthrough{\lstinline!this.equals!} inside the type class. In Rust,
 this is implicitly resolved but because our type class instances are
 only created in the extraction, the phase also has to resolve the
@@ -798,10 +799,10 @@ we are in the implementation of the class itself.
 
 \subsubsection{Spec Closure Encoding}
 
-In \RefSec{sec:pipeline} we already saw how our specification attributes
+In \autoref{sec:pipeline} we already saw how our specification attributes
 on functions are desugared by the procedural macro of
 \passthrough{\lstinline!libstainless!} into an annotated closure nested
-inside the function (\RefCode{lst:example2}). The extraction phase
+inside the function (\autoref{lst:example2}). The extraction phase
 recognises the closures by their attribute and translates them to
 Scala's \passthrough{\lstinline!require!},
 \passthrough{\lstinline!ensures!} and
