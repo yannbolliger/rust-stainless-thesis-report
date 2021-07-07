@@ -857,3 +857,190 @@ verification.
 
 \section{Limitations}
 \label{impl-limitations}
+
+\subsection{Unsupported Rust features}
+
+Language features not mentioned in \autoref{sec:supported-features} are
+not yet supported. However, not all language features are of the same
+importance. Here, we mention the ones that are required for our goal of
+verifying \emph{idiomatic} Rust code. The two very important Rust
+features not yet supported are closures and sequences. Besides that, we
+also don't support \emph{unsafe Rust}. This is a conscious decision as
+many of our translations rely on the assumption that only the
+\emph{safe} Rust is used.
+
+For closures, most of the infrastructure is already in place as closures
+are represented very similarly to functions in the compiler.
+Nonetheless, there are some difficulties. Closures can capture variables
+from the surrounding scope, which includes moving variables from the
+surrounding scope into the closure. This becomes very difficult to
+manage for Stainless if these variables are mutable
+\cite[section 3.4.3]{regb}. The second problem arises with higher-order
+functions that take closures as parameters. In Rust, to take a closure
+as an argument, the argument type is a type parameter with a trait bound
+like \passthrough{\lstinline!F: Fn(i32) -> i32!}. This polymorphism is
+harder to translate than directly specified lambda types like in Scala
+\passthrough{\lstinline!Int => Int!}.
+
+With sequences we mean vectors, arrays, iterators, but also loops. Implementing
+loops and even arrays should be feasible as these are already supported in
+Stainless \cite[section "Imperative"]{stainless-doc}. On the other hand,
+iterators and vectors are very difficult to translate because they are not
+inherent \emph{language} features but rather some of the most important but also
+complex items of the standard library.
+
+\paragraph{One Crate Limitation}
+
+For translating standard library items, we run into the limitation that
+is imposed by the one-crate-a-time compilation model of
+\passthrough{\lstinline!rustc!}. Our tool is currently not able to
+extract the code of standard library items because they are not part of
+the user crate, hence no HIR is available. This is probably the biggest
+technical limitation of Rust-Stainless' implementation. Various
+approaches could be explored to solve it:
+
+\begin{itemize}
+\item
+  If Rust-Stainless could read its serialised output and work with that,
+  then the tool could translate a crate, serialise the representation
+  and read it again when working on the next crate. For example, one
+  could extract and translate the required crate from the standard
+  library, serialise it and then import in when translating the user
+  crate.
+
+  The problem of that approach is that many of the widely used standard
+  library items like vectors are implemented with very advanced features
+  and \emph{unsafe Rust.} Extracting code of that level of complexity is
+  clearly out of scope for a user-focused tool.
+\item
+  The contrary approach would be to provide completely synthetic
+  definitions of standard items. That is, the tool would detect usage of
+  items like a vector and then synthesise some definition and
+  implementation like it does for the Stainless set and map.
+
+  While this approach would be technically feasible with the current
+  state of the software, it would be an unstable and labour-intensive
+  endeavour because the synthetic shadow implementation would need to
+  stay in sync with the standard library. Moreover, the standard library
+  of Rust is large and the choice of what to provide would be difficult.
+\item
+  The most promising way of dealing with crate-external items is to let
+  the user provide contracts to emulate the external items. Indeed, this
+  is the approach other tools take \cite{prusti, mirai}. The given
+  contracts will be interpreted as correct and used to verify the user
+  code. Our library could also provide contracts for the most frequently
+  used standard items, which is what \cite{mirai} does. Keeping such
+  contracts up-to-date would still require less work than providing
+  synthetic shadow implementations. The only disadvantage of this
+  approach is that the user can still state false contracts for the
+  external items, which leads to incorrect results.
+\end{itemize}
+
+\subsection{Stainless Backend Limitations}
+
+\subsubsection{Type Classes}
+
+Traits are omnipresent in Rust. For example, Rust does not have an
+equality operation on all types by default like Scala. Rather,
+comparison operators (in the language) are only defined on primitive
+types and for other types, the \passthrough{\lstinline!==!} operator is
+desugared to a call to the trait method
+\passthrough{\lstinline!PartialEq::eq!} of the standard library. Most
+types however provide a derived implementation of
+\passthrough{\lstinline!PartialEq!} that performs structural comparison.
+
+On one hand, this shows how important our translation of traits to type
+classes is. On the other hand, this poses a problem for Stainless
+because there, Scala-like structural equality exists on all types. To
+deal with the trait methods, the frontend needs to extract the trait
+implementations of \passthrough{\lstinline!PartialEq!} with its type
+class mechanism. This either forces the user to provide an
+implementation for equality that Stainless can understand, or it
+requires the solution of the crate-external items problem, as discussed
+in the previous section.
+
+The second problem with type classes is that they are expensive in
+verification with the current Stainless pipeline. Functions that rely on
+type class instances are transformed by multiple phases of the Stainless
+pipeline and especially the \emph{refinement lifting} phase in such a
+way that verification becomes untraceable and the solver times out.
+
+A radical solution to the problem is to erase and replace calls to
+\passthrough{\lstinline!PartialEq::eq!} by \passthrough{\lstinline!==!}
+in the translation. With a similar safety check and argument as for the
+erasure of \passthrough{\lstinline!Clone!} to
+\passthrough{\lstinline!freshCopy!}, we can argue that only derived
+instances of \passthrough{\lstinline!PartialEq!} can be safely replaced
+by the structural \passthrough{\lstinline!==!} operator of Scala.
+
+\subsubsection{Mutability}
+
+In \autoref{sec:aliasing-restrictions} we have tailored our general
+translation around the specific aliasing restrictions of the Stainless
+backend. This can already be seen as a limitation because it renders the
+translation more complex. If we had a Scala verifier for the entire
+Scala language, we could simply use the general translation.
+Nonetheless, thanks to Rust's borrow checking guarantees, the
+translation can be adapted rather well to the restrictions but some
+limitations remain.
+
+The \emph{imperative phase} of Stainless is not the most stable part of
+the pipeline and is also still under active development. Rust-Stainless
+targeted the phase as a new frontend in ways that were unforeseen and
+therefore, many bugs were discovered. Most of them have already been
+solved, like incorrect constant propagation. For code using mutability
+in complex ways like the \autoref{lst:mut-ref-12}, it is still possible
+to find new bugs in the backend. This particular example fails because
+of a incorrect effect
+\href{https://github.com/epfl-lara/stainless/issues/1111}{target
+calculation.}
+
+As discussed in the previous section, the refinement lifting phase makes
+examples using type classes more expensive to verify. In combination
+with the mutable tuple and cell encoding this unfortunately leads to two
+larger benchmarks of the test suite
+\href{https://github.com/epfl-lara/stainless/issues/1093}{timing out.}
+Luckily, the refinement lifting phase is set to be removed from the
+pipeline in the future which may solve these issues.
+
+\paragraph{Other approaches}
+
+To overcome the limitations of Stainless' current imperative phase, a
+new \emph{full imperative} phase using a \emph{heap encoding} has been
+proposed \cite{new-imperative}. That new phase has explicit support for
+mutable references \passthrough{\lstinline!AnyHeapRef!} which represent
+parts of the heap. Furthermore, it uses annotations on functions that
+state which references are read (\passthrough{\lstinline!reads()!}) and
+which are written to (\passthrough{\lstinline!modifies()!}) by the
+function. These two features are very promising to target from
+Rust-Stainless because they resemble things that are already in our
+mutability translation. The mutable references are very close to our
+mutable cells and it might even be possible to infer the information
+needed for the read and write annotations from the mutability of the
+function parameters, which is explicitly stated in Rust.
+
+A radically different approach for dealing with mutability would be to
+extract the Rust program not from the THIR but from the lower-level MIR.
+We discuss this approach in the next section.
+
+\subsection{Design Limitations}
+
+The current way of translating the THIR to Stainless ASTs has many
+advantages. The THIR is very close to Stainless ASTs and errors,
+counter-examples or insights coming from Stainless are easily mapped
+back and forth between the two representations. On the downside, the
+THIR still has many features that all need to be understood by our
+translation, which can render the latter more complex. More importantly,
+the THIR does not have any information about liveness, reference
+lifetimes, and borrowing because all these analyses are only performed
+later on the MIR. This is the fundamental limitation of translating from
+the THIR.
+
+The advantage of the MIR is that the representation is even more
+explicit, there are less features to translate, and lifetimes have been
+resolved. That means, it would be possible to manually propagate changes
+back to borrowed variables at the lifetime end of mutable borrows. On
+the other hand, the MIR is in CFG form and it should be challenging to
+transform that graph form back to a syntax tree. It is also unfeasible
+to combine the THIR and the MIR because they do not use the same
+identifiers for variables.
