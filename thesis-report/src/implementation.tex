@@ -860,14 +860,15 @@ verification.
 
 \subsection{Unsupported Rust features}
 
-Language features not mentioned in \autoref{sec:supported-features} are
-not yet supported. However, not all language features are of the same
-importance. Here, we mention the ones that are required for our goal of
-verifying \emph{idiomatic} Rust code. The two very important Rust
-features not yet supported are closures and sequences. Besides that, we
-also don't support \emph{unsafe Rust}. This is a conscious decision as
-many of our translations rely on the assumption that only the
-\emph{safe} Rust is used.
+Language features not mentioned in \autoref{sec:supported-features} are not yet
+supported. However, not all language features are of the same importance. Here,
+we mention the ones that are required for our goal of verifying \emph{idiomatic}
+Rust code. The two very important Rust features not yet supported are closures
+and sequences. Besides that, we also don't support \emph{unsafe Rust}. This is a
+conscious decision as many of our translations rely on the assumption that only
+the \emph{safe} Rust is used. Further missing features that are less complex to
+add are supertraits, i.e. type class inheritance in Scala, top-level constants,
+and invariants on ADTs like in Stainless.
 
 For closures, most of the infrastructure is already in place as closures
 are represented very similarly to functions in the compiler.
@@ -891,12 +892,11 @@ complex items of the standard library.
 
 \paragraph{One Crate Limitation}
 
-For translating standard library items, we run into the limitation that
-is imposed by the one-crate-a-time compilation model of
-\passthrough{\lstinline!rustc!}. Our tool is currently not able to
-extract the code of standard library items because they are not part of
-the user crate, hence no HIR is available. This is probably the biggest
-technical limitation of Rust-Stainless' implementation. Various
+For standard library items we run into the limitation that is imposed by the
+one-crate-a-time compilation model of \passthrough{\lstinline!rustc!}. Our tool
+is currently not able to extract the code of standard library items because they
+are not part of the user crate, hence no HIR is available. This is probably the
+biggest technical limitation of Rust-Stainless' implementation. Various
 approaches could be explored to solve it:
 
 \begin{itemize}
@@ -984,24 +984,22 @@ Nonetheless, thanks to Rust's borrow checking guarantees, the
 translation can be adapted rather well to the restrictions but some
 limitations remain.
 
-The \emph{imperative phase} of Stainless is not the most stable part of
-the pipeline and is also still under active development. Rust-Stainless
-targeted the phase as a new frontend in ways that were unforeseen and
-therefore, many bugs were discovered. Most of them have already been
-solved, like incorrect constant propagation. For code using mutability
-in complex ways like the \autoref{lst:mut-ref-12}, it is still possible
-to find new bugs in the backend. This particular example fails because
-of a incorrect effect
-\href{https://github.com/epfl-lara/stainless/issues/1111}{target
-calculation.}
+The \emph{imperative phase} of Stainless is not the most stable part of the
+pipeline and is also still under active development. Rust-Stainless targeted the
+phase as a new frontend in ways that were unforeseen and therefore, many bugs
+were discovered. Most of them have already been solved, like incorrect constant
+propagation. For code using mutability in complex ways like the
+\autoref{lst:mut-ref-12}, it is still possible to find new bugs in the backend.
+This particular example fails because of a incorrect effect target
+calculation.\footnote{\url{https://github.com/epfl-lara/stainless/issues/1111}}
 
 As discussed in the previous section, the refinement lifting phase makes
-examples using type classes more expensive to verify. In combination
-with the mutable tuple and cell encoding this unfortunately leads to two
-larger benchmarks of the test suite
-\href{https://github.com/epfl-lara/stainless/issues/1093}{timing out.}
-Luckily, the refinement lifting phase is set to be removed from the
-pipeline in the future which may solve these issues.
+examples using type classes more expensive to verify. In combination with the
+mutable tuple and cell encoding this unfortunately leads to two larger
+benchmarks of the test suite timing
+out.\footnote{\url{https://github.com/epfl-lara/stainless/issues/1093}} Luckily,
+the refinement lifting phase is set to be removed from the pipeline in the
+future which may solve these issues.
 
 \paragraph{Other approaches}
 
@@ -1010,8 +1008,8 @@ new \emph{full imperative} phase using a \emph{heap encoding} has been
 proposed \cite{new-imperative}. That new phase has explicit support for
 mutable references \passthrough{\lstinline!AnyHeapRef!} which represent
 parts of the heap. Furthermore, it uses annotations on functions that
-state which references are read (\passthrough{\lstinline!reads()!}) and
-which are written to (\passthrough{\lstinline!modifies()!}) by the
+state which references are read (\passthrough{\lstinline!reads!}) and
+which are written to (\passthrough{\lstinline!modifies!}) by the
 function. These two features are very promising to target from
 Rust-Stainless because they resemble things that are already in our
 mutability translation. The mutable references are very close to our
