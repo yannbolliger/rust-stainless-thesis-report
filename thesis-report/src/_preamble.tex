@@ -65,6 +65,9 @@
 \usepackage{tabularx}
 \usepackage{multirow}
 
+\usepackage{etoolbox}
+\BeforeBeginEnvironment{tabular}{\scriptsize}
+
 % Floating placement
 \usepackage{placeins}
 % use \FloatBarrier before a \section to ensure all floating are displayed
