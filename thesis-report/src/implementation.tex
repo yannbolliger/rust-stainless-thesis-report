@@ -1,12 +1,10 @@
-The Rust-Stainless tool is developed as a Rust open source software
+The Rust-Stainless tool is developed as an open source software
 project.\footnote{\url{https://github.com/epfl-lara/rust-stainless/}} It was
 created by Georg Schmid to explore a new frontend to Stainless for the Rust
-language. This thesis project substantially extends the fragment of Rust code
-that the tool supports. With the thesis' completion, the source repository
-contains approximately 12K lines of Rust code and over 70 files or 3K lines of
-Rust test examples. Most features described here are available on the
-\lstinline!master! branch, except for the mutability translation that can be
-found on the \lstinline!mutable-cells!
+language. Upon completion of this thesis project, the tool is implemented in
+approximately 12K lines of Rust code. Most features described here are available
+on the \lstinline!master! branch, except for the mutability translation that
+lives on the \lstinline!mutable-cells!
 branch.\footnote{\url{https://github.com/epfl-lara/rust-stainless/pull/164}}
 
 Before presenting the design of the tool and some details of its implementation,
@@ -629,6 +627,7 @@ def fn_with_bound_and_spec(x: T, y: T, ev0: Equals[T]): Int = {
 \subsection{Implementation details}
 
 \subsubsection{Extraction overview}
+\label{sec:extraction-overview}
 
 As we have seen in \autoref{sec:pipeline}, the big majority of the work
 performed by Rust-Stainless happens in the extraction of the HIR to
