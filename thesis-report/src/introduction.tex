@@ -23,83 +23,51 @@ to minimise the number of upgrades required, hence the need for correct
 A very strict approach on writing correct software is to use tools that
 mathematically proof the program correct, called \emph{formal verification}. The
 Stainless verification framework \cite{stainless} is such a tool for the Scala
-programming language. It enables the user to \_.
+programming language. It enables the user to \TODO{add examples}.
 
 However, blockchains are not usually implemented in Scala, but rather in C++, Go
 or Rust for performance reasons. While Go achieves high performance despite its
 \emph{garbage collector}, C++ and Rust leave memory management to the
 programmer. For C++ this is the primary source of bugs and security problems,
-Rust however guarantees memory-safety by introducing a new \emph{data ownership
-paradigm} that is enforced by its compiler's \emph{borrow checking} phase. For
-these reasons, Rust is well-suited for implementing highly performant, correct
-and safe blockchain systems. One such a system is the \emph{inter-blockchain
-communication protocol
-(IBC)\footnote{\url{https://github.com/informalsystems/ibc-rs}}} developed by
-Informal Systems.\footnote{\url{https://informal.systems}} But even if Rust
-provides type safety and memory safety at compile time, this does not guarantee
-correctness.
+Rust however guarantees memory safety by introducing a new type checking phase
+in its compiler, the \emph{borrow checker}. For these reasons, Rust is
+well-suited for implementing highly performant, correct and safe blockchain
+systems. One such a system is the \emph{inter-blockchain communication protocol
+(IBC)\footnote{\url{https://github.com/informalsystems/ibc-rs}}} implementation
+developed by Informal Systems.\footnote{\url{https://informal.systems}} But even
+if Rust provides type safety and memory safety at compile time, this does not
+guarantee correctness.
 
-With the vision of combining the safety guarantees of Rust with much
-stronger correctness guarantees of Stainless we present the
-\emph{Rust-Stainless} verification tool created by Georg Schmid.
-Rust-Stainless\footnote{Pun not intended, but -- needless to say -- welcome.}
-is a frontend to Stainless capable of extracting a subset of the Rust
-language, translating it to a Scala subset and verifying it with the
-Stainless verifier. This thesis project substantially extends the
-fragment of Rust the tool can translate with features including
-mutability, references and type classes.
+With the vision of combining the safety guarantees of Rust with much stronger
+correctness guarantees of Stainless we present \emph{Rust-Stainless}, a
+verification tool created by Georg Schmid. Rust-Stainless\footnote{Pun not
+intended, but -- needless to say -- welcome.} is a frontend to the Stainless
+verifier capable of extracting a subset of the Rust language, translating it to
+a subset of Scala and verifying it with Stainless. This thesis project
+substantially extends the fragment of Rust that can be translated by the tool
+including features like mutability, references and type classes.
 
-\section{Background}
+\subsubsection{Contribution}
 
-\subsection{Stainless verifier}
+\TODO{Is this section needed or does the last paragraph above suffice?}
 
+Main contributions of project
 \begin{itemize}
 \tightlist
 \item
-  Support for FP
+  Theoretical mutability translation
 \item
-  Support for mutability (\& limitations)
-\end{itemize}
-
-\subsection{Rust language}
-
-\begin{itemize}
-\tightlist
-\item
-  intro to Rust
+  Advance extraction/translation by a lot
 
   \begin{itemize}
   \tightlist
   \item
-    \emph{abstract data types} ADT: \passthrough{\lstinline!enum!},
-    \passthrough{\lstinline!struct!} and tuples
+    What was possible at the start of the project
+  \item
+    What at the end?
   \end{itemize}
-\end{itemize}
-
-\section{Contribution}
-
-\begin{itemize}
-\tightlist
 \item
-  Main contributions of project
-
-  \begin{itemize}
-  \tightlist
-  \item
-    Theoretical mutability translation
-  \item
-    Advance extraction/translation by a lot
-
-    \begin{itemize}
-    \tightlist
-    \item
-      What was possible at the start of the project
-    \item
-      What at the end?
-    \end{itemize}
-  \item
-    Fix bugs on Stainless side
-  \item
-    Bring user perspective to the project from Informal
-  \end{itemize}
+  Fix bugs on Stainless side
+\item
+  Bring user perspective to the project from Informal
 \end{itemize}

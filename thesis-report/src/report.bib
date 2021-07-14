@@ -6,6 +6,22 @@
     publisher = {North}
 }
 
+@inproceedings{once-upon-a-type,
+author = {Turner, David N. and Wadler, Philip and Mossin, Christian},
+title = {Once upon a Type},
+year = {1995},
+isbn = {0897917197},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/224164.224168},
+doi = {10.1145/224164.224168},
+booktitle = {Proceedings of the Seventh International Conference on Functional Programming Languages and Computer Architecture},
+pages = {1-11},
+numpages = {11},
+location = {La Jolla, California, USA},
+series = {FPCA '95}
+}
+
 @phdthesis{regb,
   title={{Verification by Reduction to Functional Programs}},
   author={Blanc, R{\'e}gis},
@@ -90,7 +106,6 @@ keywords = {software verification, SMT, System F, dependent types, recursive typ
 
 @inbook{smt,
 title = "Satisfiability modulo theories",
-abstract = "Applications in artificial intelligence, formal verification, and other areas have greatly benefited from the recent advances in SAT. It is often the case, however, that applications in these fields require determining the satisfiability of formulas in more expressive logics such as first-order logic. Also, these applications typically require not general first-order satisfiability, but rather satisfiability with respect to some background theory, which fixes the interpretations of certain predicate and function symbols. For many background theories, specialized methods yield decision procedures for the satisfiability of quantifier-free formulas or some subclass thereof. Specialized decision procedures have been discovered for a long and still growing list of theories with practical applications. These include the theory of equality, various theories of arithmetic, and certain theories of arrays, as well as theories of lists, tuples, records, and bit-vectors of a fixed or arbitrary finite size. The research field concerned with determining the satisfiability of formulas with respect to some background theory is called Satisfiability Modulo Theories (SMT). This chapter provides a brief overview of SMT together with references to the relevant literature for a deeper study. It begins with an overview of techniques for solving SMT problems by encodings to SAT. The rest of the chapter is mostly concerned with an alternative approach in which a SAT solver is integrated with a separate decision procedure (called a theory solver) for conjunctions of literals in the background theory. After presenting this approach as a whole, the chapter provides more details on how to construct and combine theory solvers, and discusses several extensions and enhancements.",
 author = "Clark Barrett and Roberto Sebastiani and Seshia, {Sanjit A.} and Cesare Tinelli",
 year = "2009",
 doi = "10.3233/978-1-58603-929-5-825",
@@ -196,16 +211,24 @@ location = {Phoenix, Arizona, USA},
 series = {OOPSLA '91}
 }
 
-@inbook{ownership-types,
-  author = {Clarke, Dave and Östlund, Johan and Sergey, Ilya and Wrigstad, Tobias},
-  title = {Ownership Types: A Survey},
-  year = {2013},
-  isbn = {9783642369452},
-  publisher = {Springer-Verlag},
-  address = {Berlin, Heidelberg},
-  booktitle = {Aliasing in Object-Oriented Programming: Types, Analysis, and Verification},
-  pages = {15 - 58},
-  numpages = {44}
+@article{ownership-types,
+author = {Clarke, David G. and Potter, John M. and Noble, James},
+title = {Ownership Types for Flexible Alias Protection},
+year = {1998},
+issue_date = {Oct. 1998},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {33},
+number = {10},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/286942.286947},
+doi = {10.1145/286942.286947},
+journal = {SIGPLAN Not.},
+month = oct,
+pages = {48-64},
+numpages = {17},
+keywords = {sharing, ownership, alias protection, containment, representation exposure, programming language design}
+}
 }
 
 @article{use-once,
@@ -305,4 +328,101 @@ keywords = {subtyping, Larch, formal specifications}
   title={{MIRAI: Rust mid-level IR Abstract Interpreter}},
   url={https://github.com/facebookexperimental/MIRAI},
   note = {Accessed: 2021-07-07},
+}
+
+@article{alias-burying,
+author = {Boyland, John},
+title = {Alias Burying: Unique Variables without Destructive Reads},
+year = {2001},
+issue_date = {May 2001},
+publisher = {John Wiley &amp; Sons, Inc.},
+address = {USA},
+volume = {31},
+number = {6},
+issn = {0038-0644},
+url = {https://doi.org/10.1002/spe.370},
+doi = {10.1002/spe.370},
+journal = {Softw. Pract. Exper.},
+month = may,
+pages = {533-553},
+numpages = {21},
+keywords = {unshared, borrowed, compromise}
+}
+
+@article{linear-haskell,
+author = {Bernardy, Jean-Philippe and Boespflug, Mathieu and Newton, Ryan R. and Peyton Jones, Simon and Spiwack, Arnaud},
+title = {Linear Haskell: Practical Linearity in a Higher-Order Polymorphic Language},
+year = {2017},
+issue_date = {January 2018},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {2},
+number = {POPL},
+url = {https://doi.org/10.1145/3158093},
+doi = {10.1145/3158093},
+journal = {Proc. ACM Program. Lang.},
+month = dec,
+articleno = {5},
+numpages = {29},
+keywords = {polymorphism, typestate, GHC, Haskell, laziness, linear logic, linear types}
+}
+
+@inproceedings{external-uniqueness,
+  title={External Uniqueness Is Unique Enough},
+  author={D. Clarke and Tobias Wrigstad},
+  booktitle={ECOOP},
+  year={2003}
+}
+
+@inproceedings{10.1145/512529.512563,
+author = {Grossman, Dan and Morrisett, Greg and Jim, Trevor and Hicks, Michael and Wang, Yanling and Cheney, James},
+title = {Region-Based Memory Management in Cyclone},
+year = {2002},
+isbn = {1581134630},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/512529.512563},
+doi = {10.1145/512529.512563},
+booktitle = {Proceedings of the ACM SIGPLAN 2002 Conference on Programming Language Design and Implementation},
+pages = {282-293},
+numpages = {12},
+location = {Berlin, Germany},
+series = {PLDI '02}
+}
+
+@article{cyclone-region,
+author = {Grossman, Dan and Morrisett, Greg and Jim, Trevor and Hicks, Michael and Wang, Yanling and Cheney, James},
+title = {Region-Based Memory Management in Cyclone},
+year = {2002},
+issue_date = {May 2002},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {37},
+number = {5},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/543552.512563},
+doi = {10.1145/543552.512563},
+journal = {SIGPLAN Not.},
+month = may,
+pages = {282-293},
+numpages = {12}
+}
+
+@article{lightweight-formalism,
+author = {Pearce, David J.},
+title = {A Lightweight Formalism for Reference Lifetimes and Borrowing in Rust},
+year = {2021},
+issue_date = {April 2021},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {43},
+number = {1},
+issn = {0164-0925},
+url = {https://doi.org/10.1145/3443420},
+doi = {10.1145/3443420},
+journal = {ACM Trans. Program. Lang. Syst.},
+month = apr,
+articleno = {3},
+numpages = {73},
+keywords = {model checking, type theory, Rust, ownership}
 }
