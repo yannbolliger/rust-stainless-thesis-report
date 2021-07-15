@@ -1,4 +1,4 @@
-\section{The Rust Language}
+\section{Rust Language}
 
 Rust \cite{rust2, rust1} is a recent systems programming language, initally
 developed at Mozilla with the goal to replace C++ as application programming
@@ -221,7 +221,7 @@ inaccessible as soon as one of its fields is moved.
 
 \paragraph{Move vs. Copy}
 
-One departure from these \emph{use once} \citep{use-once} variables are copyable
+One departure from these \emph{use-once} \citep{use-once} variables are copyable
 types. Types that implement the \passthrough{\lstinline!Copy!} trait in Rust get
 copy semantics rather than move semantics. The compiler automatically implements
 this for primitive types\footnote{Primitive types in Rust are \lstinline!bool!,
@@ -341,3 +341,5 @@ immutable objects while retaining by-value semantics. But as a consequence, the
 by-value passing of references closely resembles by-reference passing for
 mutable objects. The translation presented in \autoref{translation} will
 extensively exploit this fact.
+
+\section{Stainless Verifier}
