@@ -7,7 +7,7 @@ with Rust-Stainless.
 \section{Benchmarks}
 
 The Rust-Stainless repository contains a test suite of 64 passing (positive) and
-11 failing (negative) test code examples of in total around 3000
+12 failing (negative) test code examples of in total around 3000
 lines.\footnote{Found under \texttt{stainless\_frontend/tests/[pass|fail]}
 on the \texttt{mutable-cells} branch.} The suite is run for every pull request
 and every commit to the \texttt{master} branch.
@@ -32,8 +32,8 @@ standard library items before it can translate the user crate. This detection is
 needed because the numerical identifiers used in the compilation
 (\lstinline!DefId!s) are not stable across runs. Even if the detection iterates
 through the same constant number of crates on each run, we observe larger
-variations in running time. On average in the measured test examples, detection
-takes $200 \pm 32$~ms or equivalently 4~\% of the running time.
+variations in running time. On average in the measured examples, detection takes
+$199 \pm 33$~ms or equivalently 4~\% of the running time.
 
 The actual translation is very fast, especially for the rather short examples
 that are the majority of the test suite, it takes only 0.4~ms or about 0.008~\%
@@ -170,14 +170,13 @@ pub fn main() {
 
 A more involved example is \autoref{lst:mut-ref-12} from the
 \texttt{mutable-cells} branch. This is the most complicated mutability
-benchmark, unfortunately it currently fails verification due to a bug in the
-Stainless backend. In particular, the example shows how a mutable reference is
-matched upon and then a sub-reference is returned (\autoref{lst:mut-ref-match}).
-That sub-reference is subsequently used to alter the container struct. The
-assertion at the end of the main function ensures that the mutation has an
-effect. In summary, the example requires support for mutable borrows, pattern
-match on mutable references, passing mutable references as values in arguments
-and returns, as well as mutation of a struct via a mutable reference.
+benchmark. In particular, it shows how a mutable reference is matched upon and
+then a sub-reference is returned (\autoref{lst:mut-ref-match}). That
+sub-reference is subsequently used to alter the container struct. The assertion
+at the end of the main function ensures that the mutation has an effect. In
+summary, the example requires support for mutable borrows, pattern matching on
+mutable references, passing mutable references as values in arguments and
+returns, as well as mutation of structs via mutable references.
 
 \begin{lstlisting}[
   language=Rust,
