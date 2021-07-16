@@ -888,6 +888,8 @@ iterators and vectors are very difficult to translate because they are not
 inherent \emph{language} features but rather some of the most important but also
 complex items of the standard library.
 
+\TODO{lifetime annotations}
+
 \paragraph{One Crate Limitation}
 
 For standard library items we run into the limitation that is imposed by the
@@ -962,6 +964,8 @@ verification with the current Stainless pipeline. Functions that rely on
 type class instances are transformed by multiple phases of the Stainless
 pipeline and especially the \emph{refinement lifting} phase in such a
 way that verification becomes untraceable and the solver times out.
+
+\TODO{combination of: type class + recursive type + mutable cell}
 
 A radical solution to the problem is to erase and replace calls to
 \passthrough{\lstinline!PartialEq::eq!} by \passthrough{\lstinline!==!}
