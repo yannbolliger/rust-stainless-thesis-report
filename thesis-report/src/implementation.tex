@@ -976,21 +976,22 @@ by the structural \passthrough{\lstinline!==!} operator of Scala.
 
 \subsubsection{Mutability}
 
-In \autoref{sec:aliasing-restrictions} we have tailored our general
-translation around the specific aliasing restrictions of the Stainless
-backend. This can already be seen as a limitation because it renders the
-translation more complex. If we had a Scala verifier for the entire
-Scala language, we could simply use the general translation.
-Nonetheless, thanks to Rust's borrow checking guarantees, the
-translation can be adapted rather well to the restrictions but some
-limitations remain.
+\autoref{sec:aliasing-restrictions} described how the general translation can be
+tailored around the specific aliasing restrictions of the Stainless backend.
+This is by itself a limitation; if we had a Scala verifier for the entire Scala
+language we could simply use the general translation. Nonetheless, thanks to
+Rust's borrow checking guarantees, the translation can be adapted rather well to
+the restrictions but some limitations remain, as \autoref{trans-limitations}
+discusses.
 
-The \emph{imperative phase} of Stainless is not the most stable part of the
-pipeline and is also still under active development. Rust-Stainless targets the
-phase as a new frontend in ways that were unforeseen and therefore, many bugs
-were discovered. Most of them have already been solved, like incorrect constant
-propagation. For code using mutability in complex ways, it is still possible to
-find new bugs in the backend.
+From an implementation point of view, the \emph{imperative phase} of Stainless
+is not the most stable part of the pipeline and is also still under active
+development. Rust-Stainless targets that phase as a new frontend in ways that
+were unforeseen and thus found many bugs in the process. Most of the bugs have
+already been solved, for example an incorrect constant
+propagation.\footnote{\url{https://github.com/epfl-lara/stainless/issues/1090}}
+However, for code using mutability in complex ways it is still possible to find
+new bugs in the backend.
 
 As discussed in the previous section, refinement lifting makes examples using
 type classes more expensive to verify. In combination with the mutable cell

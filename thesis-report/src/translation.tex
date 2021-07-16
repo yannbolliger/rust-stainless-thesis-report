@@ -703,13 +703,6 @@ cloning because we made sure that only clone operations are extracted for which
 these semantics are correct.
 
 
-
-
-\subsubsection{Nested Mutable Cells}
-
-
-
-
 \subsection{Functional Fragment / Usability}
 
 Functional/immutable programs make use of sharing. For functional Rust
@@ -734,3 +727,54 @@ programming.
 \end{itemize}
 
 This is a fragment that Stainless supports well.
+
+
+\subsection{Limitations}
+\label{trans-limitations}
+
+So far, mutable cells together with the \lstinline!freshCopy! primitive solved
+all cases of aliasing restriction problems. However, one particular pattern will
+still run into the aliasing restrictions of Stainless, the mutable binding of a
+mutable reference: \passthrough{\lstinline!mut x: &mut T!}. This variable is
+mutable in two ways, it can be dereferenced and assigned \lstinline!*x = ...!
+which changes the referred object, but it can also be reassigned with another
+mutable reference \lstinline!x = &mut ...!. To correctly translate both of these
+cases, the variable must be translated as \lstinline!MutCell[MutCell[T]]!, this
+is in fact what our translation does. An example of such a translation is
+\autoref{lst:nested-cell}.
+
+\noindent\begin{minipage}[t]{.35\textwidth}
+\begin{lstlisting}[
+  language=Rust,
+  caption={A mutable reference in a mutable variable.}
+]
+let mut a = 123;
+let mut b = 456;
+let mut r = &mut a;
+
+r = &mut b;
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.6\textwidth}
+\begin{lstlisting}[
+  language=Scala,
+  label=lst:nested-cell,
+  caption={Translation with nested mutable cells.}
+]
+val a: MutCell[Int] = MutCell[Int](123)
+val b: MutCell[Int] = MutCell[Int](123)
+val r: MutCell[MutCell[Int]] =
+  MutCell[MutCell[Int]](a)
+r.value = MutCell[Int](b)
+\end{lstlisting}
+\end{minipage}
+
+Note that the Scala code of \autoref{lst:nested-cell} runs correctly in Scala,
+hence the general translation is still valid and captures this particular case.
+Unfortunately, the same cannot be said about Stainless. The assignment on line 5
+of \autoref{lst:nested-cell} creates an alias of \lstinline!b! in
+\lstinline!r.value!, which Stainless does not permit. Hence, the translation for
+Stainless is fundamentally limited by the aliasing restrictions in that it
+cannot translate mutable references in mutable bindings. This can occur for
+local variables as in the example or also for \lstinline!mut! function
+parameters of mutable reference type.
