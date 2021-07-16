@@ -9,7 +9,8 @@ translation is correct and then present some optimisations and usability results
 that make it possible to use the translation together with the current state of
 the Stainless verifier backend.
 
-\section{Translation}
+\section{Translation for Runtime Equivalence}
+\label{sec:translation}
 
 The translation works under the assumption that the input Rust code is
 \emph{safe} and ``well-behaved''. That is, it works for the \emph{safe subset}
@@ -25,8 +26,7 @@ unsafe features are detected at extraction of the code and abort the
 translation.
 
 
-\subsection{General Translation}
-\label{sec:translation}
+\subsection{Algorithm}
 
 The goal of the translation is to bridge the gaps between Rust's and Scala's
 memory model -- making places accessible in the program and allowing mutability
@@ -439,18 +439,17 @@ mutable references as well.
 
 
 
-
-\section{Implementation}
+\section{Translation for Stainless}
 
 The translation presented so far results in correct Scala runtime semantics, but
 the motivation behind the translation was to ultimately use it to verify the
-Scala program with the Stainless verifier. Intuitively, we submit the translated
-program to Stainless, get a verification result and deduce verification
-properties for the Rust program from that. The approach is correct because both
-programs exhibit the same runtime semantics, as we have shown. However,
-Stainless does not support the entire Scala language. In particular, it has some
-limitations concerning mutability. Therefore, we adapt the general translation
-step-by-step to yield Scala programs that are accepted by Stainless.
+Scala program with Stainless. Intuitively, we submit the translated program to
+Stainless, get a verification result and deduce verification properties for the
+Rust program from that. The approach is correct because both programs exhibit
+the same runtime semantics, as we have shown. However, Stainless does not
+support the entire Scala language. In particular, it has some limitations
+concerning mutability. Therefore, we adapt the general translation step-by-step
+to yield Scala programs that are accepted by Stainless.
 
 This section presents the changes made to the translation to reach compatibility
 with Stainless on a coarse-grained theoretical level. Like before, we will show
@@ -460,8 +459,7 @@ entire system please refer to \autoref{implementation}.
 
 
 
-
-\subsection{Translation without Aliasing}
+\subsection{Avoiding Aliasing}
 \label{sec:aliasing-restrictions}
 
 The main difference between Scala and the supported imperative fragment of
@@ -514,16 +512,15 @@ operators \passthrough{\lstinline!move!} and
 \passthrough{\lstinline!copy!}.
 
 The translation already introduces \passthrough{\lstinline!move!} and
-\passthrough{\lstinline!copy!} when data is used by value, e.g.~in
-assignments and for function arguments. To work around Stainless'
-aliasing restrictions we additionally introduce
-\passthrough{\lstinline!copy!} for function arguments that are shared
-references and lastly, we \passthrough{\lstinline!move!} or
-\passthrough{\lstinline!copy!} return values of functions and inner
-blocks, unless they contain mutable references. The correctness of that
-approach follows from the same argument as the correctness of using
-\passthrough{\lstinline!move!} on moveable types and
-\passthrough{\lstinline!copy!} on copyable types (see \autoref{sec:correctness-by-value}).
+\passthrough{\lstinline!copy!} when data is used by value, e.g.~in assignments
+and for function arguments. To work around Stainless' aliasing restrictions we
+additionally introduce \passthrough{\lstinline!copy!} for function arguments
+that are shared references and lastly, we \passthrough{\lstinline!move!} or
+\passthrough{\lstinline!copy!} return values of functions and inner blocks,
+unless they contain mutable references. The correctness of that approach follows
+from the same argument as the correctness of using \lstinline!move! on moveable
+types and \lstinline!copy! on copyable types (see
+\autoref{sec:correctness-by-value}).
 
 To summarise, all types are \passthrough{\lstinline!move!}'d or
 \passthrough{\lstinline!copy!}'d when they could create an alias except

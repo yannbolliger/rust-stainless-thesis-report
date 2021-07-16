@@ -221,10 +221,10 @@ post-condition does not hold.
 
 \section{Extraction}
 
-\subsection{Supported Rust features}
+\subsection{Supported Rust Features}
 \label{sec:supported-features}
 
-\subsubsection{Existing features}
+\subsubsection{Existing Features}
 
 The initial fragment of the Rust language that the tool could extract
 and translate underlay strict restrictions: all code needed to be
@@ -282,7 +282,7 @@ pub fn fact(x: i32) -> i32 {
 }
 \end{lstlisting}
 
-\subsubsection{New features}
+\subsubsection{New Features}
 
 We turn to give an overview of all the language features that were added
 to the extraction in the course of this thesis project except for the
@@ -358,7 +358,7 @@ because expressions that only read data, like we assume most
 specifications do, can now take a reference instead of consuming the
 data.
 
-\paragraph{Measure attribute}
+\paragraph{Measure Attribute}
 
 Recursive proofs in Stainless often require the programmer to state the
 induction variable with a \passthrough{\lstinline!decreases!} call. This
@@ -379,7 +379,7 @@ fn size<T>(l: &List<T>) -> u32 {
 }
 \end{lstlisting}
 
-\paragraph{Stainless library}
+\paragraph{Stainless Library}
 
 As explained above, the \passthrough{\lstinline!libstainless!} crate is
 exposed to the programmer and contains helpers for specifying proofs and
@@ -623,9 +623,9 @@ def fn_with_bound_and_spec(x: T, y: T, ev0: Equals[T]): Int = {
 
 
 
-\subsection{Implementation details}
+\subsection{Implementation Details}
 
-\subsubsection{Extraction overview}
+\subsubsection{Extraction Overview}
 \label{sec:extraction-overview}
 
 As we have seen in \autoref{sec:pipeline}, the big majority of the work
@@ -684,7 +684,7 @@ body expression in THIR form from the compiler and extract it with the
 \passthrough{\lstinline!st::Expr!}, hence it is the entry-point of the
 actual translation.
 
-\subsubsection{Synthesisation}
+\subsubsection{Synthesis}
 
 Multiple translations that Rust-Stainless performs rely on the ability
 to synthesise expressions of certain ADT types that do not necessarily
@@ -695,13 +695,13 @@ Moreover, the fields of these ADTs also need to be available:
 \passthrough{\lstinline!tuple.\_0!} and
 \passthrough{\lstinline!cell.value!}.
 
-In implementing synthesisation, we observe a primary benefit of the
+In implementing synthesis, we observe a primary benefit of the
 \passthrough{\lstinline!get\_or\_extract!} pattern. For example, when
-some translation needs the option type, it triggers its synthesisation.
-But all synthesisation methods internally implement a
+some translation needs the option type, it triggers its synthesis.
+But all synthesis methods internally implement a
 \passthrough{\lstinline!get\_or\_create!} logic, i.e.~if the option type
 has already been either extracted from user code or synthesised by a
-former synthesisation call, it is simply reused and the demanded ADT
+former synthesis call, it is simply reused and the demanded ADT
 expression can be built with its identifier. That way, we only
 synthesise ADT definitions on demand and we never run the risk of
 extracting one definition of option and synthesising a second one. The
@@ -856,7 +856,7 @@ verification.
 \section{Limitations}
 \label{impl-limitations}
 
-\subsection{Unsupported Rust features}
+\subsection{Unsupported Rust Features}
 
 Language features not mentioned in \autoref{sec:supported-features} are not yet
 supported. However, not all language features are of the same importance. Here,
@@ -1003,7 +1003,7 @@ out.\footnote{\url{https://github.com/epfl-lara/stainless/issues/1093}} Luckily,
 the refinement lifting phase is set to be removed from the pipeline in the
 future which may solve these issues.
 
-\paragraph{Other approaches}
+\paragraph{Other Approaches}
 
 To overcome the limitations of Stainless' current imperative phase, a
 new \emph{full imperative} phase using a \emph{heap encoding} has been
