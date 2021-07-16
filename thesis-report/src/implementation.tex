@@ -21,9 +21,10 @@ To make the translation of Rust code manageable and minimise the amount of
 busy-work the tool needs to do, it heavily relies on the Rust compiler
 \cite{rustc-guide}, \passthrough{\lstinline!rustc!}. The compiler takes Rust
 source code as input and produces an executable binary. This process involves
-multiple phases in each of which the high-level input source is transformed or
-\emph{lowered} into a more low-level representation. We will proceed by giving a
-brief overview of the compilation process.
+multiple phases that each transform or \emph{lower} the high-level input source
+into a more low-level representation. The following paragraphs give  a brief
+overview of the compilation process while the leftmost column of
+\autoref{fig:flowchart} illustrates the different phases.
 
 The Rust compiler always operates on a single crate. That is, each crate is
 compiled separately and maybe linked to other crates only after compilation.
@@ -80,6 +81,18 @@ stainless!} is the most common way of running Rust-Stainless. Internally, it
 calls the second stand-alone binary \lstinline!rustc_to_stainless! which runs
 the actual frontend of the tool.
 
+\begin{figure}
+  \begin{center}
+  \input{img/flowchart}
+  \caption{
+    The Rust-Stainless pipeline depicted with all intermediate representations
+    of the user program. The left column on its own shows the normal compilation
+    pipeline of Rust's compiler. The gray parts are not executed in Rust-Stainless.
+  }
+  \label{fig:flowchart}
+  \end{center}
+\end{figure}
+
 The programmer also sees another interface of Rust-Stainless, its
 library \lstinline!libstainless!. The library needs to be
 imported as \passthrough{\lstinline!extern crate stainless;!} in all
@@ -104,21 +117,19 @@ pipeline but with a custom entry-point called
 extraction} which means it takes as input serialised trees instead of
 extracting trees from the Scala compiler output.
 
-\begin{quote}
-\TODO{diagram for this}
-\end{quote}
-
 \subsection{Pipeline}
 \label{sec:pipeline}
 
-Knowing the system's components, we can trace the path of an exemplary
-program through the pipeline in more detail. This will allow us to
-understand some of the design decisions made.
+Having introduced the system's components, the next section traces the path of
+an exemplary program through the Rust-Stainless pipeline in more detail. The
+path can also be followed on  \autoref{fig:flowchart}. Gaining insight into the
+pipeline will also increase understanding of the design decisions made.
 
+\noindent\begin{minipage}[b]{.45\textwidth}
 \begin{lstlisting}[
   language=Rust,
-  caption={Example Rust program with a post-condition.},
-  label={lst:example}
+  caption={Rust program with a post-condition.},
+  label={lst:example},
 ]
 extern crate stainless;
 use stainless::*;
@@ -130,15 +141,8 @@ fn f(a: A) -> A {
   A(a.0 * a.0)
 }
 \end{lstlisting}
-
-In \autoref{lst:example}, the Stainless library is added as an external crate
-and then imported such that the post-condition specification attribute
-\passthrough{\lstinline!\#[post()]!} is available. The attribute is implemented
-as a procedural macro\footnote{Procedural macros invoke user-provided code at
-compilation-time and hence, allow for more complex transformations of the AST
-inside a macro \cite[section "Procedural Macros"]{rustref}.} and will be
-expanded to a closure inside the function (\autoref{lst:example2}).
-
+\end{minipage}\hfill
+\begin{minipage}[b]{.52\textwidth}
 \begin{lstlisting}[
   language=Rust,
   caption={Desugared post-condition.},
@@ -150,6 +154,15 @@ fn f(a: A) -> A {
   A(a.0 * a.0)
 }
 \end{lstlisting}
+\end{minipage}
+
+In \autoref{lst:example}, the Stainless library is added as an external crate
+and then imported such that the post-condition specification attribute
+\passthrough{\lstinline!\#[post()]!} is available. The attribute is implemented
+as a procedural macro\footnote{Procedural macros invoke user-provided code at
+compilation-time and hence, allow for more complex transformations of the AST
+inside a macro \cite[section "Procedural Macros"]{rustref}.} and will be
+expanded to a closure inside the function (\autoref{lst:example2}).
 
 Rust-Stainless leverages the heavy lifting done by the Rust compiler. The
 frontend invokes the compiler via the \passthrough{\lstinline!rustc\_driver!}
@@ -245,34 +258,36 @@ argument of a spec is a regular Rust expression that needs to type and
 borrow check, but it must have no effect on any variables of the
 function body.
 
-In the absence of references, the borrow checking of spec expressions
-posed a problem because oftentimes the expression would consume a
-function parameter of moved type multiple times which does not borrow
-check. As a work-around, one could add multiple specs of the same kind
-to a function which is equivalent to multiple
-\passthrough{\lstinline!\&\&!}-concatenated expressions. With all that,
-an example of supported and verified Rust code is the following:
+In the absence of references, the borrow checking of spec expressions posed a
+problem because oftentimes the expression would consume a function parameter of
+moved type multiple times which does not borrow check. As a work-around, one
+could add multiple specs of the same kind to a function which is equivalent to
+multiple \passthrough{\lstinline!\&\&!}-concatenated expressions. With all that,
+an example of supported and verified Rust code before this thesis project is
+\autoref{lst:existing}.
 
-\begin{lstlisting}[language=Rust]
+\begin{lstlisting}[
+  float,
+  language=Rust,
+  label={lst:existing},
+  caption={Example of existing features in Rust-Stainless.}
+]
 pub fn i32_ops(x: i32, y: i32) {
   assert!(x + y == 2 * x);
   if x >= 0 && x < 1<<30 {
     assert!(x == (x + x) / 2);
   }
 }
-
 enum Maybe<T> {
   Nothing,
   Just { value: T }
 }
-
 fn get_or<T>(maybe: Maybe<T>, default: T) -> T {
   match maybe {
     Maybe::Nothing => default,
     Maybe::Just { value } => value,
   }
 }
-
 #[pre(x >= 0)]
 #[pre(x < 10)]
 #[post(ret >= 0)]
