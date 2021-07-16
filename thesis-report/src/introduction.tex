@@ -1,4 +1,4 @@
-Everybody who has ever written a computer program knows, it never runs
+Everyone who has ever written a computer program knows, it never runs
 correctly at the first try. Writing correct software is a hard task, yet
 software dominates our lives the longer the more. While finding bugs in
 a student software project may be time-consuming but harmless, there are
@@ -21,9 +21,13 @@ to minimise the number of upgrades required, hence the need for correct
 (blockchain) software.
 
 A very strict approach on writing correct software is to use tools that
-mathematically proof the program correct, called \emph{formal verification}. The
+mathematically prove the program correct, called \emph{formal verification}. The
 Stainless verification framework \cite{stainless} is such a tool for the Scala
-programming language. It enables the user to \TODO{add examples}.
+programming language. It enables users to check and prove high-level properties
+about functions and data structures, for instance that they conform to their
+specification. The properties and specifications can be stated in plain Scala as
+annotations. Stainless also establishes the termination of the program and the
+absence of runtime crashes.
 
 However, blockchains are not usually implemented in Scala, but rather in C++, Go
 or Rust for performance reasons. While Go achieves high performance despite its

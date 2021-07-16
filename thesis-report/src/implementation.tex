@@ -858,37 +858,38 @@ verification.
 
 \subsection{Unsupported Rust Features}
 
-Language features not mentioned in \autoref{sec:supported-features} are not yet
-supported. However, not all language features are of the same importance. Here,
-we mention the ones that are required for our goal of verifying \emph{idiomatic}
-Rust code. The two very important Rust features not yet supported are closures
-and sequences. Besides that, we also don't support \emph{unsafe Rust}. This is a
-conscious decision as many of our translations rely on the assumption that only
-the \emph{safe} Rust is used. Further missing features that are less complex to
-add are supertraits, i.e. type class inheritance in Scala, top-level constants,
-and invariants on ADTs like in Stainless.
+In general, language features not mentioned in \autoref{sec:supported-features}
+are not yet supported. However, there are mainly two features that are still
+mandatory to reach the goal of verifying \emph{idiomatic Rust} -- closures and
+sequences.  Other missing features provide less value and prevent the programmer
+less from writing normal code, for example, \emph{unsafe Rust} is not supported.
+This is a conscious decision as many translations rely on the assumption that
+only \emph{safe} Rust is used. User-annotated reference lifetimes are another
+example. Although, the borrow checking assumption of the translation enables it
+to ignore the exact lifetimes, the tool currently does not extract explicit
+lifetimes. Further missing but less complex to add features are supertraits,
+i.e. type class inheritance in Scala, top-level constants, and invariants on
+ADTs like Stainless knows them.
 
-For closures, most of the infrastructure is already in place as closures
-are represented very similarly to functions in the compiler.
-Nonetheless, there are some difficulties. Closures can capture variables
-from the surrounding scope, which includes moving variables from the
-surrounding scope into the closure. This becomes very difficult to
-manage for Stainless if these variables are mutable
+For closures, most of the infrastructure is already in place as closures are
+represented like functions in the compiler. There are some difficulties
+nonetheless. Closures can capture variables from the surrounding scope, which
+includes moving variables from the surrounding scope into the closure. This
+becomes very difficult to manage for Stainless if these variables are mutable
 \cite[section 3.4.3]{regb}. The second problem arises with higher-order
-functions that take closures as parameters. In Rust, to take a closure
-as an argument, the argument type is a type parameter with a trait bound
-like \passthrough{\lstinline!F: Fn(i32) -> i32!}. This polymorphism is
-harder to translate than directly specified lambda types like in Scala
-\passthrough{\lstinline!Int => Int!}.
+functions that take closures as parameters. In Rust, the function parameter type
+of a closure must be a type parameter with a trait bound like
+\passthrough{\lstinline!F: Fn(i32) -> i32!} becuase the exact shape of the
+closure is not clear in advance. This polymorphism is harder to translate than
+directly specified lambda types in Scala \passthrough{\lstinline!Int => Int!}.
 
-With sequences we mean vectors, arrays, iterators, but also loops. Implementing
+By sequences I mean vectors, arrays, iterators, but also loops. Implementing
 loops and even arrays should be feasible as these are already supported in
 Stainless \cite[section "Imperative"]{stainless-doc}. On the other hand,
 iterators and vectors are very difficult to translate because they are not
 inherent \emph{language} features but rather some of the most important but also
 complex items of the standard library.
 
-\TODO{lifetime annotations}
 
 \paragraph{One Crate Limitation}
 
@@ -959,13 +960,11 @@ implementation for equality that Stainless can understand, or it
 requires the solution of the crate-external items problem, as discussed
 in the previous section.
 
-The second problem with type classes is that they are expensive in
-verification with the current Stainless pipeline. Functions that rely on
-type class instances are transformed by multiple phases of the Stainless
-pipeline and especially the \emph{refinement lifting} phase in such a
-way that verification becomes untraceable and the solver times out.
-
-\TODO{combination of: type class + recursive type + mutable cell}
+The second problem with type classes is that they are expensive in verification
+with the current Stainless pipeline. Functions that rely on type class instances
+are transformed by multiple phases of the Stainless pipeline, especially the
+\emph{refinement lifting}, in such a way that verification may become
+untraceable in extreme cases.
 
 A radical solution to the problem is to erase and replace calls to
 \passthrough{\lstinline!PartialEq::eq!} by \passthrough{\lstinline!==!}
@@ -987,18 +986,16 @@ translation can be adapted rather well to the restrictions but some
 limitations remain.
 
 The \emph{imperative phase} of Stainless is not the most stable part of the
-pipeline and is also still under active development. Rust-Stainless targeted the
+pipeline and is also still under active development. Rust-Stainless targets the
 phase as a new frontend in ways that were unforeseen and therefore, many bugs
 were discovered. Most of them have already been solved, like incorrect constant
-propagation. For code using mutability in complex ways like the
-\autoref{lst:mut-ref-12}, it is still possible to find new bugs in the backend.
-This particular example fails because of a incorrect effect target
-calculation.\footnote{\url{https://github.com/epfl-lara/stainless/issues/1111}}
+propagation. For code using mutability in complex ways, it is still possible to
+find new bugs in the backend.
 
-As discussed in the previous section, the refinement lifting phase makes
-examples using type classes more expensive to verify. In combination with the
-mutable tuple and cell encoding this unfortunately leads to two larger
-benchmarks of the test suite timing
+As discussed in the previous section, refinement lifting makes examples using
+type classes more expensive to verify. In combination with the mutable cell
+encoding and recursive types like the linked-list, this unfortunately leads two
+larger benchmarks of the test suite to time
 out.\footnote{\url{https://github.com/epfl-lara/stainless/issues/1093}} Luckily,
 the refinement lifting phase is set to be removed from the pipeline in the
 future which may solve these issues.
