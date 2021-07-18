@@ -1,1 +1,38 @@
+\section{Background Topics}
 
+Rust's type and ownership system has been heavily inspired by decades of
+research in the programming language area. The main topics to consider are
+linear, unique, and ownership types as well as region-based memory management.
+
+Linearity was introduced by \citet{girard} and \citet{Wadler90lineartypes}.
+Linear types must be used \emph{exactly once}, they cannot be duplicated nor
+discarded \cite{use-once}. This presents the disadvantage that values to be
+reused have to be threaded through the program, e.g.~a function that reads from
+an array also needs to return the array after the read to make it useable again.
+Unique types as described by \citet*{alias-free-pointers} on the other hand
+guarantee that they are the only reference to a certain value, i.e.~the absence
+of aliases. Lastly, \citet*{ownership-types} introduce ownership types that
+follow the same goal, the absence of inadvertent and even dangerous aliasing of
+(heap-allocated) objects.
+
+Many early approaches to linear and unique types originated in functional
+languages and some challenges arise when they are applied to object-oriented
+languages that may assign to values or clone objects. Shallowly copying an
+object in a language with owned data is problematic because it might copy unique
+pointers, hence creating illegal aliases. Deep copying would solve the problem
+but there is also a more efficient approach called \emph{sheep cloning}. First
+described by \citet*{dynamic-alias-protection}, Rust implements a version close
+to \cite{sheep-cloning}: owned data, that is data pointed at by unique pointers
+is deeply copied, while shared data, i.e.~immutable references, can be safely
+aliased.
+
+To make unique types work with assignments, values need to be moved or destroyed
+after read. This notion of \emph{destructive reads} was introduced by
+\citet*{islands-alias-protection}, with the goal of protecting from aliasing in
+object-oriented languages. Rust implements such reads for its move semantics by
+making the borrow checker flow-sensitive, similar to the proposition of
+\citet*{alias-burying}. The flow-sensitive borrow checker can also be seen as
+substructural typing \cite{oxide}.
+
+Other, less practically used languages with substructural typing or
+similar ideas are:
