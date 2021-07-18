@@ -56,18 +56,18 @@ examples stem from the test suite of Rust-Stainless and were included in the
 previous section's measurements. The last example is an implementation by
 Informal Systems used in the IBC implementation.
 
-\subsubsection{Test Suite Examples}
+\subsection{Test Suite Examples}
 
 \paragraph{Insertion Sort}
 
 The first code example in \autoref{lst:insertion-sort} is an implementation of
 \emph{inseration sort} on the typical functional linked-list seen in
-\autoref{lst:linked-list}. The linked-list is implemented as a recursive
-datatype which is enabled by the support for boxes. As this example was
-translated  from an equivalent Scala example in Stainless' test suite, it shows
-a functional way of writing Rust; there is no mutation in the entire example. In
-idiomatic Rust, one would probably use a vector instead of a linked-list. On the
-other hand, the linked-list allows for a recursive implementation which is very
+\autoref{lst:linked-list}. The linked-list is implemented as a recursive data
+type which is enabled by the support for boxes. As this example was translated
+from an equivalent Scala example in Stainless' test suite, it shows a functional
+way of writing Rust; there is no mutation in the entire example. In idiomatic
+Rust, one would probably use a vector instead of a linked-list. On the other
+hand, the linked-list allows for a recursive implementation which is very
 well-suited for verification with Stainless.
 
 The example further showcases the use of implementation blocks and specs on
@@ -217,7 +217,8 @@ def get_mut[V @mutable](
   }
 \end{lstlisting}
 
-\subsubsection{Peer-list Implementation}
+\subsection{Peer-list Implementation}
+\label{peerlist}
 
 benchmarks of Informal
 

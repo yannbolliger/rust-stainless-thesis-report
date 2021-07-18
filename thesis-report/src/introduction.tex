@@ -1,77 +1,84 @@
-Everyone who has ever written a computer program knows, it never runs
-correctly at the first try. Writing correct software is a hard task, yet
-software dominates our lives the longer the more. While finding bugs in
-a student software project may be time-consuming but harmless, there are
-countless places where logical errors and worse, security bugs cannot be
-tolerated. These are usually systems where failure has too high of a
-cost in terms of money or even human safety, think a railway control
-system. Software errors are also intolerable in systems where
-\emph{upgrading} the software is costly or impossible like embedded
-systems or satellites.
+Everyone who has ever written a computer program knows, it never runs correctly
+at the first try. Writing correct software is a hard task, yet software
+dominates our lives the longer the more. While finding bugs in a student
+software project may be time-consuming but harmless, there are countless places
+where logical errors and worse, security problems cannot be tolerated. These are
+usually systems where failure has too high of a cost in terms of money or even
+human safety, think a railway control system. Software errors are also
+intolerable in systems that or costly or impossible to \emph{upgrade} like
+embedded systems or satellites.
 
-One type of system that combines both of the above are blockchains that power
-decentralised cryptocurrencies. Bitcoin \cite{bitcoin} and Ethereum
-\cite{ethereum} have become very popular and are valued at incredible amounts of
-money reaching into the hundreds of billion dollars at the time of writing. The
-problem with upgrading such distributed systems is that a majority of the
+One type of system that has both a high financial cost of failure and is
+difficult to upgrade are blockchains that power decentralised cryptocurrencies.
+Bitcoin \cite{bitcoin} and Ethereum \cite{ethereum} have become very popular and
+are valued at amounts reaching into the hundreds of billion dollars at the time
+of writing. Upgrading such distributed systems is hard because a majority of the
 participating machines needs to reach a consensus about the upgrade. This makes
 upgrading the two former blockchains nearly impossible and even systems that
 were designed with upgrades in mind like the Cosmos network \cite{cosmos} wish
 to minimise the number of upgrades required, hence the need for correct
 (blockchain) software.
 
-A very strict approach on writing correct software is to use tools that
-mathematically prove the program correct, called \emph{formal verification}. The
-Stainless verification framework \cite{stainless} is such a tool for the Scala
-programming language. It enables users to check and prove high-level properties
-about functions and data structures, for instance that they conform to their
-specification. The properties and specifications can be stated in plain Scala as
-annotations. Stainless also establishes the termination of the program and the
-absence of runtime crashes.
+A powerful and strict approach to writing correct software is to mathematically
+prove the program correct in an automated fashion, called \emph{formal
+verification}. The Stainless verification framework \cite{stainless} is such a
+tool for the Scala programming language. It enables users to check and prove
+high-level properties about functions and data structures, for instance that
+they conform to their specification. The properties and specifications can be
+stated in plain Scala as annotations. Stainless also establishes the termination
+of the program and the absence of runtime crashes.
 
-However, blockchains are not usually implemented in Scala, but rather in C++, Go
+However, blockchains are usually not implemented in Scala, but rather in C++, Go
 or Rust for performance reasons. While Go achieves high performance despite its
 \emph{garbage collector}, C++ and Rust leave memory management to the
-programmer. For C++ this is the primary source of bugs and security problems,
-Rust however guarantees memory safety by introducing a new type checking phase
-in its compiler, the \emph{borrow checker}. For these reasons, Rust is
-well-suited for implementing highly performant, correct and safe blockchain
-systems. One such a system is the \emph{inter-blockchain communication protocol
+programmer. For C++ this is the primary source of security problems, Rust
+however guarantees memory safety by introducing a new type checking phase in its
+compiler, the \emph{borrow checker}. Therefore, Rust is well-suited for
+implementing highly performant, correct and safe blockchain systems, for example
+the  the \emph{inter-blockchain communication protocol
 (IBC)\footnote{\url{https://github.com/informalsystems/ibc-rs}}} implementation
 developed by Informal Systems.\footnote{\url{https://informal.systems}} But even
-if Rust provides type safety and memory safety at compile time, this does not
-guarantee correctness.
+with type safety and memory safety at compile time, Rust cannot guarantee
+correctness on its own.
 
-With the vision of combining the safety guarantees of Rust with much stronger
-correctness guarantees of Stainless we present \emph{Rust-Stainless}, a
-verification tool created by Georg Schmid. Rust-Stainless\footnote{Pun not
-intended, but -- needless to say -- welcome.} is a frontend to the Stainless
-verifier capable of extracting a subset of the Rust language, translating it to
-a subset of Scala and verifying it with Stainless. This thesis project
-substantially extends the fragment of Rust that can be translated by the tool
-including features like mutability, references and type classes.
+Therefore, we present \emph{Rust-Stainless}, a verification tool created by
+Georg Schmid, with the vision of combining the safety guarantees of Rust with
+formally verified correctness guarantees of Stainless.
+Rust-Stainless\footnote{Pun not intended, but -- needless to say -- welcome.} is
+a frontend to the Stainless verifier capable of extracting a subset of the Rust
+language, translating it to a subset of Scala and verifying it with Stainless.
+In this thesis project, I substantially extend the fragment of Rust that can be
+translated by the tool including features like mutability, references and type
+classes.
 
-\subsubsection{Contribution}
+\subsubsection{Contributions}
 
-\TODO{Is this section needed or does the last paragraph above suffice?}
-
-Main contributions of project
 \begin{itemize}
-\tightlist
-\item
-  Theoretical mutability translation
-\item
-  Advance extraction/translation by a lot
 
-  \begin{itemize}
-  \tightlist
-  \item
-    What was possible at the start of the project
-  \item
-    What at the end?
-  \end{itemize}
-\item
-  Fix bugs on Stainless side
-\item
-  Bring user perspective to the project from Informal
+\item \textbf{Theory} In \autoref{translation}, I develop a translation from
+Rust to Scala that produces equivalent runtime semantics in Scala for Rust
+features like mutability, mutable and immutable references, mutable tuples and
+data types, and move semantics. The translation is further adapted for use with
+the current state of Stainless' imperative phase.
+
+\item \textbf{Implementation} The largest contribution of this project are the
+numerous features that I added  to the implementation of the Rust-Stainless
+tool. In over 70 pull requests, I fixed bugs, added extraction capabilities for
+new Rust language fragments, implemented the mutability translation, and
+improved the user-facing \lstinline!stainless! library. Chapter
+\ref{implementation} first describes the overall design and pipeline of our
+tool. Then it establishes the state of the frontend before and after this thesis
+project.
+
+
+\item \textbf{Bugfixes} By using Stainless only as a backend and with unforeseen
+Scala-atypical inputs, we uncovered 14 issues in Stainless, from which I solved
+or helped solve eight. Furthermore, I added the \lstinline!freshCopy! primitive
+to the imperative phase of Stainless.
+
+\item \textbf{User Perspective} The internship at Informal Systems allowed me to
+test our tool on real-world code, see \autoref{peerlist}. This helped taking on
+a user perspective and had great influence on the choice and priorisation of new
+features.
+
 \end{itemize}

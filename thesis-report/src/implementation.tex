@@ -181,9 +181,9 @@ We further examine that limitation of our implementation in \autoref{impl-limita
 
 The extraction traverses all the \emph{items} of the crate, that is top-level
 functions, structs, enums, \passthrough{\lstinline!impl!} blocks and their
-methods as well as traits. It directly constructs Stainless definitions for
-datatypes. For function and method bodies, the extraction works on the THIR,
-which is guaranteed to exist as the type check passed. The body of our example
+methods as well as traits. It directly constructs Stainless definitions for data
+types. For function and method bodies, the extraction works on the THIR, which
+is guaranteed to exist as the type check passed. The body of our example
 function in THIR can be seen in \autoref{apx:thir-example}.
 
 The HIR is very well suited for translation to Stainless AST because it is still
