@@ -9,9 +9,9 @@ Linear types must be used \emph{exactly once}, they cannot be duplicated nor
 discarded \cite{use-once}. This presents the disadvantage that values to be
 reused have to be threaded through the program, e.g.~a function that reads from
 an array also needs to return the array after the read to make it useable again.
-Unique types as described by \citet*{alias-free-pointers} on the other hand
+Unique types as described by \citet{alias-free-pointers} on the other hand
 guarantee that they are the only reference to a certain value, i.e.~the absence
-of aliases. Lastly, \citet*{ownership-types} introduce ownership types that
+of aliases. Lastly, \citet{ownership-types} introduce ownership types that
 follow the same goal, the absence of inadvertent and even dangerous aliasing of
 (heap-allocated) objects.
 
@@ -21,18 +21,59 @@ languages that may assign to values or clone objects. Shallowly copying an
 object in a language with owned data is problematic because it might copy unique
 pointers, hence creating illegal aliases. Deep copying would solve the problem
 but there is also a more efficient approach called \emph{sheep cloning}. First
-described by \citet*{dynamic-alias-protection}, Rust implements a version close
+described by \citet{dynamic-alias-protection}, Rust implements a version close
 to \cite{sheep-cloning}: owned data, that is data pointed at by unique pointers
 is deeply copied, while shared data, i.e.~immutable references, can be safely
 aliased.
 
 To make unique types work with assignments, values need to be moved or destroyed
 after read. This notion of \emph{destructive reads} was introduced by
-\citet*{islands-alias-protection}, with the goal of protecting from aliasing in
+\citet{islands-alias-protection}, with the goal of protecting from aliasing in
 object-oriented languages. Rust implements such reads for its move semantics by
 making the borrow checker flow-sensitive, similar to the proposition of
-\citet*{alias-burying}. The flow-sensitive borrow checker can also be seen as
+\citet{alias-burying}. The flow-sensitive borrow checker can also be seen as
 substructural typing \cite{oxide}.
 
 Other, less practically used languages with substructural typing or
 similar ideas are:
+
+\begin{itemize}
+\item
+  \textbf{Mezzo}, an ML-language by \citet{mezzo}, controls aliasing
+  and ownership by offering \emph{duplicable types} that are immutable
+  and can be copied, and on the other hand \emph{mutable types} that are
+  linear. This is similar to Rust's distinction of copyable and moveable
+  types. Mezzo also uses a flow-sensitive type checker to enforce its
+  discipline but it does so with permissions embedded in the type system
+  rather than lifetimes.
+
+\item
+  \textbf{Linear Haskell} by \citet{linear-haskell} tries to bring
+  linear types to Haskell in a backwards-compatible way, i.e.~existing
+  code compiles alongside linear types. The key difference of this
+  approach is that linearity is attached to functions instead of having
+  linear and non-linear types like Mezzo or Rust. A linear function is
+  then restricted in the way it uses its arguments: ``when {[}the{]}
+  result {[}of a linear function{]} is consumed exactly once, then its
+  argument is consumed exactly once''.
+
+\item
+  \textbf{Alms} is an attempt to popularise \emph{affine types},
+  e.g.~types that may be use \emph{at most once}, by \citet{alms}. The
+  language is similar to OCaml and its primary goal is to create
+  resource-aware abstractions, for solving problems like race
+  conditions. In an Alms module, the programmer can mark types as
+  affine, contrary to Rust where everything is moveable, i.e.~affine,
+  unless otherwise specified, by implementing
+  \passthrough{\lstinline!Copy!}.
+
+\item
+  \textbf{Cyclone} was intended as a save alternative to C and is among
+  the languages that inspired Rust the most. In particular,
+  \citet{cyclone-region} designed Cyclone with memory management based
+  on regions that includes ideas like region subtyping and deallocation
+  by region. Unlike Rust however, in Cyclone the programmer specifies
+  whether an object should be on the heap, on the stack or in a dynamic
+  region. In Rust, the lifetime mechanism is applied to all references
+  and memory locations, ownership is used to trigger deallocation.
+\end{itemize}
