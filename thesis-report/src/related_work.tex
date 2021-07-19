@@ -47,15 +47,13 @@ similar ideas are:
   discipline but it does so with permissions embedded in the type system
   rather than lifetimes.
 
-\item
-  \textbf{Linear Haskell} by \citet{linear-haskell} tries to bring
-  linear types to Haskell in a backwards-compatible way, i.e.~existing
-  code compiles alongside linear types. The key difference of this
-  approach is that linearity is attached to functions instead of having
-  linear and non-linear types like Mezzo or Rust. A linear function is
-  then restricted in the way it uses its arguments: ``when {[}the{]}
-  result {[}of a linear function{]} is consumed exactly once, then its
-  argument is consumed exactly once''.
+\item \textbf{Linear Haskell} by \citet{linear-haskell} tries to bring linear
+types to Haskell in a backwards-compatible way, i.e.~existing code compiles
+alongside linear types. The key difference of this approach is that linearity is
+attached to functions instead of having linear and non-linear types like Mezzo
+or Rust. A linear function is then restricted in the way it uses its arguments:
+when its result is consumed exactly once, then its argument is consumed exactly
+once.
 
 \item
   \textbf{Alms} is an attempt to popularise \emph{affine types},
@@ -77,3 +75,66 @@ similar ideas are:
   region. In Rust, the lifetime mechanism is applied to all references
   and memory locations, ownership is used to trigger deallocation.
 \end{itemize}
+
+
+\section{Rust Formalisations}
+
+Even if Rust is a rather young language, there have already been
+numerous attempts at formalising its semantics of ownership, borrowing
+and reference lifetimes. The following list mentions three important and
+recent works. Other projects are are Patina \cite{patina}, Rusty
+Types \cite{rusty-types}, and KRust \cite{krust}.
+
+\begin{itemize}
+\item
+  \textbf{RustBelt} by \citet{rustbelt} is important to mention because
+  it bridges the gap of most other works: it proves the safety of
+  implementations in \emph{unsafe Rust} -- ``securing the foundations of
+  Rust''. The authors develop an automated way of proving correctness of
+  a subset of the language and apply it to libraries that internally use
+  unsafe features. For example, they proved that a program using the
+  abstractions of \passthrough{\lstinline!std::cell!} runs safely if it
+  type checks. In contrast to the following works and Rust-Stainless
+  however, RustBelt uses a continuation-passing style language
+  \(\lambda_{Rust}\) that is close to the MIR rather than Rust itself.
+
+\item
+  \textbf{Oxide} is a recent formalisation by some of Rust's maintainers
+  \citet{oxide}. The goal of the project is to provide formal semantics
+  for a language close to surface Rust called Oxide. The authors present
+  the first syntactic proof of type safety for the borrow checking of
+  (the considered subset of) Rust and implemented a type-checker for the
+  language. It is important to note that the interpretation of lifetimes
+  in Oxide is already compatible with the future version of Rust's
+  borrow checker called \emph{Polonius} \cite{polonius}.
+
+\item
+  \textbf{Lightweight Formalism for Rust (FR)} was developed in parallel
+  to Oxide by \citet{fr}. Like Oxide, it draws strong inspiration from
+  Featherweight Java (FJ) \cite{fj}, hence the name FR. The paper also
+  presents a calculus that models source-level Rust with its salient
+  features like borrowing, reference lifetimes and move versus copy
+  semantics. The authors prove the soundness of their calculus but
+  unlike Oxide, they implemented the system in Java rather than in Rust.
+  Other differences to Oxide are that FR models boxes, that is heap
+  allocation, which Oxide doesn't. Oxide on the other hand is closer to
+  non-lexical lifetimes and hence the newer versions of the borrow
+  checker, it also covers a larger subset of Rust.
+\end{itemize}
+
+The two latter works are of particular importance to this project because these
+formalisations could be used to formally prove the correctness of the
+translation from \autoref{translation}.
+
+\section{Verification}
+
+Stainless in its current form with its own solver backend called \emph{Inox}
+\cite{nicolas} as developed by \citet*{stainless} is the successor of Leon
+\cite{leon}. The two systems come out of a long series of works exploring the
+possibilites of verifying functional programs, mainly in Scala, with SMT solvers
+\cite{smt}, like the early work by \citet{smrp}. Of particular interest to this
+project is the imperative phase of Stainless that was introduced by \citet{regb}
+and acts as main backend to the translation presented in this thesis. The new
+imperative phase by \citet{new-imperative} is likely to overcome the current
+limitations of imperative code in Stainless and may be the ideal target for
+Rust-Stainless.
