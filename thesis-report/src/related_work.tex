@@ -132,9 +132,91 @@ Stainless in its current form with its own solver backend called \emph{Inox}
 \cite{nicolas} as developed by \citet*{stainless} is the successor of Leon
 \cite{leon}. The two systems come out of a long series of works exploring the
 possibilites of verifying functional programs, mainly in Scala, with SMT solvers
-\cite{smt}, like the early work by \citet{smrp}. Of particular interest to this
-project is the imperative phase of Stainless that was introduced by \citet{regb}
-and acts as main backend to the translation presented in this thesis. The new
-imperative phase by \citet{new-imperative} is likely to overcome the current
-limitations of imperative code in Stainless and may be the ideal target for
-Rust-Stainless.
+\cite{smt}, like the early work by \citet{smrp}. Stainless distinguishes itself
+from many other verifiers in that it is \emph{counter-example complete}, that is
+it produces and minimises counter-examples for all failed verification
+conditions.
+
+Of particular interest to this project is the imperative phase of Stainless that
+was introduced by \citet{regb} and acts as main backend to the translation
+presented in this thesis. The new imperative phase by \citet{new-imperative} is
+likely to overcome the current limitations of imperative code in Stain less and
+may be the ideal target for Rust-Stainless.
+
+\subsubsection{Rust Verification}
+
+Due to its clear design and promising safety guarantees, Rust is predestined as
+implementation language for critical systems. With that arises the need to prove
+stronger properties on Rust programs like functional correctness. This is the
+major motivation behind this project, but likewise, numerous other projects try
+to build verifiers for Rust. The wide interest in the topic can be seen from the
+sheer number of projects in the uncomplete list:\footnote{The list of verifiers
+largely stems from
+\url{https://alastairreid.github.io/rust-verification-tools/}.}
+
+\begin{itemize}
+
+\item \textbf{RustHorn} \cite{rusthorn} translates Rust into \emph{constrained
+Horn clauses} that can be solved by an appropriate solver. The authors prove
+correctness of their translation for a formalised subset of Rust including
+mutable references, inspired by RustBelt \cite{rustbelt}. Contrary to
+Rust-Stainless, RustHorn operates on the MIR. While it mainly proves the absence
+of runtime errors, the tool has no features to  express and verify
+specifications or higher-level properties of a given program.
+
+\item \textbf{Seer} \cite{seer} stands for \emph{symbolic execution engine for
+Rust}. The engine takes the MIR and executes it symbolically with Z3 \cite{z3}
+as a solver backend, similar to Stainless. However, as an execution engine the
+tool tries to find executions that produce errors but cannot prove stronger
+properties.
+
+\item \textbf{SMACK} is a verification toolchain that translates LLVM IR to
+Boogie \cite{boogie} and  has been extended to support Rust \cite{smack}. Like
+RustHorn, it is able to prove absence of runtime errors and correctness of
+assertions but no higher-level properties like laws in Rust-Stainless.
+
+\item \textbf{MIRAI} \cite{mirai} is an abstract interpreter for MIR developed
+at Facebook. It supports very similar pre- and postconditions like
+Rust-Stainless that are standardised by the \lstinline!contracts! crate. The
+repository also contains contracts for many modules in the standard library.
+Such a contract could be a solution to Rust-Stainless' one-crate-limitation (cf.
+\autoref{impl-limitations}).  Contrary to Stainless, MIRAI may produce false
+negatives and  is not able to generate counter-examples for failed verification
+conditions.
+
+\item \textbf{Electrolysis} \cite{electrolysis} is probably the most similar
+work to Rust-Stainless. It translates Rust to the functional language Lean which
+is used as an interactive theorem prover \cite{lean}. Like Rust-Stainless,
+Electrolysis only works on the safe subset of Rust and one of the core topics of
+the project is the translation of mutable references. The author chooses
+functional lenses as representation of mutable references in Lean, this has the
+limitation that the translation needs to keep track of the provenance of mutable
+references. Unlike Rust-Stainless, this project operates on the MIR.
+
+
+\item \textbf{Creusot} \cite{creusot} is similar to Electrolysis, it also
+translates Rust to a verification language, WhyML \cite{why3}. Like MIRAI,
+Prusti and Rust-Stainless, Creusot lets  the programmer state specifications as
+pre- and postconditions. However it uses a special language for the contracts,
+called \emph{Pearlite}, that is developed with the project. Creusot also works
+with the MIR.
+
+\item \textbf{Prusti} \cite{prusti} is probably to most useable tool currently,
+as it is the only one  to offer a VSCode extension that verifies properties
+while the programmer is writing code. Prusti translates MIR to Viper
+\cite{viper}, a larger verification framework with frontends for various
+mainstream languages. Like Rust-Stainless, pre- and postconditions are expressed
+in Rust itself. Prusti has also the ability to attach contracts to
+crate-external items, similar to MIRAI, solving the one-crate-limitation (cf.
+\autoref{impl-limitations}). On the other hand, Prusti does not yet offer trait
+contract verification like Rust-Stainless introduces in this project with laws.
+
+\end{itemize}
+
+From this extensive enumeration, it is clear that Rust-Stainless seems to be the
+only tool that operates on an IR above the MIR. The trade-offs involved in that
+decision are discussed in \autoref{mir-thir}. One advantage that Rust-Stainless
+could offer in the future is counter-example generation in Rust. Currently,
+counter-examples are generated for the translated Scala program but it should be
+feasible to reverse the translation and return to the user counter-examples in
+Rust.
