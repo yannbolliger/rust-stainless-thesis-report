@@ -167,7 +167,7 @@ memory location~\cite{rustref}.
 {[}\ldots{]} dereferences (\passthrough{\lstinline!*expr!}), array
 indexing expressions (\passthrough{\lstinline!expr[expr]!}), field
 references (\passthrough{\lstinline!expr.f!}) {[}\ldots{]}. \\
-\cite[section "Expressions"]{rustref}
+\cite[section ``Expressions'']{rustref}
 \end{quote}
 
 Place expressions occur in \emph{place expression contexts} like on the
@@ -184,7 +184,7 @@ That system is responsible for
 
 \begin{quote}
 {[enforcing]} an ownership invariant where a
-variable is said to "own" the value it contains such that no two variables can
+variable is said to ``own'' the value it contains such that no two variables can
 own the same value \cite[page 5]{lightweight-formalism}.
 \end{quote}
 
@@ -253,7 +253,7 @@ For now, all the variables were allocated on the stack and hence, tied to the
 scope of their surrounding function. Heap allocation in Rust is achieved with
 the \lstinline!Box<T>! type. Everything, that is put into a box, is directly
 allocated on the heap \passthrough{\lstinline!let b = Box::new(A \{ ... \});!}.
-The binding that "holds the box" is the unique owner  of that data but because
+The binding that ``holds the box'' is the unique owner  of that data but because
 boxes have move semantics, the ownership can be transferred across function
 scopes.
 

@@ -14,9 +14,9 @@ the Stainless verifier backend.
 
 The translation works under the assumption that the input Rust code is
 \emph{safe} and ``well-behaved''. That is, it works for the \emph{safe subset}
-\cite[section "Unsafety"]{rustref} of the 2018 edition of Rust and
+\cite[section ``Unsafety'']{rustref} of the 2018 edition of Rust and
 single-threaded execution. In particular, the translation requires the absence
-of \emph{interior mutability} \cite[section "Interior Mutability"]{rustref} of
+of \emph{interior mutability} \cite[section ``Interior Mutability'']{rustref} of
 types. That means that all types are immutable through shared references. This
 can be enforced by prohibiting the use of \emph{smart pointers} like the ones
 from \passthrough{\lstinline!std::cell!}. Moreover, the safe subset of Rust
@@ -463,7 +463,7 @@ entire system please refer to \autoref{implementation}.
 \label{sec:aliasing-restrictions}
 
 The main difference between Scala and the supported imperative fragment of
-Stainless \cite[section "Imperative"]{stainless-doc} is that Stainless imposes
+Stainless \cite[section ``Imperative'']{stainless-doc} is that Stainless imposes
 aliasing restrictions on the program. The restrictions enable a simple but
 strict aliasing invariant:
 
