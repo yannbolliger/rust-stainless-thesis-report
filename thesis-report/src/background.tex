@@ -179,22 +179,23 @@ match c {
 
 \subsubsection{Implementations and Traits}
 
-Adding methods to data types is possible with \lstinline!impl! blocks.
-\autoref{lst:impl1} adds three methods to the running example of the container
-struct. The implementation block is generic in two type parameters, as is the
-struct.  It would also be possible to only add methods for certain
-instantiations of the  type parameters, then we would directly write for example
-\lstinline!impl Container<bool, i32>! on line 1.
+Adding methods to data types is done with \lstinline!impl! blocks in Rust. There
+can be many such blocks for a given type. \autoref{lst:impl1} adds three methods
+to the running example of the container struct. The implementation block is
+generic in two type parameters, as is the struct. Note that adding methods only
+for certain instantiations of the  type parameters is also possible. For
+example, the first line of the block could just be \passthrough{\lstinline!impl
+Container<bool, i32>!}.
 
-The first method returns an empty container. \lstinline!Self! stands for the
-type the implementation block is for, here \lstinline!Container<K, V>!. The
-\lstinline!new! method is a static method, it is not called on an instance of a
-container. In contrast, the two other methods specify a receiver type as first
-parameter. That makes the methods available on instances of the container, like
-\lstinline!c.is_empty()!. \lstinline!&self! acts on a reference to the instance
-the method is called on, the same for \lstinline!&mut self! but
-mutably.\footnote{More on references in \autoref{references}.} It is also be
-possible to consume the instance by specifying \lstinline!self! as receiver.
+The \lstinline!Self! in the return type stands for the type the implementation
+block is for, in our case \lstinline!Container<K, V>!. The \lstinline!new! method is a
+static method, it is not called on an instance of a container. In contrast, the
+two other methods specify a receiver type as first parameter. That makes the
+methods available on instances of the container, like \lstinline!c.is_empty()!.
+\lstinline!&self! acts on a reference to the instance the method is called on,
+the same for \lstinline!&mut self! but mutably.\footnote{More on references in
+\autoref{references}.} It is also be possible to consume the instance by
+specifying \lstinline!self! as receiver.
 
 \begin{lstlisting}[language=Rust, caption={Methods for the running example}, label=lst:impl1]
 impl<K, V> Container<K, V> {
@@ -205,11 +206,13 @@ impl<K, V> Container<K, V> {
 \end{lstlisting}
 
 Traits are used in Rust to specify interfaces. A trait can be implemented for
-any  data type with an implementation block providing the abstract methods of
-the trait, as in \autoref{lst:trait-impl2}. Traits can also be used to bound
-type parameters to only the types that implement a certain trait. This is called
-a trait bound and can be seen for the type parameter \lstinline!K! in
-\autoref{lst:mut-ref-impl}.
+any data type with an implementation block providing the abstract methods of the
+trait, as in \autoref{lst:trait-impl2}. Traits can also be used to bound type
+parameters to only the types that implement a certain trait. For example, the
+trait bound \lstinline!K: Id!  in \autoref{lst:mut-ref-impl} states that any
+\lstinline!K! admissible to the function (or in other cases the block) needs to
+implement the \lstinline!Id! trait, i.e.~\passthrough{\lstinline!impl Id for K!}
+needs to be available.
 
 \noindent\begin{minipage}[t]{.45\textwidth}
 \begin{lstlisting}[language=Rust, style=short, caption={Rust trait with one method.}, label=lst:trait-impl1]
@@ -450,13 +453,192 @@ extensively exploit this fact.
 
 \section{Stainless Verifier}
 
-\begin{itemize}
-  \item Support for FP
-  \item Support for mutability (\& limitations)
+With a solid understanding of Rust, it is time to introduce verification.
+Stainless \cite{stainless} is a formal verification tool for Scala. It lets
+programmers add contracts or specifications to functions and invariants to data
+structures. Stainless then transforms the input program in multiple phases to a
+purely functional language understood by its backend \emph{Inox} \cite{inox}
+which tries to prove or disprove the contracts by using Z3 \cite{z3} or a
+similar solver.
 
-  \item very short example for pre- and post-conditions
-  \item use verification directly on Rust
-\end{itemize}
+\subsection{Specifications}
+
+The simplest example of a specification is shown in \autoref{lst:fact-scala}.
+The expression in \lstinline!require! is called a \emph{precondition}, it has to
+hold when the function is called, the \lstinline!ensuring! is a
+\emph{postcondition} that must hold if the precondition holds. Simply put,
+Stainless establishes just the latter, that the postconditions hold assuming the
+preconditions hold. Of course, Stainless is more sophisticated and additionally
+proves that the program finishes for all inputs (\emph{termination}), that
+preconditions hold at static call sites of functions, that pattern matches are
+exhaustive, and that the program does not crash at runtime (except for
+out-of-memory errors) \cite{stainless-doc}. If these properties are invalid,
+then Stainless finds a counter-example input for the function that leads to a
+crash or violation of the specification.
+
+\noindent\begin{minipage}[t]{.47\textwidth}
+\begin{lstlisting}[
+  language=Scala,
+  label=lst:fact-scala,
+  caption={The factorial with specifications.}
+]
+def fact(x: Int): Int = {
+  require(x >= 0 && x < 10)
+  if (x <= 0) 1
+  else fact(x - 1) * x
+} ensuring { r => r >= 0 }
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.47\textwidth}
+\begin{lstlisting}[
+  language=Rust,
+  label=lst:fact-rust,
+  caption={The factorial in Rust.}
+]
+#[pre(x >= 0 && x < 10)]
+#[post(ret >= 0)]
+pub fn fact(x: i32) -> i32 {
+  if x <= 0 { 1 }
+  else { fact(x - 1) * x }
+}
+\end{lstlisting}
+\end{minipage}
+
+As \autoref{lst:fact-rust} illustrates, the same function and specification is
+also accepted by Rust-Stainless, which subsequently translates the program to
+Stainless and lets it prove correctness. The only difference is that
+specifications are added as function attributes rather than inline statements
+and that postconditions in Rust automatically have a \lstinline!ret! variable in
+scope that represents the return value. Other than that, the two are so similar
+that the following sections of this chapter will only show examples in Rust for
+simplicity. In both languages, one can in addition to specifications put
+assertions into function bodies, in Rust with \lstinline"assert!" macro.
+Stainless also proves that body assertions hold.
+
+So far, an imprecision has been made about Stainless' input language. Stainless
+does not support the full Scala language but rather a functional subset called
+\emph{PureScala}. Expressions in specifications also need to be in PureScala.
+However, Stainless was extended to support some form of mutability \cite{regb}
+which this project relies upon. Chapter \ref{translation} will go into details
+about how this is used.
+
+The methods of the container in the running example (fully displayed in
+\autoref{running-example}) show how the above features are applied to add
+specifications. The \lstinline!implies! function in line 26 is a library helper
+method provided by the \lstinline!stainless! crate. Body assertions are used in
+the main function to ensure that the code behaves as expected.
+
+\subsection{Algebraic Properties}
+\label{laws-intro}
+
+Traits are a very useful way of specifying mandatory interfaces in both Scala
+and Rust. Common properties like equality and ordering are often modelled with
+traits, but while the languages can enforce implementors of traits to provide
+all abstract methods, they cannot enforce higher-level contracts. For example,
+for an equality trait with \texttt{eq} one would assume that all implementations
+are reflexive, i.e. $\forall x: x~\mathtt{eq}~x$. However, the compilers cannot
+guarantee that.
+
+As a solution, in Stainless one can specify contracts on traits. First, trait
+methods can have all specification attributes like regular functions. These will
+be checked to hold for all implementations. Furthermore, one can attach
+\emph{laws} to traits i.e.~algebraic properties the contract implementors need
+to fulfil \cite[section "Specifying Algebraic Properties"]{stainless-doc}.
+Stainless proves correctness of the laws for each implementation of the trait.
+
+The last addition to the running example, is a law on the \lstinline!Id! trait
+stating  that ids need to be positive. Of course, the toy implementation that
+hard-codes an id for strings, holds that contract (lines 7-8 in
+\autoref{running-example}). A more interesting example of laws in
+\autoref{lst:liskov1} shows a violation of the  Liskov Substitution principle
+\cite{liskov}. The trait defines four methods. Two of them have regular
+postconditions and the laws state that a change to the width should not change
+the height and vice versa. Clearly, the implementation in \autoref{lst:liskov2}
+holds these properties.
+
+\begin{lstlisting}[language=Rust, caption={Example trait with laws.}, label={lst:liskov1}]
+trait Rectangle {
+  #[post(ret > 0)]
+  fn width(&self) -> u32;
+  #[post(ret > 0)]
+  fn height(&self) -> u32;
+
+  fn set_width(&self, width: u32) -> Self;
+  fn set_height(&self, height: u32) -> Self;
+  #[law]
+  fn preserve_height(&self, any: u32) -> bool {
+    self.set_width(any).height() == self.height()
+  }
+  #[law]
+  fn preserve_width(&self, any: u32) -> bool {
+    self.set_height(any).width() == self.width()
+  }
+}
+\end{lstlisting}
+
+Without the laws, it would be tempting to add a square implementation, see
+\autoref{lst:liskov3}. However, the square changes both dimensions at once --
+violating the laws. Stainless detects this, the square implementation fails
+verification, and thereby a possible bug is caught.
+
+\noindent
+\begin{minipage}[t]{.49\textwidth}
+\begin{lstlisting}[
+  language=Rust,
+  caption={Example implementation of the trait.},
+  label={lst:liskov2},
+  basicstyle=\footnotesize\ttfamily,
+]
+struct Rect {
+  width: u32,
+  height: u32
+}
+impl Rectangle for Rect {
+  fn width(&self) -> u32 { self.width }
+  fn height(&self) -> u32 { self.height }
+  fn set_width(&self, width: u32) -> Self {
+    Rect { width, height: self.height }
+  }
+  fn set_height(&self, height: u32) -> Self {
+    Rect { width: self.width, height }
+  }
+}
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.49\textwidth}
+\begin{lstlisting}[
+  language=Rust,
+  caption={Example implementation violating the laws.},
+  label={lst:liskov3},
+  basicstyle=\footnotesize\ttfamily,
+]
+struct Square {
+  width: u32
+}
+
+impl Rectangle for Square {
+  fn width(&self) -> u32 { self.width }
+  fn height(&self) -> u32 { self.width }
+  fn set_width(&self, width: u32) -> Self {
+    Square { width }
+  }
+  fn set_height(&self, height: u32) -> Self {
+    Square { width: height }
+  }
+}
+\end{lstlisting}
+\end{minipage}
+
+
+This concludes this chapter's introduction on Rust and Stainless. All Rust
+features needed for writing the motivating example (\autoref{running-example})
+were introduced as well as the verification features of Rust-Stainless, at the
+completion of this project. The goal of the remaining chapters is now to extend
+Rust-Stainless with all the features required to verify the example. Most of
+these features were added in the course of this thesis project. In particular,
+\autoref{translation} will explain how mutability and mutable references are
+translated to Scala. Chapter \ref{implementation} distinguishes between existing
+and added features, then gives some implementation details.
 
 \lstinputlisting[
   float,

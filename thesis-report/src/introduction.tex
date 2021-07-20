@@ -21,12 +21,11 @@ to minimise the number of upgrades required, hence the need for correct
 
 A powerful and strict approach to writing correct software is to mathematically
 prove the program correct in an automated fashion, called \emph{formal
-verification}. The Stainless verification framework \cite{stainless} is such a
-tool for the Scala programming language. It enables users to check and prove
-high-level properties about functions and data structures, for instance that
-they conform to their specification. The properties and specifications can be
-stated in plain Scala as annotations. Stainless also establishes the termination
-of the program and the absence of runtime crashes.
+verification}. The Stainless verification framework \cite{stainless} is a formal
+verification tool for the Scala programming language. It enables programmers to
+prove high-level properties about functions and data structures, for instance
+that they conform to their specification. Additionally, it establishes program
+termination and the absence of runtime crashes.
 
 However, blockchains are usually not implemented in Scala, but rather in C++, Go
 or Rust for performance reasons. While Go achieves high performance despite its

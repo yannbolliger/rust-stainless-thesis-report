@@ -7,10 +7,12 @@ on the \lstinline!master! branch, except for the mutability translation that
 lives on the \lstinline!mutable-cells!
 branch.\footnote{\url{https://github.com/epfl-lara/rust-stainless/pull/164}}
 
-Before presenting the design of the tool and some details of its implementation,
-we provide some  background on the Rust compiler and its phases. Then we will
-see what language features the tool was already capable of extracting before
-this thesis project and what new features have been introduced.
+Before presenting the tool's design and details about its implementation, the
+next section provides some background on the Rust compiler needed to understand
+the workings of our tool. The subsequent sections establish what language
+features the tool was already capable of extracting before this thesis project
+and what new features have been introduced. Finally, limitations of the current
+approach and implementation are discussed.
 
 
 \section{Background}
@@ -87,7 +89,7 @@ the actual frontend of the tool.
   \caption{
     The Rust-Stainless pipeline depicted with all intermediate representations
     of the user program. The left column on its own shows the normal compilation
-    pipeline of Rust's compiler. The gray parts are not executed in Rust-Stainless.
+    pipeline of Rust's compiler. The grey parts are not executed in Rust-Stainless.
   }
   \label{fig:flowchart}
   \end{center}
@@ -237,35 +239,6 @@ post-condition does not hold.
 \subsection{Supported Rust Features}
 \label{sec:supported-features}
 
-\subsubsection{Existing Features}
-
-The initial fragment of the Rust language that the tool could extract
-and translate underlay strict restrictions: all code needed to be
-functional, immutable and the only allowed side-effect was
-\passthrough{\lstinline"panic!"}. References, heap allocation with boxes
-and with it recursive data types were impossible.
-
-Apart from that, the majority of the language was already supported, i.e.~most
-of the control flow syntax, top-level functions with bodies, integer and boolean
-expressions, string literals, pattern matching, type parameters, generics, etc.
-ADTs were supported, including tuples (without pattern matching) and generics.
-
-Function specifications (specs), that is pre- and postconditions, could
-be stated with the two attributes from the
-\passthrough{\lstinline!libstainless!} crate:
-\passthrough{\lstinline!pre!} and \passthrough{\lstinline!post!}. The
-argument of a spec is a regular Rust expression that needs to type and
-borrow check, but it must have no effect on any variables of the
-function body.
-
-In the absence of references, the borrow checking of spec expressions posed a
-problem because oftentimes the expression would consume a function parameter of
-moved type multiple times which does not borrow check. As a work-around, one
-could add multiple specs of the same kind to a function which is equivalent to
-multiple \passthrough{\lstinline!\&\&!}-concatenated expressions. With all that,
-an example of supported and verified Rust code before this thesis project is
-\autoref{lst:existing}.
-
 \begin{lstlisting}[
   float,
   language=Rust,
@@ -297,15 +270,36 @@ pub fn fact(x: i32) -> i32 {
 }
 \end{lstlisting}
 
+\subsubsection{Existing Features}
+
+The initial fragment of the Rust language that the tool could extract and
+translate underlay strict restrictions: all code needed to be functional,
+immutable and the only allowed side-effect was \lstinline"panic!". References,
+heap allocation and with it recursive data types were impossible.
+
+Apart from that, a large part of the language was already supported, i.e.~most
+of the control-flow syntax, top-level functions with bodies, integer and boolean
+expressions, string literals, pattern matching, ADTs, including tuples (without
+their pattern matching), and generics. Function specifications (specs), that is
+pre- and postconditions, could be stated with the \lstinline!pre! and
+\lstinline!post! attributes from the \lstinline!stainless! crate.
+
+The argument of a spec is a regular Rust expression that must have no effect on
+any variables of the function body. This posed a problem in the absence of
+references because oftentimes, the expression would consume a function parameter
+of moveable type multiple times which does not borrow check. As a work-around,
+one could add multiple specs of the same kind to a function which is equivalent
+to multiple \lstinline!&&!-concatenated expressions.
+
+With all of the above, an example of supported and verified Rust code before
+this thesis project is \autoref{lst:existing}.
+
 \subsubsection{New Features}
 
-We turn to give an overview of all the language features that were added
-to the extraction in the course of this thesis project except for the
-mutability which has been introduced in \autoref{translation}. The
-features described here have been merged to the
-\passthrough{\lstinline!master!} branch of the project by a series of
-pull requests. You can find more implementation details about each
-feature in said pull requests.
+This section gives an overview of all the language features that were added to
+the extraction in the course of this thesis project except for the mutability
+translation which has been introduced in \autoref{translation}. The features
+described here are available on the \lstinline!master! branch of the project.
 
 \paragraph{Syntactical and Notational Improvements}
 
@@ -324,66 +318,65 @@ Support was added for:
   \passthrough{\lstinline!A(2, 3).0!},
 \item
   usage of the \passthrough{\lstinline!return!} keyword at most points
-  of a function (but not in if conditions and guards),
+  of a function (but not in \lstinline!if! conditions and guards),
 \item
   \passthrough{\lstinline!usize!} and \passthrough{\lstinline!isize!}
-  integer types that have the size of a pointer on the targeted
+  integer types that have the bit-length of a pointer on the targeted
   platform,
 \item
-  \emph{struct update syntax,} a short-hand notation for creating a
+  \emph{struct update syntax}, a short-hand notation for creating a
   struct from an existing one,
-
 \begin{lstlisting}[language=Rust]
 struct A { a: i32, b: bool, c: char }
 let x: A = A { a: 123, b: true, c: 'c' };
 let y: A = A { b: false, ..x }; // copies `x.b`, `x.c`
 \end{lstlisting}
+
 \item
   crate local modules and imports, which includes the ability of
   splitting up a crate into multiple files, and finally,
 \item
   panics in expression locations like an arm of a pattern match.
-
 \begin{lstlisting}[language=Rust]
 match Option::Some(123) {
   Option::Some(x) => x,
   Option::None => panic!("no value"),
 }
 \end{lstlisting}
+
 \end{itemize}
 
 \paragraph{Immutable References and Heap Allocation}
 
-It is now possible to immutably borrow places, pass immutable references
-around and allocate data on the heap with
-\passthrough{\lstinline!Box::new!}. Although already presented in
-\autoref{translation}, we mention the feature here because it exists
-independently of the mutability translation. This enables recursive data
-types like the typical, functional linked-list.
+It is now possible to immutably borrow places, pass immutable references as
+values and allocate data on the heap with boxes. Although already presented in
+\autoref{translation}, the feature is mentioned here because it exists
+independently of the mutability translation.
 
-\begin{lstlisting}[language=Rust]
+The above enables recursive data types like the typical, functional linked-list.
+Additionally, this eases the problem of borrow checking spec expressions because
+expressions that only read data, like most specifications do, can now take a
+reference instead of consuming the data.
+
+\begin{lstlisting}[language=Rust, style=short]
 pub enum List<T> {
   Nil,
   Cons(T, Box<List<T>>),
 }
 \end{lstlisting}
 
-Additionally, this eases the problem of borrow-checking spec expressions
-because expressions that only read data, like we assume most
-specifications do, can now take a reference instead of consuming the
-data.
-
 \paragraph{Measure Attribute}
 
 Recursive proofs in Stainless often require the programmer to state the
-induction variable with a \passthrough{\lstinline!decreases!} call. This
-helps Stainless infer the so called \emph{measure} of the proof, with
-which it checks termination. The same feature was introduced as a new
-spec attribute which enables verification of recursive functions.
+induction variable with a \lstinline!decreases! call in Scala. This helps
+Stainless infer the so called \emph{measure} of the proof, with which it checks
+termination. The same feature was introduced in Rust as a new spec attribute
+which enables verification of recursive functions, like \autoref{lst:measure}.
 
 \begin{lstlisting}[
   language=Rust,
-  caption={Measure attribute.}
+  caption={Measure attribute.},
+  label={lst:measure}
 ]
 #[measure(l)]
 fn size<T>(l: &List<T>) -> u32 {
@@ -396,28 +389,27 @@ fn size<T>(l: &List<T>) -> u32 {
 
 \paragraph{Stainless Library}
 
-As explained above, the \passthrough{\lstinline!libstainless!} crate is
-exposed to the programmer and contains helpers for specifying proofs and
-conditions. This is the equivalent of the
-\passthrough{\lstinline!stainless!} package in Scala. In addition to the
-pre-, post- and measure attributes the
-\passthrough{\lstinline!libstainless!} now offers an immutable, infinite
-set \passthrough{\lstinline!stainless::Set<T>!} and map
-\passthrough{\lstinline!stainless::Map<K, V>!} implementation.
+As explained above, the \lstinline!stainless! crate is exposed to the programmer
+and contains helpers for specifying proofs and conditions. This is the
+equivalent of the \lstinline!stainless! package in Scala. In addition to the
+pre-, post- and measure attributes the \lstinline!libstainless! now offers an
+immutable, infinite set \passthrough{\lstinline!stainless::Set<T>!} and map
+\passthrough{\lstinline!stainless::Map<K, V>!} implementation, see
+\autoref{lst:map-set}.
 
-In extraction and verification, both of these types are translated to
-the Stainless built-in infinite set and map type. Hence, they are backed
-and well-understood by Stainless which enables their utility in proofs.
-At runtime of the verified program however, the collections are backed
-with a runnable implementation that relies on the
-\passthrough{\lstinline!im!} crate for the immutable set and map
-implementations. The Rust interface of the collections was designed so
-as to resemble the \passthrough{\lstinline!std::collections::HashSet!}
-and \passthrough{\lstinline!HashMap!} as closely as possible.
+In extraction, both of these types are translated to Stainless' built-in
+infinite set and map type. Hence, they are backed and well-understood by
+Stainless which enables their proof utility. At runtime of the program, the
+collections are backed by a runnable implementation that relies on the
+\lstinline!im! crate. The Rust interface of the collections was designed so as
+to resemble the \lstinline!std::collections::HashSet! and \lstinline!HashMap! as
+closely as possible.
 
 \begin{lstlisting}[
+  float,
   language=Rust,
-  caption={The interface of the Stainless collections in Rust.}
+  caption={The interface of the Stainless collections in Rust.},
+  label=lst:map-set
 ]
 Set<T> {
   fn new() -> Self;
@@ -448,193 +440,42 @@ implication $p \implies q \equiv \neg{p} \land q$ over boolean expressions.
 
 \paragraph{External and Synthesised ADTs}
 
-Internally, the \lstinline!Map<K, V>! of the Stainless crate relies on
-the \passthrough{\lstinline!MutableMap!} of Scala Stainless with a value
-type of \passthrough{\lstinline!Option[V]!}. To perform that
-translation, the extraction needs to create trees of the
-\passthrough{\lstinline!Option!} type even if the
-\passthrough{\lstinline!std::option::Option!} doesn't occur in the
-program. Therefore, Rust-Stainless can now synthesise values and types
-for certain specific ADTs: the \passthrough{\lstinline!Option!}, tuples
-and mutable cells as described in \autoref{sec:translation}.
+Internally, the \lstinline!Map<K, V>! of the Stainless crate relies on the
+\lstinline!MutableMap! of Scala Stainless with values of type
+\lstinline!Option[V]!. To perform that translation, the extraction needs to
+create trees of the \lstinline!Option! type, even if the
+\lstinline!std::option::Option! doesn't occur in the program. Therefore,
+Rust-Stainless can now synthesise values and types for certain specific ADTs:
+\lstinline!Option!, tuples and mutable cells as described in
+\autoref{sec:translation}.
 
-Related to the above, the frontend also supports extraction of
-crate-external ADTs like \passthrough{\lstinline!Option!} and
-\passthrough{\lstinline!std::result::Result!}. This means, the
-programmer can use the standard structures and they will be correctly
-translated, provided that no methods on these types are used. Other than
-ADT definitions that are available across crates, function bodies only
-live in the HIR which is only ever available for the currently compiled
-crate.
+The frontend also supports extraction of crate-external ADTs like
+\lstinline!std::result::Result!. That means, the programmer can use the standard
+structures and they are correctly translated, provided that no methods of these
+types are used. This is the one-crate-limitation, discussed in
+\autoref{impl-limitations}.
 
 \paragraph{Implementation Blocks, Traits and Laws}
 
-Methods on types are defined with \passthrough{\lstinline!impl!} blocks
-in Rust. There can be many such blocks for a certain type.
-Implementation blocks either just add methods on a type or they
-\emph{implement a trait}, that is they provide implementations for all
-the methods specified by the trait for a given type,
-\passthrough{\lstinline!impl TraitX for TypeA!}. The blocks may be
-generic i.e.~add methods to all instantiations of a polymorphic type
-(example \passthrough{\lstinline!Option<T>!}) or they may be specific to
-a certain instantiation (\passthrough{\lstinline!List<i32>!}).
-
-\begin{lstlisting}[language=Rust, caption={Rust trait with two implementations.}]
-trait Equals {
-  fn equals(&self, x: &Self) -> bool;
-  fn not_equals(&self, x: &Self) -> bool { !self.equals(x) }
-}
-impl Equals for i32 {
-  fn equals(&self, y: &i32) -> bool { *self == *y }
-}
-impl<T: Equals> Equals for List<T> {
-  fn equals(&self, other: &List<T>) -> bool { ... }
-}
-// A regular method on the List type.
-impl<T> List<T> {
-  #[measure(self)]
-  pub fn size(&self) -> u32 { ... }
-}
-\end{lstlisting}
-
-The Rust compiler automatically and implicitly resolves which method to
-call for any given receiver in the code. If no suitable implementation
-is in scope, it signals an error. A similar but nonetheless different
-mechanism is achieved in Scala by means of type classes. In regular
-Scala, the resolution of type class methods and instances is done
-through the \emph{implicits mechanism} of Scala. In Stainless, this
-resolution has to be done manually, but it remains possible to translate
-the Rust semantics of traits and implementations to Stainless by means
-of type classes.
-
-\begin{lstlisting}[
-  language=Scala,
-  caption={Type class with implementations in Scala.},
-  label=lst:equals-scala
-]
-abstract class Equals[T] {
-  def equals(x: T, y: T): Boolean
-  def notEquals(x: T, y: T): Boolean = !this.equals(x, y)
-}
-case object i32asEquals extends Equals[Int] {
-  def equals(x: Int, y: Int): Boolean = x == y
-}
-// The argument for this class has to be manually provided.
-case class ListasEquals[T](ev0: Equals[T]) extends Equals[List[T]] {
-  def equals(x: List[T], y: List[T]): Boolean = ??? // will call `ev0.equals`
-}
-\end{lstlisting}
-
-The largest addition, other than mutability, of this thesis project is
-support for the features just described: implementation blocks and
-traits with implementations by means of type classes. Rust-Stainless not
-only extracts type classes and objects from Rust traits, but it also
+The largest addition, other than mutability, of this project is support for
+implementation blocks, methods, and traits with contracts, as introduced in
+\autoref{laws-intro}. This includes solving some intricate problems. For
+example, the Rust compiler automatically and implicitly resolves which trait
+implementation to use for any given trait method call. If no suitable
+implementation is in scope, it signals an error.  A similar mechanism can be
+achieved in Scala by means of \emph{type classes}. The resolution of type class
+methods and instances is done through the \emph{implicits mechanism} of regular
+Scala. In Stainless however, this resolution has to be done manually. Therefore,
+Rust-Stainless not only extracts type classes from Rust traits, but it also
 infers which type class instance to call at each method call site.
-Moreover, one can specify contracts on traits and methods. Whether they
-live in an implementation block or are abstract trait items, methods can
-state all the specification attributes like regular functions (as an
-example take the post attributes on \passthrough{\lstinline!width!} and
-\passthrough{\lstinline!height!} of \autoref{lst:liskov1}).
-Additionally, one can attach \emph{laws} to traits i.e.~algebraic
-properties on type classes that ensure that implementors hold the
-contract set by the type class \cite[section "Specifying Algebraic
-Properties"]{stainless-doc}. Stainless proves correctness of these laws
-for each implementation of the trait. \autoref{lst:liskov1} shows an
-exemplary violation of the Liskov Substitution principle \cite{liskov}.
 
-\begin{lstlisting}[language=Rust, caption={Example trait with laws.}, label={lst:liskov1}]
-trait Rectangle {
-  #[post(ret > 0)]
-  fn width(&self) -> u32;
-  #[post(ret > 0)]
-  fn height(&self) -> u32;
-
-  fn set_width(&self, width: u32) -> Self;
-  fn set_height(&self, height: u32) -> Self;
-
-  #[law]
-  fn preserve_height(&self, any: u32) -> bool {
-    self.set_width(any).height() == self.height()
-  }
-  #[law]
-  fn preserve_width(&self, any: u32) -> bool {
-    self.set_height(any).width() == self.width()
-  }
-}
-\end{lstlisting}
-
-The trait defines four methods and states with two laws that a change to
-the width should not change the height and vice versa. Clearly, the
-following implementation of a rectangle holds these properties.
-
-\begin{lstlisting}[language=Rust, caption={Example implementation of the trait.}]
-struct Rect { width: u32, height: u32 }
-impl Rectangle for Rect {
-  fn width(&self) -> u32 { self.width }
-  fn height(&self) -> u32 { self.height }
-  fn set_width(&self, width: u32) -> Self {
-    Rect { width, height: self.height }
-  }
-  fn set_height(&self, height: u32) -> Self {
-    Rect { width: self.width, height }
-  }
-}
-\end{lstlisting}
-
-Without the laws, it would be tempting to add a square implementation.
-However, that implementation changes both dimensions at once --
-violating the laws. Stainless detects this, the square implementation
-fails verification, and thereby the violation is caught.
-
-\begin{lstlisting}[language=Rust, caption={Example implementation violating the laws.}]
-struct Square { width: u32 }
-impl Rectangle for Square {
-  fn width(&self) -> u32 { self.width }
-  fn height(&self) -> u32 { self.width }
-  fn set_width(&self, width: u32) -> Self {
-    Square { width }
-  }
-  fn set_height(&self, height: u32) -> Self {
-    Square { width: height }
-  }
-}
-\end{lstlisting}
-
-Polymorphic type parameters can be bounded in Rust by trait bounds. For example,
-\lstinline!T: Equals! in \autoref{lst:poly-bound} states that any \lstinline!T!
-admissible to the function (in other cases the implementation block) needs to
-implement the \passthrough{\lstinline!trait Equals!},
-i.e.~\lstinline!impl Equals for T! needs to be available. This pattern
-corresponds to the \emph{evidence parameter} pattern in Scala, with which the
-caller proves that the instantiated type satisfies the given constraint.
-Rust-Stainless is capable of extracting such trait bounds from top-level
-functions, trait implementations, and regular implementation blocks. It
-translates them to evidence arguments in Scala as shows \autoref{lst:ev-params2}.
-
-\begin{lstlisting}[
-  language=Rust,
-  caption={Polymorphic function with a trait bound.},
-  label=lst:poly-bound
-]
-#[post(ret > 0)]
-pub fn fn_with_bound_and_spec<T: Equals>(x: &T, y: &T) -> i32 {
-  if x.eq(y) { 123 } else { 456 }
-}
-\end{lstlisting}
-
-\begin{lstlisting}[
-  language=Scala,
-  caption={Translation of the trait bound as evidence parameter.},
-  label=lst:ev-params2
-]
-def fn_with_bound_and_spec(x: T, y: T, ev0: Equals[T]): Int = {
-  if (ev0.eq(x, y)) 123 else 456
-} ensures { _ > 0}
-\end{lstlisting}
-
-\begin{quote}
-\TODO{What about the fixes on the Stainless side?}
-\end{quote}
+Furthermore, our tool is capable of extracting laws and specifications of traits
+and their implementations, including specification attributes on abstract
+methods. Lastly, it can extract  trait bounds like \passthrough{\lstinline!T:
+Equals!} from top-level functions, trait implementations, and regular
+implementation blocks, and transform them to the Scala equivalent pattern of
+\emph{evidence parameters}. More details on this tranlsation are found in
+\autoref{type-class-extraction}.
 
 
 
@@ -723,47 +564,53 @@ extracting one definition of option and synthesising a second one. The
 latter also shows why it is crucial to register and recognise standard
 items.
 
-\subsubsection{Type Class Extraction}
+\subsubsection{Trait to Type Class Translation}
+\label{type-class-extraction}
 
-Type class extraction introduces a distinction between regular
-\passthrough{\lstinline!impl!} blocks for which we simply extract the
-methods as top-level functions, and
-\passthrough{\lstinline!impl TraitX for TypeA!} blocks that need to be
-extracted as type class implementations, i.e.~\emph{case classes} or
-\emph{case objects}. Of course, traits are extracted as \emph{abstract
-classes}.
+As mentioned in \autoref{sec:supported-features}, Rust-Stainless extracts traits
+and models them as type classes in Scala. This introduces a distinction between
+regular \lstinline!impl! blocks for which it suffices to extract the methods as
+top-level functions, and \passthrough{\lstinline!impl TraitX for TypeA!} blocks
+that need to be extracted as type class implementations, i.e.~\emph{case
+classes} or \emph{case objects}. Traits themselves are extracted as
+\emph{abstract classes}, see \autoref{lst:clstranslation0}.
 
-Internally, Rust represents
-\passthrough{\lstinline!impl TraitX for TypeA!} blocks with a
-\emph{trait bound} on the block
-i.e.~\passthrough{\lstinline!Self: TraitX!}, while Scala uses
-inheritance (\passthrough{\lstinline!extends!}). Furthermore, Rust
-traits are implemented on the implicit \passthrough{\lstinline!Self!}
-type parameter, whereas Scala type classes always have at least one type
-parameter representing the type for which the class is implemented.
-Fortunately, \passthrough{\lstinline!rustc!} internally treats the
-\passthrough{\lstinline!Self!} like a regular type parameter, therefore
-it internally already has the Scala form. As \autoref{lst:clstranslation}
-shows, the trait bounds on type parameters of implementations are
-converted to evidence parameters. If an implementation has no type
-parameter, it can be extracted as a ground case object.
+Internally, Rust represents \passthrough{\lstinline!impl TraitX for TypeA!}
+blocks with a \emph{trait bound} on the block i.e.~\passthrough{\lstinline!Self:
+TraitX!}, while Scala uses inheritance (\passthrough{\lstinline!extends!}).
+Furthermore, Rust traits are implemented on the implicit \lstinline!Self! type
+parameter, whereas Scala type classes always have at least one type parameter
+representing the type for which the class is implemented. Fortunately, the Rust
+compiler internally treats the \lstinline!Self! like a regular type parameter,
+hence internally it is already in the Scala form.
 
-\noindent
-\begin{minipage}[t]{.49\textwidth}
+\noindent\begin{minipage}[t]{.49\textwidth}
 \begin{lstlisting}[
   language=Rust,
   showlines=true,
-  caption={Examples of traits and implementations with and without trait bounds.}
+  caption={Examples of traits and implementations with and without trait bounds.},
+  label={lst:clstranslation0}
 ]
-trait Equals { ... }
+trait Equals {
+  fn equals(&self, x: &Self) -> bool;
 
+  fn not_equals(&self, x: &Self)
+    -> bool {
+      !self.equals(x)
+    }
+}
 trait Other<X, Y> { ... }
 
 impl Equals for i32 { ... }
 
+
 impl<T: Equals> Equals for List<T>
   { ... }
 
+let list: List<i32> = List::Cons(
+  123, Box::new(List::Nil)
+);
+list.equals(&List::Nil)
 \end{lstlisting}
 \end{minipage}\hfill
 \begin{minipage}[t]{.49\textwidth}
@@ -774,41 +621,62 @@ impl<T: Equals> Equals for List<T>
     Trait bounds are translated as evidence parameters.},
   label={lst:clstranslation}
 ]
-abstract class Equals[Self] { ... }
+abstract class Equals[Self] {
+  def equals(self: T, x: T): Boolean
 
+  def notEquals(
+    self: T, x: T
+  ): Boolean =
+    !this.equals(x, y)
+}
 abstract class Other[Self, X, Y]
   { ... }
 case object i32asEquals
   extends Equals[Int] { ... }
+
 case class ListasEquals[T](
   ev0: Equals[T]
 ) extends Equals[List[T]] { ... }
+
+val list = Cons(123, Nil())
+ListasEquals[i32](i32asEquals)
+  .equals(list, Nil())
 \end{lstlisting}
 \end{minipage}
 
-If there are classes, it is also necessary to distinguish \emph{function
-calls} from \emph{method calls}. This distinction is mostly achieved by
-adding flags like \passthrough{\lstinline!abstract!} and
-\passthrough{\lstinline!methodOf(i32asEquals)!} to methods. The
-challenge of method calls is to resolve the receiver instance they are
-called on. For example, \autoref{lst:equals-scala} shows a call to
-\passthrough{\lstinline!this.equals!} inside the type class. In Rust,
-this is implicitly resolved but because our type class instances are
-only created in the extraction, the phase also has to resolve the
-receiver instances itself.
+As \autoref{lst:clstranslation} shows, the trait bounds on type parameters are
+converted to evidence parameters in Scala, like \passthrough{\lstinline!ev0:
+Equals[T]!}. Evidence parameters force the caller to prove that the instantiated
+type satisfies the bound by providing an instance of the corresponding type
+class. This is equivalent to Rust's compiler ensuring that
+\passthrough{\lstinline!impl Equals for T!} is in scope. If an implementation
+has no type parameter, it can be extracted as a ground case object.
 
-Instance resolution takes a triple of class identifier, receiver type
-and type parameters, as well as the current surrounding class to resolve
-the receiver instance. For example, inside a type class, the
-\passthrough{\lstinline!this!} instance is accessible, inside classes
-with evidence parameters, the evidence instances are available and
-ground case objects are always in scope. As a last resort, instance
-resolution recursively checks whether it can create a new type class
-instance by providing it the required evidence arguments. This happens
-for example for \passthrough{\lstinline!List<i32>!}, which gets
-translated to
-\passthrough{\lstinline!ListasEquals[i32](i32asEquals).equals!} unless
-we are in the implementation of the class itself.
+If there are classes, it is also necessary to distinguish \emph{function calls}
+from \emph{method calls}. This distinction is mostly achieved by adding flags
+like \passthrough{\lstinline!abstract!} and
+\passthrough{\lstinline!methodOf(i32asEquals)!} to methods. The challenge of
+method calls is to resolve the receiver instance they are called on. For
+example, \autoref{lst:clstranslation} shows a call to \lstinline!this.equals!
+inside the type class. In Rust, the call is on the first parameter of the
+function which is also the receiver. This is implicitly resolved by the
+compiler. In Stainless however, the call needs to happen on the type class
+instance and because our type class instances are only created in the
+extraction, the tool also has to resolve the receivers itself.
+
+Instance resolution takes a triple of type class identifier, receiver type and
+type parameters, as well as the current surrounding class to resolve the
+receiver instance. For example, inside a type class, the \lstinline!this!
+instance is accessible, inside classes with evidence parameters, the evidence
+instances are available (e.g. \lstinline!ev0.eq(x, y)! in
+\lstinline!ListasEquals[T]!) and ground case objects are always in scope. As a
+last resort, instance resolution recursively checks whether it can create a new
+type class instance by providing it the required evidence arguments. This
+happens for example for the call on line 20 of \autoref{lst:clstranslation0}. It
+gets translated to a new instance of \lstinline!ListasEquals! that is created
+with the ground object \lstinline!i32asEquals!.
+
+
 
 \subsubsection{Spec Closure Encoding}
 
