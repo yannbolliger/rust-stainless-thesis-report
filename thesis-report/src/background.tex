@@ -1,57 +1,69 @@
+This chapter offers a short introduction to the Rust language as well as the
+Stainless verifier. Both parts will use a running example of a Rust program to
+illustrate the involved concepts. It may seem odd to introduce Stainless with
+Rust  as it is built and usually used with Scala. However, thanks to
+Rust-Stainless the  usage of Stainless in Rust is so similar to the usage in
+Scala that it is suitable  to reuse the running Rust example. For a more
+detailed introduction to Stainless in Scala please refer to
+\cite{stainless-doc}.
+
 \section{Rust Language}
 
-Rust \cite{rust2, rust1} is a recent systems programming language, initally
+Rust \cite{rust2, rust1} is a recent systems programming language, initially
 developed at Mozilla with the goal of replacing C++ as primary application
-language. The most distinguishing feature of Rust is its new approach to memory
+language. Its most distinguishing feature is the new approach to memory
 management. Traditional languages tend to either manage memory with a
 \emph{garbage collector} or require the programmer to manually allocate and,
-more importantly, deallocate memory. Rust is able to deallocate memory itself
-without a garbage collector by using concepts of \emph{ownership} and
-\emph{reference lifetimes}. In other words, Rust provides memory management at
-compile time which results in cost-free memory management at runtime.
-Additionally, Rust guarantees memory safety properties like  the absence of
-\emph{dangling pointers}, i.e. it is impossible to dereference a freed part of
-memory.
+more importantly, deallocate memory. Rust deallocates memory itself without a
+garbage collector by using concepts of \emph{ownership} and \emph{reference
+lifetimes}. In other words, Rust provides memory management at compile-time
+which results in cost-free abstractions at runtime. Additionally, Rust
+guarantees memory safety properties like  the absence of \emph{dangling
+pointers}, i.e. it is impossible to dereference a freed part of memory.
 
-To achieve this, Rust introduces a flow-sensitive type checker, the \emph{borrow
-checker}, which is a concrete implementation of existing ideas that have been
-widely studied in many years of research. The two main concepts are ownership
+To live up to its promises, Rust introduces a flow-sensitive type checker, the
+\emph{borrow checker}, which is a concrete implementation of ideas that have
+been studied in research for years. The two main concepts are ownership
 \cite{ownership-types} and \emph{borrowing} that build on the research topics of
 \emph{uniqueness} \cite{alias-burying} and \emph{linearity}
-\cite{Wadler90lineartypes, once-upon-a-type}, and reference lifetimes that are
-inspired by work on region-based memory management \cite{cyclone-region}.
+\cite{Wadler90lineartypes, once-upon-a-type}. Reference lifetimes are inspired
+by work on region-based memory management \cite{cyclone-region}.
 
 
 \subsection{Syntax Overview}
 
-As a start, the \autoref{lst:first-ex} shows a simple function in Rust that
-calculates and returns the square of the given integer. The language is
-statically typed, therefore the parameter \lstinline!x! has its type annotated,
-\lstinline!i32!, a signed 32-bit integer. Other integer types can be unsigned
-(\lstinline!u32!) or of other bitwidths (\lstinline!u128!). The return type of
-function is indicated after the arrow, if omitted the return type defaults to
-\lstinline!-> ()!, the unit type. Note also, that the expression on the last
-line of the function, or any brace-delimited block is implicitly returned.
-Alternatively, one may also employ the explicit return statement to return a
-value from any point in a function, like in \autoref{lst:let}. Statements
-are delimited with semi-colons and produce the unit type.
+As a start, \autoref{lst:first-ex} shows a simple function in Rust that returns
+the square of the integer \lstinline!x!. Rust is statically typed, hence
+parameters have annotated types, \lstinline!i32! in our case, a signed 32-bit
+integer. Other integer types can be unsigned (\lstinline!u32!) or of other
+bit-lengths (\lstinline!u128!). The return type of function is indicated after
+the arrow, if omitted the return type defaults to \lstinline!-> ()!, the unit
+type. Note also, that the expression on the single line of the function block,
+or any brace-delimited block, is implicitly returned. Alternatively, one may
+employ the explicit return statement to return a value from any point in a
+function, like on line 4 of \autoref{lst:let}. Statements are delimited with
+semi-colons and produce the unit type.
 
-\begin{lstlisting}[language=Rust, caption={A simple Rust function.}, label=lst:first-ex]
-fn square(x: i32) -> i32 {
-  x * x
-}
+\begin{lstlisting}[style=short, language=Rust, caption={A simple Rust function.}, label=lst:first-ex]
+fn square(x: i32) -> i32 { x * x }
 \end{lstlisting}
 
 \subsubsection{Variables}
 
 To bind values, Rust offers the \lstinline!let! statement, which creates a new
-variable and binds the assigned value to it. This is the case for both
-\lstinline!x, y! in \autoref{lst:let}. Function parameters are also
-variables~\cite{rustref}. By default, variables are
-immutable, that is the compiler rejects any attempt to reassign to an
-initialised variable. On the other hand, it accepts to redeclare and thus
-\emph{shadow} a binding, which is what happens on line 7 of \autoref{lst:let}.
+variable and binds the assigned value to it. Function parameters are also
+variables in Rust~\cite{rustref}. By default, variables are immutable, that is
+the compiler rejects any attempt to reassign to an initialised variable. On the
+other hand, Rust accepts to redeclare and thus \emph{shadow} a binding, which is
+what happens on line 7 of \autoref{lst:let}.
 
+For most let-bindings the type of the variable is inferred by the compiler and
+does not have to be annotated like for function parameters. In
+\autoref{lst:let}, all the types are inferred as the standard integer type
+\lstinline!i32!. This even works for bindings that shadow an earlier declaration
+with a different type.
+
+\noindent\begin{minipage}[t]{.45\textwidth}
 \begin{lstlisting}[language=Rust, caption={A Rust function doing some arithmetics.}, label=lst:let]
 fn f(z: i32) -> i32 {
   let x = z * 10;
@@ -63,22 +75,8 @@ fn f(z: i32) -> i32 {
   x + y + z
 }
 \end{lstlisting}
-
-Something to note for let-bindings is that in most cases, the type of variable
-does not have to be declared like for function parameters but rather the
-compiler is able to infer it. In \autoref{lst:let}, all the types are inferred
-as the standard integer type \lstinline!i32!. This even works when a binding is
-shadowed with a different type from the earlier declaration.
-
-\subsubsection{Mutability}
-
-As an imperative language Rust nonetheless offers mutable bindings, but each
-variable has to be explicitly declared as mutable by annotating it with the
-\lstinline!mut! keyword. In general, Rust is always very explicit about the
-distinction between mutable and immutable variables and references.
-\autoref{lst:mut-ex} has both the function parameter as well as the local
-variable \lstinline!b! mutable.
-
+\end{minipage}\hfill
+\begin{minipage}[t]{.45\textwidth}
 \begin{lstlisting}[language=Rust, caption={Mutable variable bindings.}, label=lst:mut-ex]
 fn g(mut a: i32) -> i32 {
   let mut b = 10;
@@ -87,6 +85,16 @@ fn g(mut a: i32) -> i32 {
   a * b
 }
 \end{lstlisting}
+\end{minipage}
+
+\subsubsection{Mutability}
+
+As an imperative language Rust also offers mutable bindings, but each variable
+has to be explicitly declared as mutable by annotating it with the
+\lstinline!mut! keyword. In general, Rust is always very explicit about the
+distinction between mutable and immutable variables and references.
+\autoref{lst:mut-ex} has both a mutable function parameter and a mutable local
+variable.
 
 \subsubsection{Algebraic Data Types (ADT)}
 
@@ -97,53 +105,139 @@ three forms: without fields like \lstinline!OnlyAMarker! in
 numerically indexed fields, e.g. \lstinline!a.0! and the C-like structs with
 field names, \lstinline!b.field!. Enumerations are sum types and can have
 members that are again like structs in either unit, tuple or C-like form.
+\autoref{lst:option} shows  an example from the standard library, the option
+type. It also shows how a type parameter is used to create a generic
+data type.
 
-\begin{lstlisting}[language=Rust, caption={ADTs an instances thereof.}, label=lst:struct-ex]
+\noindent\begin{minipage}[t]{.45\textwidth}
+\begin{lstlisting}[language=Rust, caption={All three types of structs.}, label=lst:struct-ex]
 struct OnlyAMarker;
 struct A(i32, bool);
 struct B {
   field: u8
 }
-enum C {
-  SecondMarker,
-  TupleLike(i128),
-  StructLike {
-    a: bool
-  }
-}
 let a = A(0, true);
 let mut b = B { field: 2 };
-let c = C::TupleLike(123);
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.45\textwidth}
+\begin{lstlisting}[
+  language=Rust,
+  caption={The standard option type as an example of a generic enumeration.},
+  label=lst:option
+]
+enum Option<T> {
+    None,
+    Some(T),
+}
+let opt: Option<i32> =
+  Option::Some(123);
+\end{lstlisting}
+\end{minipage}
+
+Fields are not considered variables in Rust, rather they are part of their
+belonging struct's variable~\cite{rustref}. Hence, fields inherit the mutability
+of their struct, e.g. the only mutable field in \autoref{lst:struct-ex} is
+\lstinline!b.field! because \lstinline!b! is mutable. Hence, mutability is not
+part of the field type but depends on the binding of the struct's instance.
+
+Rust also has anonymous tuples. These behave exactly like tuple structs but
+don't need to be declared beforehand. One can simply instantiate tuples of any
+non-negative number of types (cf. \autoref{lst:tuples}). With that, the first
+part of the running example is simply a generic container struct that has an
+option of a tuple (\autoref{lst:container}).
+
+\noindent\begin{minipage}[t]{.45\textwidth}
+\begin{lstlisting}[language=Rust, style=short, caption={A two-tuple in Rust.}, label=lst:tuples]
+let t: (i32, bool) = (123, true);
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.45\textwidth}
+\begin{lstlisting}[language=Rust, style=short, label={lst:container}, caption={The struct for the running example.}]
+struct Container<K, V> {
+  pair: Option<(K, V)>,
+}
+\end{lstlisting}
+\end{minipage}
+
+\subsubsection{Pattern Matching}
+
+With ADTs, especially enumerations, it is natural that Rust also offers pattern
+matching. \autoref{lst:match} shows how to match on the container struct from
+before. Note that match arms can be further refined by \lstinline!if! guards of
+any boolean expression. To simply check whether a value matches a certain shape,
+one can use the \lstinline"matches!(opt, Some(_))" macro, that is expanded to a
+regular pattern match returning true for the pattern  and false otherwise.
+
+\begin{lstlisting}[language=Rust, caption={Pattern matching on a struct.}, label=lst:match]
+let c = Container { pair: None };
+match c {
+  Container { pair: Some((k, v)) } if k == 123 => Some(v),
+  _ => None,
+}
 \end{lstlisting}
 
-Note that fields are not considered variables in Rust, rather they are a part of
-the struct's variable~\cite{rustref}. Hence, fields inherit the mutability of
-their struct's variable, e.g. the only mutable field in \autoref{lst:struct-ex}
-is \lstinline!b.field! because \lstinline!b! is mutable. That means mutability
-is not part of a fields type but depends on the binding of each instance.
+\subsubsection{Implementations and Traits}
 
-Finally, Rust also has anonymous tuples. These behave exactly like tuple structs
-but don't need to be declared upfront. The programmer can simply instatiate
-tuples of any non-negative number of types, like
-\lstinline!let t: (i32, bool) = (123, true)!.
+Adding methods to data types is possible with \lstinline!impl! blocks.
+\autoref{lst:impl1} adds three methods to the running example of the container
+struct. The implementation block is generic in two type parameters, as is the
+struct.  It would also be possible to only add methods for certain
+instantiations of the  type parameters, then we would directly write for example
+\lstinline!impl Container<bool, i32>! on line 1.
 
+The first method returns an empty container. \lstinline!Self! stands for the
+type the implementation block is for, here \lstinline!Container<K, V>!. The
+\lstinline!new! method is a static method, it is not called on an instance of a
+container. In contrast, the two other methods specify a receiver type as first
+parameter. That makes the methods available on instances of the container, like
+\lstinline!c.is_empty()!. \lstinline!&self! acts on a reference to the instance
+the method is called on, the same for \lstinline!&mut self! but
+mutably.\footnote{More on references in \autoref{references}.} It is also be
+possible to consume the instance by specifying \lstinline!self! as receiver.
 
-\iffalse
-  - pattern match
-  - impls
-  - traits
-  - generics
-\fi
+\begin{lstlisting}[language=Rust, caption={Methods for the running example}, label=lst:impl1]
+impl<K, V> Container<K, V> {
+  pub fn new() -> Self { Container { pair: None } }
+  pub fn is_empty(&self) -> bool { matches!(self.pair, None) }
+  pub fn insert(&mut self, k: K, v: V) { self.pair = Some((k, v)) }
+}
+\end{lstlisting}
 
+Traits are used in Rust to specify interfaces. A trait can be implemented for
+any  data type with an implementation block providing the abstract methods of
+the trait, as in \autoref{lst:trait-impl2}. Traits can also be used to bound
+type parameters to only the types that implement a certain trait. This is called
+a trait bound and can be seen for the type parameter \lstinline!K! in
+\autoref{lst:mut-ref-impl}.
+
+\noindent\begin{minipage}[t]{.45\textwidth}
+\begin{lstlisting}[language=Rust, style=short, caption={Rust trait with one method.}, label=lst:trait-impl1]
+trait Id {
+  fn id(&self) -> usize;
+}
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.45\textwidth}
+\begin{lstlisting}[
+  language=Rust,
+  style=short,
+  caption={Non-sensical implementation of the Id trait for strings.},
+  label=lst:trait-impl2
+]
+impl Id for String {
+  fn id(&self) -> usize { 123456 }
+}
+\end{lstlisting}
+\end{minipage}
 
 \subsection{Owning and Referencing Data}
 
 \subsubsection{Value Categories}
 
 Rust, like C but unlike Java or Scala, exposes memory management to the
-programmer and makes it possible to reference data that is locally allocated on
-the stack. Therefore, the programmer and compiler need  to distinguish between
-different \emph{value categories} of an expression:
+programmer and allows referencing data that is stack-allocated. Therefore,  one
+needs to distinguish between different \emph{value categories} of an expression:
 
 \begin{itemize}
 \tightlist
@@ -171,16 +265,15 @@ references (\passthrough{\lstinline!expr.f!}) {[}\ldots{]}. \\
 \end{quote}
 
 Place expressions occur in \emph{place expression contexts} like on the
-left-hand side of let-bindings, as borrow operands, as field expression
-operands or as pattern match scrutinees. Otherwise, if a place
-expression is evaluated in a \emph{value context}, e.g.~on the
-right-hand side of a binding, it evaluates to what is stored at the
-place it evaluates to. We say, its data is \emph{used}.
+left-hand side of let-bindings, as borrow operands or as field expression
+operands. Otherwise, if a place expression is evaluated in a \emph{value
+context}, e.g.~on the right-hand side of a binding, it evaluates to what is
+stored at the place it designates, its data is \emph{used}.
 
 \subsubsection{Ownership}
 
-As said previously, the distinguishing feature of Rust is its ownership system.
-That system is responsible for
+As said previously, Rust's distinguishing feature is its ownership system which
+is responsible for
 
 \begin{quote}
 {[enforcing]} an ownership invariant where a
@@ -188,50 +281,36 @@ variable is said to ``own'' the value it contains such that no two variables can
 own the same value \cite[page 5]{lightweight-formalism}.
 \end{quote}
 
-In other words, data is owned by exactly one binding and if some data is used in
-an assignment or passed to a function, it will be \emph{moved out} of that
-binding, i.e. the ownership of the data is transferred to the new binding or the
-function. The old binding is deinitialised and can never be reused, we say it
-behaves linearly \cite{oxide}. One can also see moving out as \emph{destructive
-read} \cite{islands-alias-protection}. In \autoref{lst:move}, data is moved out
-of \passthrough{\lstinline!a!} and its ownership is transferred to
-\passthrough{\lstinline!b!}.
+In other words, data is owned by exactly one binding and if some data is used,
+e.g. in an assignment or passed to a function, it will be \emph{moved out} of
+that binding, i.e. the ownership of the data is transferred to the new binding.
+The old binding is deinitialised and can never be reused. Moved data behaves
+linearly \cite{oxide}, moving out can be seen as \emph{destructive read}
+\cite{islands-alias-protection}. On line 2 of \autoref{lst:move}, data is moved
+out of \lstinline!a! and its ownership is transferred to \lstinline!b!.
 
+From \autoref{lst:move} it is clear, why Rust's borrow checker needs to be
+flow-sensitive. The move semantics render \lstinline!a! dead before it formally
+goes out of scope, e.g. at the end of the block. The same applies to individual
+fields. A field can be moved out of its struct and become inaccessible while
+another field of the same struct is still available. This is called a
+\emph{partial move}. The struct itself also becomes inaccessible as soon as one
+of its fields is moved.
+
+\noindent\begin{minipage}[t]{.47\textwidth}
 \begin{lstlisting}[
   language=Rust,
   label=lst:move,
   caption={A struct type with move semantics.}
 ]
-struct A { a: i32 };
-let a = A { a: 123 };
+let a = Container {
+  pair: Some(123, 456)
+};
 let b = a;
-// `a` can never be used from here
+// `a` can never be used again
 \end{lstlisting}
-
-From \autoref{lst:move} it is clear, why Rust's borrow checker needs to be
-flow-sensitive. The move semantics render the variable \lstinline!a! dead before
-it formally goes out of its scope. For example, a subsequent statement like
-\lstinline!let c: A = a;! would type check because the type checker is
-flow-insensitive, however the borrow checker needs to take flow into account.
-This is also applies to single fields of structs, e.g. a field can be moved
-out of a struct and become inaccessible while another field is still available.
-This is called a \emph{partial move}. The struct itself also becomes
-inaccessible as soon as one of its fields is moved.
-
-\paragraph{Move vs. Copy}
-
-One departure from these \emph{use-once} \citep{use-once} variables are copyable
-types. Types that implement the \passthrough{\lstinline!Copy!} trait in Rust get
-copy semantics rather than move semantics. The compiler automatically implements
-this for primitive types\footnote{Primitive types in Rust are \lstinline!bool!,
-\lstinline!char!, \lstinline!str!, numeric types and the type for panics
-\texttt{!}~\cite{rustref}} (cf. \autoref{lst:copy}) but also for shared
-references and tuples of copyable types \cite[section "Special types and
-traits"]{rustref}. When data of these types is used, it's implicitly copied and
-the original binding and data stay valid and independent. In contrast to shared
-references that can be copied, mutable references have move semantics because
-they need to stay unique, as will become clear shortly.
-
+\end{minipage}\hfill
+\begin{minipage}[t]{.47\textwidth}
 \begin{lstlisting}[
   language=Rust,
   label=lst:copy,
@@ -240,72 +319,100 @@ they need to stay unique, as will become clear shortly.
 let a = 123;
 let mut b = a;
 b += 1;
-// `a` can still be used and is == 123
+// `a` can still be used
+assert!(a == 123 && b == 124)
 \end{lstlisting}
+\end{minipage}
 
-For types that are not copyable, we are still able to explicitly create
-copies of objects by implementing the \passthrough{\lstinline!Clone!}
-trait and calling the \passthrough{\lstinline!Clone::clone!} method.
+\paragraph{Move vs. Copy}
+
+One departure from the move semantics are copyable types. Types that implement
+the \lstinline!Copy! trait get copy semantics. The compiler automatically
+implements that trait for primitive types\footnote{Primitive types in Rust are
+booleans, characters, \lstinline!str!, numeric types and the panic type
+\texttt{!}~\cite{rustref}} (cf. \autoref{lst:copy}) but also for shared
+references and tuples of copyable types \cite[section "Special types and
+traits"]{rustref}. When copyable data is used, it's implicitly copied and the
+original binding stays valid and independent. In contrast to shared references
+that are copyable, mutable references have move semantics because they need to
+stay unique, as will become clear shortly. Non-copyable types can still be
+explicitly copied by implementing the \lstinline!Clone! trait and calling the
+\lstinline!clone! method.
 
 \paragraph{Heap Allocation}
 
-For now, all the variables were allocated on the stack and hence, tied to the
-scope of their surrounding function. Heap allocation in Rust is achieved with
-the \lstinline!Box<T>! type. Everything, that is put into a box, is directly
-allocated on the heap \passthrough{\lstinline!let b = Box::new(A \{ ... \});!}.
-The binding that ``holds the box'' is the unique owner  of that data but because
-boxes have move semantics, the ownership can be transferred across function
-scopes.
+Up until now, all data was stack-allocated and hence, tied to the scope of the
+surrounding function. To outlive a function, data needs to be heap-allocated
+which is achieved in Rust with the \lstinline!Box<T>! type. Everything that is
+put into a box is directly allocated on the heap (cf. \autoref{lst:box}). The
+binding that ``holds the box'', \lstinline!c_heap! in the example, is the unique
+owner of that data. But because boxes have move semantics, the ownership can be
+transferred to other bindings, e.g. across function scopes.
+
+\begin{lstlisting}[language=Rust, label=lst:box, caption={A heap-allocated container.}, style=short]
+let c_heap = Box::new(Container { pair: None });
+\end{lstlisting}
 
 \subsubsection{References}
+\label{references}
 
-Reading and even writing data one does not own is still possible in Rust but has
-to be done with references. In other words, references are the way to --
-temporarily -- break away from the ownership
-invariant~\cite{lightweight-formalism}. References are created by
-\emph{borrowing} from a variable or field with the \lstinline!\&! or
-\lstinline!\&mut! operator, depending on whether the created borrow should be
-immutable or mutable. One can either borrow from owned data directly or
-\emph{reborrow} from an existing reference. When passing a reference to an
-object as a function argument, we say we pass that argument \emph{by reference},
-as opposed to passing the entire object \emph{by value} and hence moving or
-copying it.
+It is possible to read and even write data one does not own in Rust, through
+references. In other words, they are the way to -- temporarily -- break away
+from the ownership invariant~\cite{lightweight-formalism}. References are
+created by \emph{borrowing} from a variable or field with the \lstinline!&! or
+\lstinline!&mut! operator, depending on whether the created reference should be
+mutable or not. One can either borrow from owned data directly or
+\emph{reborrow} from an existing reference. Passing a reference to an object in
+a function argument is called pass \emph{by reference}, as opposed to passing
+the entire object \emph{by value} and hence moving or copying it. The method of
+\autoref{lst:mut-ref-impl} is passed a mutable reference to the receiving
+container instance and returns a reborrowed mutable reference  to the second
+part of its tuple.
+
+\begin{lstlisting}[
+  language=Rust,
+  label={lst:mut-ref-impl},
+  caption={An implementation block with a trait bound. The method returns a mutable reference to some interior part of the struct.}
+]
+impl<K: Id, V> Container<K, V> {
+  pub fn get_mut_by_id(&mut self, id: usize) -> Option<&mut V> {
+    match &mut self.pair {
+      Some((k, v)) if k.id() == id => Some(v),
+      _ => None,
+    }
+  }
+}
+\end{lstlisting}
 
 Rust's type system and borrow checking guarantee that all references are valid
-when they are used. That is use-after free errors are impossible and Rust also
+when they are used. That is, use-after free errors are impossible and Rust also
 prevents stack-allocated data from escaping its allocation scope. To do so, Rust
-needs to infer the lifetime of each reference. \emph{Liveness} is a general
-concept in programming languages and can be determined by a \emph{data-flow
-analysis}. A variable or for this case a reference is said to be \emph{live} if
-it holds a value that may be used at any future point of any execution path
-\cite{wiki:live-vars}. Otherwise, that variable is said to be \emph{dead}. The
-part of the program in which a variable is live is called its \emph{lifetime}.
+infers the \emph{lifetime} of each reference, i.e. the part of the program in
+which the reference points to a valid variable and may still be used at a future
+point of any execution path~\cite{wiki:live-vars}. A reference or variable that
+is not used anymore is said to be \emph{dead}.
 
 The lifetime of a reference in Rust is constrained by the lifetime of the
 variable it borrows from, this is the main  mechanism to prevent use-after free
-problems. Furthermore, there is a very strict set of rules that borrows need to
-adhere to. At any point in a program and for any data there can either exist
+problems. Furthermore, there is a strict set of rules that borrows need to
+adhere to. At any point of a program and for any data there can either exist
 
 \begin{itemize}
 \tightlist
-\item
-  multiple immutable i.e.~\emph{shared references}
-  \passthrough{\lstinline!\&T!} that may read the referenced data,
-\item
-  or there can be a \emph{unique mutable reference}
-  \passthrough{\lstinline!\&mut T!} that is allowed to read and write
-  to the data it does not own.
+\item multiple immutable, i.e.~\emph{shared references}, \lstinline!\&T!,  that
+may read the referenced data,
+
+\item or there can be a \emph{unique mutable reference},
+\passthrough{\lstinline!\&mut T!}, that is allowed to read and write to the data
+it does not own.
 \end{itemize}
 
-During the lifetime of a shared reference, the data can be read but not
-changed by the owning binding. In contrast, the mutable reference allows
-to change data without owning it under the condition that there exist no
-other references to that data. While the mutable reference is live, even
-the owning binding is neither allowed to read nor to write that place.
-
-These rules underpin how Rust can ensure memory safety at compile time
-and therefore form the core of the language. The type and borrow checker
-of the Rust compiler enforce the rules or in the words of \citet{oxide}:
+During the lifetime of a shared reference, the data can be read but not changed
+by the owning binding as well. In contrast, the mutable reference allows to
+change data without owning it under the condition that there exist no other
+references to that data. While the mutable reference is live, even the owning
+binding is neither allowed to read nor to write that place. In the words of
+\citet{oxide}:
 
 \begin{quote}
 {[...]} we understand Rust's borrow checking system as ultimately being a system
@@ -321,10 +428,9 @@ for statically building a proof that data in memory is either
 In Scala, there are local mutable variables (\passthrough{\lstinline!var!})
 comparable to \passthrough{\lstinline!let mut!} in Rust. Class fields however
 are immutable by default. At the class declaration one can opt into mutability
-for a certain field by marking it as \passthrough{\lstinline!var!}. That field
-is then mutable on all instances of the class and irrespective of whether an
-instance is locally bound with the immutable \passthrough{\lstinline!val!} or
-the mutable \passthrough{\lstinline!var!}.
+for a certain field by marking it as \lstinline!var!. That field is then mutable
+on all instances of the class and irrespective of whether an instance is locally
+bound with the immutable \lstinline!val! or the mutable \lstinline!var!.
 
 \subsubsection{References}
 

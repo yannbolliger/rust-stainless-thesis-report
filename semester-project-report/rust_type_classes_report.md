@@ -94,7 +94,7 @@ code-base as well as prospects for future work \ref{discussion}.
 
 The targeted Rust fragment underlies strict restrictions: all code has to be
 functional and immutable and the only allowed side-effect is `panic!`. Before
-this project, references, heap allocated objects called _boxes_ and therefore
+this project, references, heap-allocated objects called _boxes_ and therefore
 recursive data types were impossible. Nonetheless, the majority of features
 existed already, like the extraction of most of the syntax, top-level functions
 and their bodies, integer and boolean expressions/operations, pattern matching,

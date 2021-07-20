@@ -38,7 +38,7 @@ implementing highly performant, correct and safe blockchain systems, for example
 the  the \emph{inter-blockchain communication protocol
 (IBC)\footnote{\url{https://github.com/informalsystems/ibc-rs}}} implementation
 developed by Informal Systems.\footnote{\url{https://informal.systems}} But even
-with type safety and memory safety at compile time, Rust cannot guarantee
+with type safety and memory safety at compile-time, Rust cannot guarantee
 correctness on its own.
 
 Therefore, we present \emph{Rust-Stainless}, a verification tool created by
@@ -69,7 +69,6 @@ improved the user-facing \lstinline!stainless! library. Chapter
 \ref{implementation} first describes the overall design and pipeline of our
 tool. Then it establishes the state of the frontend before and after this thesis
 project.
-
 
 \item \textbf{Bugfixes} By using Stainless only as a backend and with unforeseen
 Scala-atypical inputs, we uncovered 14 issues in Stainless, from which I solved
