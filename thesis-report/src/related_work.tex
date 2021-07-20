@@ -128,14 +128,13 @@ translation from \autoref{translation}.
 
 \section{Verification}
 
-Stainless in its current form with its own solver backend called \emph{Inox}
-\cite{nicolas} as developed by \citet*{stainless} is the successor of Leon
-\cite{leon}. The two systems come out of a long series of works exploring the
-possibilites of verifying functional programs, mainly in Scala, with SMT solvers
-\cite{smt}, like the early work by \citet{smrp}. Stainless distinguishes itself
-from many other verifiers in that it is \emph{counter-example complete}, that is
-it produces and minimises counter-examples for all failed verification
-conditions.
+Stainless in its current form with the \emph{Inox} solver \cite{inox} as
+developed by \citet*{stainless} is the successor of Leon \cite{leon}. The two
+systems come out of a long series of works exploring the possibilites of
+verifying functional programs, mainly in Scala, with SMT solvers \cite{smt},
+like the early work by \citet{smrp}. Stainless distinguishes itself from many
+other verifiers in that it is \emph{counter-example complete}, that is it
+produces and minimises counter-examples for all failed verification conditions.
 
 Of particular interest to this project is the imperative phase of Stainless that
 was introduced by \citet{regb} and acts as main backend to the translation
