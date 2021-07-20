@@ -139,21 +139,18 @@ and called on the corresponding type class implementations.
 \paragraph{Local Mutability}
 
 Turning to mutability, the benchmark in \autoref{lst:local-clone} is available
-on the \texttt{mutable-cells} branch. It features a simple struct containing an
-integer for which the compiler derives an instance of the \lstinline!Clone!
-trait. In the function, the struct is created cloned and mutated. The assertions
-ensure that  the cloned instance is not changed as well by the mutation. The
-mutability translation for that example will erase the instance of
-\lstinline!Clone! and replace the \lstinline!clone! call with
-\lstinline!freshCopy!.
+on the \texttt{mutable-cells} branch. It features a simple struct for which the
+macro derives an instance of \lstinline!Clone!. In the function, the struct is
+created, cloned and mutated. The assertions ensure that the cloned instance is
+not changed as well by the mutation. The mutability translation for that example
+will erase the instance of \lstinline!Clone! and replace the \lstinline!clone!
+call with \lstinline!freshCopy!.
 
 \begin{lstlisting}[
   language=Rust,
   caption={Local mutation and cloning of a simple struct.},
   label=lst:local-clone
 ]
-extern crate stainless;
-
 #[derive(Clone)]
 pub struct S(i32);
 
@@ -168,53 +165,45 @@ pub fn main() {
 
 \paragraph{Mutable References}
 
-A more involved example is \autoref{lst:mut-ref-12} from the
-\texttt{mutable-cells} branch. This is the most complicated mutability
-benchmark. In particular, it shows how a mutable reference is matched upon and
-then a sub-reference is returned (\autoref{lst:mut-ref-match}). That
-sub-reference is subsequently used to alter the container struct. The assertion
-at the end of the main function ensures that the mutation has an effect. In
-summary, the example requires support for mutable borrows, pattern matching on
-mutable references, passing mutable references as values in arguments and
-returns, as well as mutation of structs via mutable references.
+The running example \autoref{running-example} from \autoref{background} is
+adapted from the most complicated mutability benchmark on the
+\texttt{mutable-cells} branch. In particular, it shows how a mutable reference
+is matched upon and then a sub-reference is returned. That sub-reference is
+subsequently used to alter the container struct. The assertion at the end of the
+main function ensures that the mutation has an effect. In summary, the example
+requires support for mutable borrows, pattern matching on mutable references,
+passing mutable references as values in arguments and returns, as well as
+mutation of structs via mutable references.
 
-\begin{lstlisting}[
-  language=Rust,
-  caption={Pattern match on a mutable reference.},
-  label={lst:mut-ref-match}
-]
-impl<V> Container<String, V> {
-  pub fn get_mut(&mut self, key: &String) -> Option<&mut V> {
-    match &mut self.pair {
-      Some((k, v)) if *k == *key => Some(v),
-      _ => None,
-    }
-  }
-}
-\end{lstlisting}
-
-In the translation of \autoref{lst:mut-ref-match}
-(\autoref{lst:mut-ref-translated}), we observe how the optimisations of
-\autoref{optimisations} apply. The string argument \lstinline!key! is not given
-as a mutable cell because it is immutable. We also see that the pattern match
-binds the mutable cell \lstinline!v! inside the tuple ADT instead of its value,
-such that it can later be used to modify the original object.
+In the translation of \lstinline!get_mut_by_id! in
+\autoref{lst:mut-ref-translated}, we observe how the optimisations of
+\autoref{optimisations} apply. The \lstinline!id! argument is not wrapped in a
+mutable cell because it is immutable. We also see that the pattern match binds
+the mutable cell \lstinline!v! inside the tuple ADT instead of its value, such
+that it can later be used to modify the original object. Furthermore, the
+evidence argument responsible for the trait method is added as parameter.
 
 \begin{lstlisting}[
   language=Scala,
-  caption={Translation of \autoref{lst:mut-ref-match}},
+  caption={Translation of the \lstinline!get_mut_by_id! method from \autoref{running-example}.},
   label={lst:mut-ref-translated}
 ]
-def get_mut[V @mutable](
-  self: MutCell[Container[String, V @mutable]],
-  key: String
-): Option[V @mutable] =
+def get_mut_by_id[K @mutable, V @mutable](
+  self: MutCell[Container[K, V]],
+  id: Long,
+  ev0: Id[K] @evidence
+): Option[V] = {
   self.value.pair match {
-    case MutCell(Some(MutCell(Tuple2(k, v)))) if k.value == key =>
-      Some[V @mutable](v)
-    case _ =>
-      None[V @mutable]()
+    case MutCell(Some(MutCell(Tuple2(k, v))))
+      if ev0.id(k.value) == id => Some[V](v)
+    case _ => None[V]()
   }
+} ensuring {
+  (ret: Option[V]) => is_empty[K, V](self.value) ==> ret match {
+    case None() => true
+    case _ => false
+  }
+}
 \end{lstlisting}
 
 \subsection{Peer-list Implementation}

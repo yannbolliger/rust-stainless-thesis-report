@@ -447,6 +447,7 @@ by-value passing of references closely resembles by-reference passing for
 mutable objects. The translation presented in \autoref{translation} will
 extensively exploit this fact.
 
+
 \section{Stainless Verifier}
 
 \begin{itemize}
@@ -456,3 +457,10 @@ extensively exploit this fact.
   \item very short example for pre- and post-conditions
   \item use verification directly on Rust
 \end{itemize}
+
+\lstinputlisting[
+  float,
+  language=Rust,
+  caption={The full running example for \autoref{background}. It showcases most of the newly introduced features of Rust-Stainless.},
+  label={running-example}
+]{code/thesis_example.rs}
