@@ -200,11 +200,11 @@ the translation, for example for some other encoding of mutability as explored
 in \autoref{impl-limitations}.
 
 
-If all the THIR can be translated to Stainless AST without errors,
-i.e.~there are no unsupported features in the program, the AST is
-serialised to the custom binary format that is used by Stainless'
-caching mechanism. At this point, the program consists of a list of
-functions, a list of ADTs and a list of classes (\autoref{lst:stainless-trees}).
+If all the THIR can be translated to Stainless AST without errors, i.e.~there
+are no unsupported features in the program, the AST is serialised to the custom
+binary format that is used by Stainless's caching mechanism. At this point, the
+program consists of a list of functions, a list of ADTs and a list of classes
+(\autoref{lst:stainless-trees}).
 
 \begin{lstlisting}[
   language=Scala,
@@ -397,7 +397,7 @@ immutable, infinite set \passthrough{\lstinline!stainless::Set<T>!} and map
 \passthrough{\lstinline!stainless::Map<K, V>!} implementation, see
 \autoref{lst:map-set}.
 
-In extraction, both of these types are translated to Stainless' built-in
+In extraction, both of these types are translated to Stainless's built-in
 infinite set and map type. Hence, they are backed and well-understood by
 Stainless which enables their proof utility. At runtime of the program, the
 collections are backed by a runnable implementation that relies on the
@@ -780,7 +780,7 @@ For standard library items we run into the limitation that is imposed by the
 one-crate-a-time compilation model of \passthrough{\lstinline!rustc!}. Our tool
 is currently not able to extract the code of standard library items because they
 are not part of the user crate, hence no HIR is available. This is probably the
-biggest technical limitation of Rust-Stainless' implementation. Various
+biggest technical limitation of Rust-Stainless's implementation. Various
 approaches could be explored to solve it:
 
 \begin{itemize}
@@ -886,7 +886,7 @@ future which may solve these issues.
 
 \paragraph{Other Approaches}
 
-To overcome the limitations of Stainless' current imperative phase, a
+To overcome the limitations of Stainless's current imperative phase, a
 new \emph{full imperative} phase using a \emph{heap encoding} has been
 proposed \cite{new-imperative}. That new phase has explicit support for
 mutable references \passthrough{\lstinline!AnyHeapRef!} which represent

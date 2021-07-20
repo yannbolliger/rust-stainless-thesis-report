@@ -493,7 +493,7 @@ may contain \lstinline!var! fields or type parameters marked with
 
 As our translation uses mutable cells everywhere, virtually all
 resulting types are mutable and fall under these restrictions. On the
-other hand, the motivation of Stainless' aliasing restrictions is to
+other hand, the motivation of Stainless's aliasing restrictions is to
 make its imperative code elimination phase work \cite{regb}. The
 transformation relies on the fact, that there is only a single path to a
 mutable object, so changes to the object are correctly detected when the
@@ -513,7 +513,7 @@ operators \passthrough{\lstinline!move!} and
 
 The translation already introduces \passthrough{\lstinline!move!} and
 \passthrough{\lstinline!copy!} when data is used by value, e.g.~in assignments
-and for function arguments. To work around Stainless' aliasing restrictions we
+and for function arguments. To work around Stainless's aliasing restrictions we
 additionally introduce \passthrough{\lstinline!copy!} for function arguments
 that are shared references and lastly, we \passthrough{\lstinline!move!} or
 \passthrough{\lstinline!copy!} return values of functions and inner blocks,
@@ -534,7 +534,7 @@ runtime semantics.
 Here, we show that our \passthrough{\lstinline!move!} operator --
 though very useful to work with Stainless -- is not necessary to the
 semantical correctness of the translation and may be omitted by implementations
-that do not need to comply with Stainless' aliasing restrictions.
+that do not need to comply with Stainless's aliasing restrictions.
 
 \begin{quote}
 Under the assumption that the original Rust program type \& borrow
@@ -666,7 +666,7 @@ erase shared references and use their referred value directly.
 \subsubsection{Preventing Aliasing}
 
 We have already seen how our two theoretical operators \lstinline!move! and
-\lstinline!copy! are used to emit code that complies with Stainless' aliasing
+\lstinline!copy! are used to emit code that complies with Stainless's aliasing
 restrictions (\autoref{sec:aliasing-restrictions}). We have also argued that
 \lstinline!copy! \emph{must} perform a semantical deep copy, while
 \lstinline!move! \emph{may} do a deep copy but might also be the identity. For
