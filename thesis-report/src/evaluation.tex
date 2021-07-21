@@ -1,102 +1,94 @@
-In this chapter, we present how Rust-Stainless is tested and give some examples
-of code that it can process. Furthermore, we will decompose the running time of
-a typical execution into its subparts and finish by presenting a
+This chapter presents how Rust-Stainless is tested and gives some examples of
+code that the tool can verify. Furthermore, it will decompose the running time
+of a typical execution into its subparts and finish by presenting a
 blockchain-related code example implemented by Informal Systems and verified
 with Rust-Stainless.
 
 \section{Benchmarks}
 
-The Rust-Stainless repository contains a test suite of 64 passing (positive) and
+The Rust-Stainless repository contains a test suite of 65 passing (positive) and
 12 failing (negative) test code examples of in total around 3000
-lines.\footnote{Found under \texttt{stainless\_frontend/tests/[pass|fail]}
-on the \texttt{mutable-cells} branch.} The suite is run for every pull request
-and every commit to the \texttt{master} branch.
+lines.\footnote{Found under \texttt{stainless\_frontend/tests/[pass|fail]} on
+the \texttt{mutable-cells} branch.} The suite is run for every pull request and
+every commit to the \texttt{master} branch.
 
-To quantitatively evaluate Rust-Stainless, we collected some statistics of all
-the positive examples and display them in \autoref{measurements}.\footnote{All
+To quantitatively evaluate Rust-Stainless, I collected some statistics of all
+the positive test examples, displayed in \autoref{measurements}.\footnote{All
 the tests were run on a MacBook Pro with a 2.8~GHz Quad-Core Intel Core i7 and
 16~GB of RAM.} Only the positive examples were used for the measurements because
 the negative examples may fail at different stages of the extraction or
-verification pipeline. Hence, the time measurement is only representative for
-the positive examples which complete the verification pipeline. The displayed
-benchmarks amount to 2100 lines of Rust code (LoC), Stainless generates in total
-470 verification conditions (VCs) and the accumulated running time is just under
-6 minutes (Total). Note that the test suite normally (when run with
-\texttt{cargo test}) runs multiple tests in parallel and thus completes in less
-than 2 minutes on the same machine.
+verification pipeline. Thus, the time measurement is only representative for the
+positive examples which complete the verification pipeline. The used benchmarks
+amount to 2100 lines of Rust code (LoC), Stainless generates in total 470
+verification conditions (VCs) and the accumulated running time is just under 6
+minutes (Total). Note that the test suite normally (when run with \texttt{cargo
+test}) runs multiple tests in parallel and thus completes in less than 2 minutes
+on the same machine.
 
 It is instructive to decompose the running time of the test examples into the
 different parts of the pipeline. As described in
 \autoref{sec:extraction-overview}, the frontend first needs to detect some
-standard library items before it can translate the user crate. This detection is
-needed because the numerical identifiers used in the compilation
-(\lstinline!DefId!s) are not stable across runs. Even if the detection iterates
-through the same constant number of crates on each run, we observe larger
-variations in running time. On average in the measured examples, detection takes
-$199 \pm 33$~ms or equivalently 4~\% of the running time.
+standard library items before it can translate the user crate. Even if the
+detection iterates through the same crates on each run, one observes larger
+variations in its running time. On average, detection takes $199 \pm 33$~ms or
+equivalently 4~\% of the running time.
 
 The actual translation is very fast, especially for the rather short examples
-that are the majority of the test suite, it takes only 0.4~ms or about 0.008~\%
-of the running time on average. By far the most expensive part of our pipeline
-is not spent in the frontend itself but rather the JVM Stainless backend that
-performs verification. Verification time accounts for on average 95~\% of the
-total running time. The rest of the time is made up of starting, serialising and
-reporting. This shows that translation time is inferior to verification time by
-1-2 orders of magnitudes which is not surprising, given that verification is
-much more complex than our translation.
+that account for the majority of the test suite. It takes only 0.4~ms or about
+0.008~\% of the running time on average. By far the largest part of the running
+time of our tool is not spent in the frontend itself but rather in the JVM
+backend that performs verification. Verification time accounts for on average
+95~\% of the total running time. The rest of the time is made up of starting,
+serialising and reporting. This shows that translation time is inferior to
+verification time by 1-2 orders of magnitudes which is not surprising, given
+that verification is much more complex than the translation.
 
 \input{measurements/measurements.tex}
 
 
 \section{Code Examples}
 
-After having measured our tool, we will now quantitatively evaluate what it is
-capable of and to that end present some code benchmarks. The first three
-examples stem from the test suite of Rust-Stainless and were included in the
-previous section's measurements. The last example is an implementation by
-Informal Systems used in the IBC implementation.
+After having quantitatively measured our tool, it is time to qualitatively
+evaluate what it is capable of and to that end present some code examples. The
+first three examples stem from the test suite of Rust-Stainless and are included
+in the measurements from above. The fourth example is the running example from
+\autoref{background} and the last one is an implementation by Informal Systems
+used in the IBC implementation.
 
 \subsection{Test Suite Examples}
 
 \paragraph{Insertion Sort}
 
-The first code example in \autoref{lst:insertion-sort} is an implementation of
-\emph{inseration sort} on the already mentioned functional linked-list. The
+The first example is \autoref{lst:insertion-sort}, an implementation of
+\emph{insertion sort} on the already mentioned functional linked-list. The
 recursive data type is enabled by the support for boxes. As this example was
-translated from an equivalent Scala example in Stainless's test suite, it shows a
-functional way of writing Rust; there is no mutation in the entire example. In
-idiomatic Rust, one would probably use a vector instead of a linked-list. On the
-other hand, the linked-list allows for a recursive implementation which is very
-well-suited for verification with Stainless.
+translated from an equivalent Scala example in Stainless's test suite, it shows
+a functional way of writing Rust; there is no mutation in the entire example. In
+idiomatic Rust, one would probably use a vector instead of a linked-list.
 
 The example further showcases the use of implementation blocks and specs on
-implementation methods. For proving termination of the recursive implementation
-it is also crucial to add the new \lstinline!measure! attributes. Also note that
-the \lstinline!Option! type of  the standard library is used and correctly
-translated.
+methods. For proving termination of the recursive implementation it is also
+crucial to add the new \lstinline!measure! attributes. Also note that the
+\lstinline!Option! type is the one of the standard library.
 
 \paragraph{Type Class}
 
-The next example in \autoref{lst:type-class} is still completely immutable and
+The next example in \autoref{lst:type-class} is also completely immutable and
 demonstrates the use of a trait for equality (\lstinline!Equals!) with two
-implementations. Note that there are traits for equality in the standard library
-(\lstinline!Eq! and \lstinline!PartialEq!), usually one would use that trait and
-let the compiler derive implementations for it. Here however, we implement
-equality ourselves because it serves as a good example for the algebraic
-properties we can add on a trait/type class. The trait contains one abstract
-method, one default method (\lstinline!not_equals!) as well as three laws
-corresponding to the three properties of the equality relation.
+implementations. Note that one would usually use the traits from the standard
+library (\lstinline!Eq! and \lstinline!PartialEq!) and let the macro derive
+implementations them. Here however, equality is implemented in the program
+because it serves as a good example for the contract one can add on a trait. The
+trait contains three laws corresponding to the three properties of the equality
+relation.
 
 The implementation for \lstinline!i32! is trivial except that it needs to
 dereference the two operands. This is to force the compiler of using the
-primitive comparison operator instead of desugaring a call to
-\lstinline!PartialEq::eq!. The linked-list implementation
-(\autoref{lst:equals-list}) is a good example of a trait bound on a type
-parameter (\lstinline!T: Equals!) that will be translated to an evidence
-argument on the Scala type class implementation (see
-\autoref{lst:equals-scala}). The two type class method calls on line 5 will be
-translated with the correct receivers, the evidence argument for the first one
-and \lstinline!this! for the second one.
+primitive comparison operator instead of  \lstinline!PartialEq::eq!. The
+linked-list implementation (\autoref{lst:equals-list}) is a good example of a
+trait bound (\lstinline!T: Equals!) that will be translated to an evidence
+argument. The two type class method calls on line 5 will be translated with the
+correct receivers.
 
 \begin{lstlisting}[
   language=Rust,
@@ -115,26 +107,26 @@ impl<T: Equals> Equals for List<T> {
 }
 \end{lstlisting}
 
-Lastly, we have to note that the three laws need to be reimplemented in the list
+Lastly, note that the three laws need to be reimplemented in the list
 implementation. This is due to Stainless not being able to recursively proof the
-properties without some guidance of the programmer. The same is necessary in an
-equivalent Scala example, therefore this is not a limitation of the Rust
-frontend but of Stainless itself. The law implementations show however another
-construct that the frontend is able to translate correctly: the static method
-calls like \lstinline!Self::law_transitive(xs, ys, zs)! are correctly translated
-and called on the corresponding type class implementations.
+properties without some guidance by the programmer. However, the same is
+necessary in an equivalent Scala example. Hence, this is not a limitation of the
+Rust frontend but of Stainless itself. On the other hand, the law
+implementations show another construct that the frontend is able to translate:
+the static method calls like \lstinline!Self::law_transitive(xs, ys, zs)! are
+correctly translated to calls on the right receiver instances.
 
 \paragraph{Local Mutability}
 
 Turning to mutability, the benchmark in \autoref{lst:local-clone} is available
-on the \texttt{mutable-cells} branch. It features a simple struct for which the
-macro derives an instance of \lstinline!Clone!. In the function, the struct is
-created, cloned and mutated. The assertions ensure that the cloned instance is
-not changed as well by the mutation. The mutability translation for that example
-will erase the instance of \lstinline!Clone! and replace the \lstinline!clone!
-call with \lstinline!freshCopy!.
+on the \texttt{mutable-cells} branch. It features a struct for which the macro
+derives a \lstinline!Clone! instance. In the function, the struct is created,
+cloned and mutated. The assertions ensure that the cloned instance is not
+changed as well by the mutation. The mutability translation  will replace the
+\lstinline!clone! call with \lstinline!freshCopy!.
 
 \begin{lstlisting}[
+  float,
   language=Rust,
   caption={Local mutation and cloning of a simple struct.},
   label=lst:local-clone
@@ -154,22 +146,20 @@ pub fn main() {
 \paragraph{Mutable References}
 
 The running example \autoref{running-example} from \autoref{background} is
-adapted from the most complicated mutability benchmark on the
+equivalent to the most complicated mutability benchmark on the
 \texttt{mutable-cells} branch. In particular, it shows how a mutable reference
-is matched upon and then a sub-reference is returned. That sub-reference is
-subsequently used to alter the container struct. The assertion at the end of the
-main function ensures that the mutation has an effect. In summary, the example
-requires support for mutable borrows, pattern matching on mutable references,
-passing mutable references as values in arguments and returns, as well as
-mutation of structs via mutable references.
+is matched upon and then a sub-reference is returned. The sub-reference is later
+used to alter the container struct. In summary, the example requires support for
+mutable borrows, pattern matching on mutable references, passing mutable
+references as values, and struct mutation via references.
 
-In the translation of \lstinline!get_mut_by_id! in
-\autoref{lst:mut-ref-translated}, we observe how the optimisations of
+In the translation of \lstinline!get_mut_by_id!
+(\autoref{lst:mut-ref-translated}), one can observe how the optimisations of
 \autoref{optimisations} apply. The \lstinline!id! argument is not wrapped in a
-mutable cell because it is immutable. We also see that the pattern match binds
-the mutable cell \lstinline!v! inside the tuple ADT instead of its value, such
-that it can later be used to modify the original object. Furthermore, the
-evidence argument responsible for the trait method is added as parameter.
+mutable cell because it is immutable. The pattern match binds the mutable cell
+\lstinline!v! inside the tuple ADT instead of its value, such that it can later
+be used to modify the original object. Furthermore, the evidence argument
+responsible for the trait method is added as parameter.
 
 \begin{lstlisting}[
   language=Scala,

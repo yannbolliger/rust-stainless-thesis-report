@@ -468,17 +468,21 @@ like panic, standard library items like \lstinline!Box<T>! and
 \lstinline!Option<T>!, but also all items of \lstinline!libstainless! like
 \lstinline!Set<T>! and \lstinline!implies!. Extraction needs to know the
 identifiers (the \lstinline!DefId!s) of those items in order to recognise them
-in user code and trigger their specialised treatment. Initially, only the
-\emph{definition paths} of the items to detect are known, e.g.
-\lstinline!stainless::Set::<T>::new!, but that does not suffice because
-\lstinline!rustc! does not have an API to query items from other crates \emph{by
-path} at the time of writing. All the lookups are done by \lstinline!DefId!.
-Therefore, the implementation has to enumerate all \lstinline!DefId!s from the
-\lstinline!std! and \lstinline!stainless! crate, compare them by name to the
-desired items and register them if needed. This approach is clearly a
-brute-force work-around to the lack of by-path lookups in \lstinline!rustc!, but
-as the number of crates to take into consideration is fixed and low, the lookup
-time is constant still relatively low (cf. \autoref{evaluation}).
+in user code and trigger their specialised treatment. Unfortunately, these
+\lstinline!DefId!s are not stable across compilation runs and therefore, the
+detection needs to be done for each run of our tool.
+
+Initially, only the \emph{definition paths} of the items to detect are
+known\footnote{For example: \lstinline!stainless::Set::<T>::new!.}, but that
+does not suffice because \lstinline!rustc! does not have an API to query items
+from other crates \emph{by path} at the time of writing. All the lookups are
+done by \lstinline!DefId!. Therefore, the implementation has to enumerate all
+\lstinline!DefId!s from the \lstinline!std! and \lstinline!stainless! crate,
+compare them by name to the desired items and register them if needed. This
+approach is clearly a brute-force work-around to the lack of by-path lookups in
+\lstinline!rustc!, but as the number of crates to take into consideration is
+fixed and low, the lookup time is constant still relatively low (cf.
+\autoref{evaluation}).
 
 After standard item detection the tool can turn to user code. The main procedure
 of the extraction enumerates all top-level
