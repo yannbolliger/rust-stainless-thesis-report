@@ -12,16 +12,15 @@ the Stainless verifier backend.
 \section{Translation for Runtime Equivalence}
 \label{sec:translation}
 
-The translation works under the assumption that the input Rust code is
-\emph{safe} and ``well-behaved''. That is, it works for the \emph{safe subset}
-\cite[section ``Unsafety'']{rustref} of the 2018 edition of Rust and
-single-threaded execution. In particular, the translation requires the absence
-of \emph{interior mutability} \cite[section ``Interior Mutability'']{rustref} of
-types. That means that all types are immutable through shared references. This
-can be enforced by prohibiting the use of \emph{smart pointers} like the ones
-from \passthrough{\lstinline!std::cell!}. Moreover, the safe subset of Rust
-excludes features like raw pointers, \passthrough{\lstinline!union!}, unsafe
-functions and blocks, as well as external, like linked C-code. In practice, all
+The translation works under the assumption that the input Rust code is the
+\emph{safe subset} \cite[section ``Unsafety'']{rustref} of the 2018 edition and
+that execution is single-threaded. Further, the translation requires the absence
+of \emph{interior mutability} \cite[section ``Interior Mutability'']{rustref}.
+That means that all types are immutable through shared references. This can be
+enforced by prohibiting the use of \emph{smart pointers} like the ones from
+\passthrough{\lstinline!std::cell!}. Moreover, the safe subset of Rust excludes
+features like raw pointers, \passthrough{\lstinline!union!}, unsafe functions
+and blocks, as well as external code, like linked C-code. In practice, all
 unsafe features are detected at extraction of the code and abort the
 translation.
 
@@ -29,153 +28,172 @@ translation.
 \subsection{Algorithm}
 
 The goal of the translation is to bridge the gaps between Rust's and Scala's
-memory model -- making places accessible in the program and allowing mutability
-of possibly all fields of structs. To achieve the first one and bring the
-ability of manipulating references to Scala, I introduce a special wrapper case
-class, the mutable cell:
+memory model -- making references accessible to the programer and allowing
+mutability of all struct fields if needed. To achieve the first one and bring
+the ability of manipulating references to Scala, I introduce a special wrapper
+case class, the \emph{mutable cell}:
 
 \begin{lstlisting}[language=Scala, style=short]
 case class MutCell[T](var value: t)
 \end{lstlisting}
 
-The mutable cell object is used as a layer of indirection on all Scala
-values and directly models the \emph{place} of the value, where the
-value is stored in the field (\passthrough{\lstinline!value!}). Note
-that the field is mutable, which in principle allows changes to any
-place. We will see that after after the translation, the mutable cell's
-field will be the only mutable variable in the program. All mutability
-in the original Rust program will be modelled with that field.
+The mutable cell object is used as a layer of indirection on all Scala values
+and directly models the \emph{place} of a value, where the value is stored in
+the field (\lstinline!value!). Note that the field is mutable, which in
+principle allows changes to any place. After the translation, the mutable cell's
+field will even be the only mutable variable. All mutability in the original
+Rust program will be modelled with that field.
 
 \begin{quote}
-Whenever something is mutable, we wrap it into a mutable cell.
+Whenever something is (possibly) mutable, we wrap it into a mutable cell.
 \end{quote}
 
-All local variables are wrapped into a mutable cell, regardless of their
-mutability in Rust. The wrapping enables taking references to local
-variables which is needed for both mutable and immutable variables. This
-approach also enables us to create references to data of primitive types
-like integers, something that is impossible directly in Scala.
+Local variables are wrapped into mutable cells, regardless of their mutability
+in Rust. This enables taking references to local variables which is needed for
+both mutable and immutable variables. The approach also allows to create
+references to data of primitive types like integers, something that is
+impossible to do in Scala directly.
 
 Likewise, all \lstinline!struct!, \lstinline!enum!, and tuple fields are mutable
 cells with the type of the original field as the type argument of the cell.
-Thereby, we achieve our second goal from above -- all fields are \emph{possibly}
-mutable.
+Thereby, the translation achieves its second goal from above -- all fields are
+\emph{possibly} mutable. In other words, every place in the Rust program is
+modelled by the introduction of a mutable cell object. Hence, all place
+expressions in the original program correspond to exactly one mutable cell
+instance in the translation.
 
-\begin{lstlisting}[language=Rust, caption=Some example Rust code.]
-struct A<T> { a: T, b: i32 }
-let x = A { a: "foo", b: 123 }
+\noindent\begin{minipage}[t]{.45\textwidth}
+\begin{lstlisting}[language=Rust, caption={Example Rust struct.}]
+struct A<T> {
+  a: T, b: i32
+}
+let x = A {
+  a: "foo", b: 123
+}
 let mut y = 123
 assert!(y == x.b)
 \end{lstlisting}
-
+\end{minipage}\hfill
+\begin{minipage}[t]{.52\textwidth}
 \begin{lstlisting}[
   language=Scala,
-  caption=The potentially mutable fields of the struct are modelled with mutable
-  cells and both let bindings are wrapped into cells as well.
+  caption=The fields of the struct are modelled with mutable
+  cells as are the two let-bindings.
 ]
-case class A[T](a: MutCell[T], b: MutCell[Int])
-val x = MutCell(A(MutCell("foo"), MutCell(123)))
+case class A[T](
+  a: MutCell[T], b: MutCell[Int]
+)
+val x = MutCell(
+  A(MutCell("foo"), MutCell(123))
+)
 val y = MutCell(123)
 assert(y.value == x.value.b.value)
 \end{lstlisting}
+\end{minipage}
 
-We can see that every place in the Rust program is modelled by the
-introduction of a mutable cell object. Hence, all place expressions in
-the original program correspond to exactly one mutable cell instance in
-the translation.
 
 \subsubsection{Tuples}
 
-Tuples in Rust are simply anonymous tuple structs. As for all structs their
-mutability is decided at binding time, contrary to Scala, where tuples are
-always immutable. To allow for tuple mutation in Rust, we translate Rust's
-tuples to case classes of the following form for any positive arity. The empty
-tuple corresponds to the unit type in Rust and is translated as such.
+As for all structs, the mutability of tuples is decided at binding time in Rust,
+contrary to Scala, where tuples are always immutable. To allow for tuple
+mutation in Rust, tuples of any positive arity are translated as case classes
+instead of Scala tuples. The following example shows  such a class for a
+2-tuple. The empty tuple corresponds to the unit type in Rust and is translated
+as such.
 
 \begin{lstlisting}[language=Scala, style=short]
 case class Tuple2[T0, T1](_0: MutCell[T0], _1: MutCell[T1])
 \end{lstlisting}
 
-\subsubsection{Accessing}
+\subsubsection{Using Data}
 
-If a field or a variable is read, the translation introduces an access
-to the \passthrough{\lstinline!value!} field of the corresponding cell.
-The same happens for dereferencing. In other words, any place expression
-that is evaluated in a value context is translated as reading the
-\passthrough{\lstinline!value!} of the corresponding mutable cell
-object. Thus, we see how the translation unifies the access of locally
-available bindings and references that may come from elsewhere.
+If a field or a variable is read, the translation introduces an access to the
+\passthrough{\lstinline!value!} field of the corresponding cell. The same
+happens for dereferencing. In other words, any place expression that is
+evaluated in a value context is translated as reading the
+\passthrough{\lstinline!value!} of the corresponding mutable cell object. This
+shows how our translation unifies the access of locally available bindings and
+references that may come from elsewhere.
 
 \paragraph{Copy vs moving}
 
 When place expressions are used in value contexts their data is used, i.e.~moved
-or copied. We will later argue that the translation is correct as-is for
-moveable types. However, for copyable types, we need to ensure that the new copy
-is distinct from the original in the translation as well.
+or copied. Subsection \ref{sec:correctness-by-value} argues that the translation
+is correct as-is for moveable types. However, for copyable types, the
+translation needs to ensure that the newly created copy is distinct from the
+original object.
 
-This holds trivially for primitive JVM types as they are copied by value
-on the JVM as well. The same goes for shared Rust references, where the
-reference is copied but still points to the same object. Because the
-reference is shared, the designated object must be immutable, hence
-sharing is the same as copying.
+This holds trivially for primitive JVM types as they are copied by value on the
+JVM as well. The same goes for shared Rust references, where the reference is
+copied but still points to the same object. Because the reference is shared, the
+designated object must be immutable, hence sharing is the same as copying.
+However, tuples of copyable types, for example tuples of numbers, are copyable
+as well in Rust. This is a problem for the translation. If it allows tuple
+objects to be shared upon a copy in Scala, the example in
+\autoref{lst:tuple-share} would be incorrect.
 
-Tuples of copyable types, for example tuples of numbers, are copyable as
-well in Rust which is a problem for the translation. If we just used
-sharing of tuple objects in the translation, the following example would
-be incorrect:
-
-\begin{lstlisting}[language=Rust, caption=The tuple is copied on line 2.]
+\begin{figure}
+\noindent\begin{minipage}[t]{.3\textwidth}
+\begin{lstlisting}[language=Rust, caption={The tuple is copied on line 2.}, label={lst:tuple-share}]
 let x = (123, false);
-let mut y = x; // copies `x`
-y.0 = 456;
-assert!(x.0 == 123) // correct
-\end{lstlisting}
 
+// copies `x`
+let mut y = x;
+
+y.0 = 456;
+// holds:
+assert!(x.0 == 123)
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.67\textwidth}
 \begin{lstlisting}[
   language=Scala,
   label=lst:tuple-sharing,
   caption=In Scala the tuple object is shared not copied.
 ]
-val x = MutCell(Tuple2(MutCell(123), MutCell(false)))
-val y = MutCell(x.value) // shares tuple object
-y.value._0.value = 456   // i.e. x.value == y.value
-assert(x.value._0.value == 123) // fails
+val x =
+  MutCell(Tuple2(MutCell(123), MutCell(false)))
+// shares tuple object `x.value`
+val y = MutCell(x.value)
+// i.e. x.value == y.value
+y.value._0.value = 456
+// fails:
+assert(x.value._0.value == 123)
 \end{lstlisting}
+\end{minipage}
+\end{figure}
 
-To avoid such problems, we introduce two operators in the translation:
+
+To avoid such problems, the translation introduces two operators in Scala:
 \passthrough{\lstinline!move[T](t: T): T!} and
-\passthrough{\lstinline!copy[T](t: T): T!}. They can be thought of as
-top-level functions that perform a deep copy of their argument. An
-implementation for these operators could be based on type classes for
-example, but we'll not go into more implementation details of the
-operators here. Now, whenever data is directly accessed, the translation
-wraps the field access of the cell \passthrough{\lstinline!value!} into
-one of the two operators, depending on the type of the data. For example
-in the last snippet on line two, the right-hand side of the assignment
-becomes \lstinline!MutCell(copy(x.value))!.(For primitive
-types, this can be omitted as an optimisation because primitive types
-are also copied by value on the JVM.)
+\passthrough{\lstinline!copy[T](t: T): T!}. They can be thought of as top-level
+functions that perform a deep copy of their argument. An implementation for
+these operators could be based on type classes for example, but implementation
+details are left open here. Whenever data is used, the translation wraps the
+field access of the cell's \lstinline!value! into one of the two operators,
+depending on the type of the data. For example in \autoref{lst:tuple-sharing} on
+line 4, the right-hand side of the assignment becomes
+\lstinline!MutCell(copy(x.value))!. For primitive JVM types, this can be omitted
+as an optimisation because they are also copied on the JVM.
 
-Types that the programmer marks with \lstinline!\#[derive(Copy)]!,
-i.e.~user-defined type that are copyable run into the same issue as tuples but
-we will ignore these for the moment as the current state of our extraction
+User-defined copyable types, i.e. types for which the user derives a Copy
+implementation with a macro, run into the same issue as copyable tuples. The
+translation currently ignores these because the current state of our extraction
 implementation does not yet accept such types. Nonetheless, the solution would
-be to use the \passthrough{\lstinline!copy!} operator as well.
+be to use the \lstinline!copy! operator as well.
 
 \subsubsection{Referencing}
 
-A borrow creates a reference to a place in Rust and makes that reference
-available as a value in the program e.g.~it can be bound to a name.
-After translation the place expression in Rust is equivalent to the JVM
-reference of the cell object. Hence, passing around Rust references as
-values can be translated to passing around cell objects as field values
-of other cells in Scala. (Passing around the cells conveniently happens
-by reference on the JVM.)
+A borrow in Rust creates a reference to a place and makes that reference
+available as a value in the program. After translation the place expression in
+Rust is equivalent to the JVM reference of the cell object. Hence, passing
+around Rust references as values can be translated to passing around cell
+objects in Scala. (Passing around the cells conveniently happens by reference on
+the JVM.)
 
-As an example, if a Rust reference is stored in a local variable, this
-creates two nested cells in the Scala translation. The outer cell models
-the local variable and the value of its field holds the other cell which
-models the Rust reference.
+As an example, if a Rust reference is stored in a local variable, this creates
+two nested cells in the translation. The outer cell models the local variable
+and the value of its field holds the other cell which models the Rust reference.
 
 \noindent\begin{minipage}[t]{.45\textwidth}
 \begin{lstlisting}[language=Rust]
@@ -190,17 +208,9 @@ val r = MutCell(x)
 \end{lstlisting}
 \end{minipage}
 
-\subsubsection{\texorpdfstring{\textbf{Matching}}{Matching}}
+\subsubsection{Matching}
 
-For pattern matching the same principles apply as for evaluating place
-expressions. If a match happens on an rvalue, the Scala match will be on
-the \passthrough{\lstinline!value!} field of that cell. If the scrutinee
-is a reference, then the Scala scrutinee is the mutable cell.
-
-The patterns are adapted to include the mutable cell wrappers of fields.
-Depending on whether a resulting binding of a match is a reference or
-not in Rust, the Scala pattern matches the cell or only its field.
-
+\begin{figure}
 \noindent\begin{minipage}[t]{.45\textwidth}
 \begin{lstlisting}[
   language=Rust,
@@ -222,7 +232,8 @@ match x {
 \begin{lstlisting}[
   language=Scala,
   caption={In the first case, \lstinline!a! matches the field \lstinline!value!
-    of the cell, whereas in the other cases it matches the cell object.}
+    of the cell, whereas in the other cases it matches the cell object.},
+  label={lst:pattern-match}
 ]
 x.value match {
     case A(MutCell(a), _) => ...
@@ -235,6 +246,16 @@ x.value match {
 }
 \end{lstlisting}
 \end{minipage}
+\end{figure}
+
+The same principles apply for pattern matching as for evaluating place
+expressions. If a match happens on a value, the Scala match will be on the
+\passthrough{\lstinline!value!} field of that cell. If the scrutinee is a
+reference, then the Scala scrutinee is the mutable cell. The patterns are
+adapted to include the mutable cell wrappers of fields. Depending on whether a
+resulting binding of a match is a reference or not in Rust, the Scala pattern
+matches the cell or only its field, see \autoref{lst:pattern-match}.
+
 
 \subsubsection{Assigning}
 
@@ -266,47 +287,52 @@ y.value = 789
 
 Rust functions can take parameters by reference or by value. This is modelled in
 the translation by wrapping the parameter in a mutable cell or directly passing
-it ``by value'' -- in the JVM sense.
+it ``by value'' -- in the JVM sense. Additionally, it is possible to declare the
+parameter binding as mutable by marking it \passthrough{\lstinline!mut!}. To
+model that local mutability, the translation again wraps the parameter in a
+mutable cell. This is done regardless of whether the parameter is locally
+mutable to keep the invariant that each place corresponds to one cell. At
+function call site, all arguments are wrapped into newly created cells to ensure
+that local mutations on these parameters remain local to the callee.
 
-Additionally, it is possible to declare the parameter binding as mutable
-by marking it \passthrough{\lstinline!mut!}. This is equivalent to a
-mutable local variable and not visible outside of the function. To model
-that local mutability we again wrap the parameter in a mutable cell. We
-do this regardless of whether the parameter is locally mutable to keep
-the invariant that each place i.e.~each variable corresponds to one
-cell. At function call site, we wrap all arguments into newly created
-cells to ensure that local mutations on these parameters remain local to
-the callee.
-
+\noindent\begin{minipage}[t]{.45\textwidth}
 \begin{lstlisting}[
   language=Rust,
   caption={\lstinline!i! is only mutable inside the function.}
 ]
+fn f(
+  mut i: i32,
+  x: &i32
+) { ... }
 let r = 123;
-fn f(mut i: i32, x: &i32) { ... }
 f(456, &r);
 \end{lstlisting}
-
+\end{minipage}\hfill
+\begin{minipage}[t]{.45\textwidth}
 \begin{lstlisting}[language=Scala]
+def f(
+  i: MutCell[Int],
+  x: MutCell[MutCell[Int]]
+) = ???
 val r = MutCell(r)
-def f(i: MutCell[Int], x: MutCell[MutCell[Int]]) = ???
 f(MutCell(456), MutCell(r))
 \end{lstlisting}
+\end{minipage}
 
 \subsubsection{Boxes}
 
 Contrary to the JVM, where all objects live on the heap, Rust lets the
-programmer allocate objects on the heap with boxes. But for verification it does
-not matter, whether something is on the heap or the stack as long as general
-memory safety is preserved. Therefore, we erase this distinction in the
-translation and just use normal heap-allocated Scala objects.
+programmer allocate objects on the heap with boxes. However, for verification it
+does not matter, whether something is on the heap or the stack as long as
+general memory safety is preserved. Therefore, this distinction can be erased in
+the translation and everything uses normal heap-allocated Scala objects.
 
 \subsection{Correctness}
 \label{correctness-claim}
 
 \begin{quote}
 Under the assumption that the original Rust program type \& borrow
-checks, we argue that the described translation of mutable Rust
+checks, I argue that the described translation of mutable Rust
 references and owned types to mutable cells in Scala is equivalent in
 runtime semantics, i.e.~when run the Scala translation yields the same
 result as the Rust program.

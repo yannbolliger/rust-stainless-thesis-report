@@ -1,10 +1,10 @@
 This chapter offers a short introduction to the Rust language as well as the
-Stainless verifier. Both parts will use a running example of a Rust program to
-illustrate the involved concepts. It may seem odd to introduce Stainless with
-Rust  as it is built and usually used with Scala. However, thanks to
-Rust-Stainless the  usage of Stainless in Rust is so similar to the usage in
-Scala that it is suitable  to reuse the running Rust example. For a more
-detailed introduction to Stainless in Scala please refer to
+Stainless verifier. Both parts will use a running example of a Rust program
+(\autoref{running-example}) to illustrate the involved concepts. It may seem odd
+to introduce Stainless with Rust  as it is built and usually used with Scala.
+However, thanks to Rust-Stainless the  usage of Stainless in Rust is so similar
+to the usage in Scala that it is suitable  to reuse the running Rust example.
+For a more detailed introduction to Stainless in Scala please refer to
 \cite{stainless-doc}.
 
 \section{Rust Language}
@@ -34,15 +34,14 @@ by work on region-based memory management \cite{cyclone-region}.
 
 As a start, \autoref{lst:first-ex} shows a simple function in Rust that returns
 the square of the integer \lstinline!x!. Rust is statically typed, hence
-parameters have annotated types, \lstinline!i32! in our case, a signed 32-bit
+parameters types are annotated, \lstinline!i32! in this case, a signed 32-bit
 integer. Other integer types can be unsigned (\lstinline!u32!) or of other
-bit-lengths (\lstinline!u128!). The return type of function is indicated after
-the arrow, if omitted the return type defaults to \lstinline!-> ()!, the unit
-type. Note also, that the expression on the single line of the function block,
-or any brace-delimited block, is implicitly returned. Alternatively, one may
-employ the explicit return statement to return a value from any point in a
-function, like on line 4 of \autoref{lst:let}. Statements are delimited with
-semi-colons and produce the unit type.
+bit-lengths (\lstinline!u128!). The return type of the function is indicated
+after the arrow, if omitted it defaults to \lstinline!()!, the unit type. Note
+also, that the single (and last) expression in the function block is implicitly
+returned. Alternatively, one may employ the explicit return statement to return
+a value from any point in a function, like on line 4 of \autoref{lst:let}.
+Statements are delimited with semi-colons and produce the unit type.
 
 \begin{lstlisting}[style=short, language=Rust, caption={A simple Rust function.}, label=lst:first-ex]
 fn square(x: i32) -> i32 { x * x }
@@ -50,18 +49,17 @@ fn square(x: i32) -> i32 { x * x }
 
 \subsubsection{Variables}
 
-To bind values, Rust offers the \lstinline!let! statement, which creates a new
-variable and binds the assigned value to it. Function parameters are also
-variables in Rust~\cite{rustref}. By default, variables are immutable, that is
-the compiler rejects any attempt to reassign to an initialised variable. On the
-other hand, Rust accepts to redeclare and thus \emph{shadow} a binding, which is
-what happens on line 7 of \autoref{lst:let}.
+The \lstinline!let! statement is used to create a new variable and bind the
+assigned value to it in Rust. Function parameters are also variables in
+Rust~\cite{rustref}. By default, variables are immutable, that is, the compiler
+rejects any attempt to reassign to an initialised variable. On the other hand,
+Rust accepts to redeclare and thereby \emph{shadow} a binding, which is what
+happens on line 7 of \autoref{lst:let}.
 
-For most let-bindings the type of the variable is inferred by the compiler and
-does not have to be annotated like for function parameters. In
-\autoref{lst:let}, all the types are inferred as the standard integer type
-\lstinline!i32!. This even works for bindings that shadow an earlier declaration
-with a different type.
+The compiler infers the type of most let-bindings, such that it  does not have
+to be annotated like for function parameters. In \autoref{lst:let}, all the
+types are inferred as the standard integer type \lstinline!i32!. This even works
+for bindings that shadow an earlier declaration with a different type.
 
 \noindent\begin{minipage}[t]{.45\textwidth}
 \begin{lstlisting}[language=Rust, caption={A Rust function doing some arithmetics.}, label=lst:let]
@@ -89,25 +87,23 @@ fn g(mut a: i32) -> i32 {
 
 \subsubsection{Mutability}
 
-As an imperative language Rust also offers mutable bindings, but each variable
-has to be explicitly declared as mutable by annotating it with the
-\lstinline!mut! keyword. In general, Rust is always very explicit about the
-distinction between mutable and immutable variables and references.
-\autoref{lst:mut-ex} has both a mutable function parameter and a mutable local
-variable.
+As an imperative language Rust also offers mutable bindings. Mutable variables
+have to be explicitly declared as such by adding the \lstinline!mut! keyword. In
+general, Rust is very explicit about the distinction between mutable and
+immutable variables and references. \autoref{lst:mut-ex} has both a mutable
+function parameter and a mutable local variable.
 
-\subsubsection{Algebraic Data Types (ADT)}
+\subsubsection{Algebraic Data Types (ADTs)}
 
 Taking strong inspiration from C, user-defined data types in Rust are called
 \lstinline!struct!s and \lstinline!enum!s. Structs are product types and come in
 three forms: without fields like \lstinline!OnlyAMarker! in
-\autoref{lst:struct-ex}, so called \emph{unit structs}, the tuple form with
-numerically indexed fields, e.g. \lstinline!a.0! and the C-like structs with
-field names, \lstinline!b.field!. Enumerations are sum types and can have
-members that are again like structs in either unit, tuple or C-like form.
+\autoref{lst:struct-ex}, so called \emph{unit structs}; the tuple form with
+numerically indexed fields, e.g. \lstinline!a.0!; and the C-like structs with
+field names, \lstinline!b.field!. Enumerations are sum types and have members
+that are again in either unit, tuple or C-like form, like structs.
 \autoref{lst:option} shows  an example from the standard library, the option
-type. It also shows how a type parameter is used to create a generic
-data type.
+type. It also shows how a type parameter is used to create a generic data type.
 
 \noindent\begin{minipage}[t]{.45\textwidth}
 \begin{lstlisting}[language=Rust, caption={All three types of structs.}, label=lst:struct-ex]
@@ -136,10 +132,11 @@ let opt: Option<i32> =
 \end{minipage}
 
 Fields are not considered variables in Rust, rather they are part of their
-belonging struct's variable~\cite{rustref}. Hence, fields inherit the mutability
-of their struct, e.g. the only mutable field in \autoref{lst:struct-ex} is
-\lstinline!b.field! because \lstinline!b! is mutable. Hence, mutability is not
-part of the field type but depends on the binding of the struct's instance.
+corresponding struct's variable~\cite{rustref}. Hence, fields inherit properties
+like mutability from their struct, e.g. the only mutable field in
+\autoref{lst:struct-ex} is \lstinline!b.field! because \lstinline!b! is mutable.
+Hence, mutability is not part of the field type but depends on the binding of
+the struct's instance.
 
 Rust also has anonymous tuples. These behave exactly like tuple structs but
 don't need to be declared beforehand. One can simply instantiate tuples of any
@@ -162,12 +159,13 @@ struct Container<K, V> {
 
 \subsubsection{Pattern Matching}
 
-With ADTs, especially enumerations, it is natural that Rust also offers pattern
-matching. \autoref{lst:match} shows how to match on the container struct from
-before. Note that match arms can be further refined by \lstinline!if! guards of
-any boolean expression. To simply check whether a value matches a certain shape,
-one can use the \lstinline"matches!(opt, Some(_))" macro, that is expanded to a
-regular pattern match returning true for the pattern  and false otherwise.
+With ADTs, especially enumerations, pattern matching comes naturally.
+\autoref{lst:match} shows how to match on the container struct from before. Like
+in Scala, the underscore is the wildcard pattern and match arms can be further
+refined by \lstinline!if! guards of any boolean expression. To simply check
+whether a value matches a certain shape, one can use the
+\lstinline"matches!(opt, Some(_))" macro that is expanded to a regular pattern
+match returning true for the pattern and false otherwise.
 
 \begin{lstlisting}[language=Rust, caption={Pattern matching on a struct.}, label=lst:match]
 let c = Container { pair: None };
@@ -187,15 +185,16 @@ for certain instantiations of the  type parameters is also possible. For
 example, the first line of the block could just be \passthrough{\lstinline!impl
 Container<bool, i32>!}.
 
-The \lstinline!Self! in the return type stands for the type the implementation
-block is for, in our case \lstinline!Container<K, V>!. The \lstinline!new! method is a
-static method, it is not called on an instance of a container. In contrast, the
-two other methods specify a receiver type as first parameter. That makes the
-methods available on instances of the container, like \lstinline!c.is_empty()!.
-\lstinline!&self! acts on a reference to the instance the method is called on,
-the same for \lstinline!&mut self! but mutably.\footnote{More on references in
-\autoref{references}.} It is also be possible to consume the instance by
-specifying \lstinline!self! as receiver.
+The \lstinline!Self! in the first return type stands for the type this block is
+adding methods to, in our case \lstinline!Container<K, V>!. The \lstinline!new!
+method is a static method, it is not called on instances of containers. In
+contrast, the two other methods specify a receiver type as first parameter. That
+makes the methods available on instances of the container, for example
+\lstinline!c.is_empty()!. In methods with \lstinline!&self! as receiver, the
+\lstinline!self! keyword  contains a reference to the instance the method is
+called on, the same for \lstinline!&mut self! but mutably.\footnote{More on
+references in \autoref{references}.} It is also be possible to consume the
+instance by specifying \lstinline!self! as receiver.
 
 \begin{lstlisting}[language=Rust, caption={Methods for the running example}, label=lst:impl1]
 impl<K, V> Container<K, V> {
@@ -205,9 +204,10 @@ impl<K, V> Container<K, V> {
 }
 \end{lstlisting}
 
-Traits are used in Rust to specify interfaces. A trait can be implemented for
-any data type with an implementation block providing the abstract methods of the
-trait, as in \autoref{lst:trait-impl2}. Traits can also be used to bound type
+Traits are used to specify interfaces in Rust. A trait \lstinline!X! can be
+implemented for a data type \lstinline!A! with an \passthrough{\lstinline!impl X
+for A!} block, providing implementations for the abstract methods of the trait,
+as in \autoref{lst:trait-impl2}. Traits can also be used to bound type
 parameters to only the types that implement a certain trait. For example, the
 trait bound \lstinline!K: Id!  in \autoref{lst:mut-ref-impl} states that any
 \lstinline!K! admissible to the function (or in other cases the block) needs to
@@ -387,27 +387,25 @@ impl<K: Id, V> Container<K, V> {
 }
 \end{lstlisting}
 
-Rust's type system and borrow checking guarantee that all references are valid
-when they are used. That is, use-after free errors are impossible and Rust also
-prevents stack-allocated data from escaping its allocation scope. To do so, Rust
+Rust's type and borrow checking system guarantees that all references are valid
+when they are used. That is, use-after free errors are impossible and
+stack-allocated data cannot escape its allocation scope. To achieve this, Rust
 infers the \emph{lifetime} of each reference, i.e. the part of the program in
-which the reference points to a valid variable and may still be used at a future
-point of any execution path~\cite{wiki:live-vars}. A reference or variable that
-is not used anymore is said to be \emph{dead}.
-
-The lifetime of a reference in Rust is constrained by the lifetime of the
-variable it borrows from, this is the main  mechanism to prevent use-after free
-problems. Furthermore, there is a strict set of rules that borrows need to
-adhere to. At any point of a program and for any data there can either exist
+which the reference may still be used at a future point of any execution
+path~\cite{wiki:live-vars}. A reference or variable that is not used anymore is
+said to be \emph{dead}. The lifetime of a reference in Rust is constrained by
+the lifetime of the variable it borrows from, this is the main  mechanism to
+prevent use-after free problems. Furthermore, there is a strict set of rules
+that references need to adhere to. At any point of a program and for any data
+there can either exist
 
 \begin{itemize}
 \tightlist
-\item multiple immutable, i.e.~\emph{shared references}, \lstinline!\&T!,  that
+\item multiple immutable, i.e.~\emph{shared references}, \lstinline!&T!,  that
 may read the referenced data,
 
-\item or there can be a \emph{unique mutable reference},
-\passthrough{\lstinline!\&mut T!}, that is allowed to read and write to the data
-it does not own.
+\item or a \emph{unique mutable reference}, \passthrough{\lstinline!&mut T!},
+that is allowed to read and write to the data it does not own.
 \end{itemize}
 
 During the lifetime of a shared reference, the data can be read but not changed
