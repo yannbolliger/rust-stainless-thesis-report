@@ -218,10 +218,9 @@ contract verification like Rust-Stainless introduces in this project with laws.
 \end{itemize}
 
 \hfill \break \noindent  From this extensive enumeration, it is clear that
-Rust-Stainless is currenlty the only tool that operates on an IR above the MIR
+Rust-Stainless is currently the only tool that operates on an IR above the MIR
 -- the THIR. The trade-offs involved in that decision are discussed in
-\autoref{mir-thir}. One advantage that Rust-Stainless could draw from that
-decision in the future is counter-example generation in Rust. Currently,
-counter-examples are generated for the translated Scala program but it should be
-feasible to reverse the translation and return to the user counter-examples in
-Rust.
+\autoref{mir-thir}. Rust-Stainless could draw an advantage from that decision in
+the future: counter-example generation for Rust. Currently, counter-examples are
+generated for the translated Scala program but it should be feasible to reverse
+the translation and return to the user counter-examples in Rust.

@@ -359,18 +359,18 @@ let c_heap = Box::new(Container { pair: None });
 \subsubsection{References}
 \label{references}
 
-It is possible to read and even write data one does not own in Rust, through
-references. In other words, they are the way to -- temporarily -- break away
-from the ownership invariant~\cite{lightweight-formalism}. References are
+It is possible to read and even write data one does not own in Rust through
+references. In other words, references are the way to -- temporarily -- break
+away from the ownership invariant~\cite{lightweight-formalism}. References are
 created by \emph{borrowing} from a variable or field with the \lstinline!&! or
-\lstinline!&mut! operator, depending on whether the created reference should be
-mutable or not. One can either borrow from owned data directly or
-\emph{reborrow} from an existing reference. Passing a reference to an object in
-a function argument is called pass \emph{by reference}, as opposed to passing
-the entire object \emph{by value} and hence moving or copying it. The method of
+\lstinline!&mut! operator, depending on the desired mutability of the created
+reference. One can either borrow from owned data directly or \emph{reborrow}
+from an existing reference. Passing a reference to an object in a function
+argument is called pass \emph{by reference}, as opposed to passing the entire
+object \emph{by value} and hence moving or copying it. The method of
 \autoref{lst:mut-ref-impl} is passed a mutable reference to the receiving
-container instance and returns a reborrowed mutable reference  to the second
-part of its tuple.
+container instance and returns a reborrowed mutable reference to the second part
+of its tuple.
 
 \begin{lstlisting}[
   language=Rust,
@@ -394,10 +394,11 @@ infers the \emph{lifetime} of each reference, i.e. the part of the program in
 which the reference may still be used at a future point of any execution
 path~\cite{wiki:live-vars}. A reference or variable that is not used anymore is
 said to be \emph{dead}. The lifetime of a reference in Rust is constrained by
-the lifetime of the variable it borrows from, this is the main  mechanism to
-prevent use-after free problems. Furthermore, there is a strict set of rules
-that references need to adhere to. At any point of a program and for any data
-there can either exist
+the lifetime of the variable it borrows from. This is the main  mechanism to
+prevent use-after free problems. Furthermore, references need to adhere to a
+strict set of rules. At any point of a program and for any data there can either
+exist:
+
 
 \begin{itemize}
 \tightlist
@@ -421,6 +422,64 @@ for statically building a proof that data in memory is either
 \emph{uniquely owned} (and thus able to allow unguarded mutation) or
 \emph{collectively shared}, but not both.
 \end{quote}
+
+\paragraph{In-place Updates}
+
+It is common to implement mutable data structures in Rust with methods that
+alter the structure via a \passthrough{\lstinline!&mut self!} reference. Take
+for example \lstinline!insert! in \autoref{running-example}. This is simple, if
+the method just needs to change some struct field, like in the example. However,
+often the method needs to temporarily consume some part of the \lstinline!self!
+in order to change it.
+
+Imagine a method on \lstinline!Option! that swaps a new value into a
+\lstinline!Some! and returns the old \lstinline!Some! value or \lstinline!None!.
+The naive approach of writing that method is shown in \autoref{lst:swap-naive}.
+But the snippet does not compile because the ownership system does not allow
+moving out of a mutable reference, as is done on line 3. This makes sense,
+because  the reference needs to stay valid, hence the data cannot disappear by
+moving out.
+
+The solution to the problem is to use the special purpose function
+\lstinline!std::mem::replace! that atomically replaces the value in a mutable
+reference with the second argument and  returns the old value of the mutably
+borrowed place. In the case of the example in \autoref{lst:swap-replace}, this
+is all the method needs to do.
+
+\begin{figure}[htb]
+\noindent\begin{minipage}[t]{.48\textwidth}
+\begin{lstlisting}[
+  language=Rust,
+  label=lst:swap-naive,
+  caption={Naive swap implementation that does not compile.}
+]
+impl<T> Option<T> {
+  fn swap(&mut self, t: T) -> Self {
+    let tmp = *self;
+    *self = Option::Some(t);
+    tmp
+  }
+}
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.48\textwidth}
+\begin{lstlisting}[
+  language=Rust,
+  label=lst:swap-replace,
+  caption={Swap using the replace method.}
+]
+impl<T> Option<T> {
+  fn swap(&mut self, t: T) -> Self {
+    std::mem::replace(
+      self,
+      Option::Some(t)
+    )
+  }
+}
+\end{lstlisting}
+\end{minipage}
+\end{figure}
+
 
 \subsection{Rust Compared to Scala}
 
@@ -447,6 +506,9 @@ immutable objects while retaining by-value semantics. But as a consequence, the
 by-value passing of references closely resembles by-reference passing for
 mutable objects. The translation presented in \autoref{translation} will
 extensively exploit this fact.
+
+
+
 
 
 \section{Stainless Verifier}

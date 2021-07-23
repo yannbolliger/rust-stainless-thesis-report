@@ -327,6 +327,48 @@ does not matter, whether something is on the heap or the stack as long as
 general memory safety is preserved. Therefore, this distinction can be erased in
 the translation and everything uses normal heap-allocated Scala objects.
 
+\subsubsection{Memory Replace}
+
+To allow for in-place updates of mutable references, the translation supports
+the  Rust function \lstinline!std::mem::replace!. With all the machinery
+introduced so far, the function can be translated as a simple feature on top of
+the \lstinline!move! and \lstinline!copy! operators, as shown in
+\autoref{lst:replace}. Interestingly, the translation corresponds quite closely
+to the implementation -- in unsafe code -- of the function in the standard
+library.\footnote{\href{}{\texttt{\color{MidnightBlue}
+https://doc.rust-lang.org/src/core/mem/mod.rs.html\#815}}}
+
+\begin{figure}
+\noindent\begin{minipage}[t]{.4\textwidth}
+\begin{lstlisting}[
+  language=Rust,
+  caption={Replacing a mutable reference's value.}
+]
+fn f(a: &mut A) -> A {
+  std::mem::replace(
+    a,
+    A { a: "bar", b: 0 }
+  )
+}
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.55\textwidth}
+\begin{lstlisting}[
+  language=Scala,
+  caption={The translation of the replace function.},
+  label={lst:replace}
+]
+def f(a: MutCell[A]): A = {
+  val res = move(a.value)
+  a.value = A(MutCell("bar"), MutCell(0))
+  res
+}
+\end{lstlisting}
+\end{minipage}
+\end{figure}
+
+
+
 \subsection{Correctness}
 \label{correctness-claim}
 
@@ -674,7 +716,7 @@ expression doesn't need an additional copy.
 For cloning, the same procedure is applied. Conveniently, the Rust compiler does
 not derive \lstinline!Clone! instances for types that are or contain mutable
 references.\footnote{\href{}{\texttt{\color{MidnightBlue}
-https://doc.rust-lang.org/std/clone/trait.Clone.html\#impl-Clone-121 }}}
+https://doc.rust-lang.org/std/clone/trait.Clone.html\#impl-Clone-121}}}
 Therefore, it is sufficient to check the assumption from
 \autoref{sec:clone-is-copy} to make sure that all types for which clone is
 translated will be \lstinline!freshCopy!'d'.
