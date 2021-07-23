@@ -195,14 +195,14 @@ As an example, if a Rust reference is stored in a local variable, this creates
 two nested cells in the translation. The outer cell models the local variable
 and the value of its field holds the other cell which models the Rust reference.
 
-\noindent\begin{minipage}[t]{.45\textwidth}
-\begin{lstlisting}[language=Rust]
+\noindent\begin{minipage}[t]{.48\textwidth}
+\begin{lstlisting}[language=Rust, caption={Taking a mutable reference in Rust.}]
 let x: T = ...;
 let r = &mut x;
 \end{lstlisting}
 \end{minipage}\hfill
-\begin{minipage}[t]{.45\textwidth}
-\begin{lstlisting}[language=Scala]
+\begin{minipage}[t]{.48\textwidth}
+\begin{lstlisting}[language=Scala, caption={Mentioning the cell \lstinline!x! suffices in the translation.}]
 val x = MutCell[T](...)
 val r = MutCell(x)
 \end{lstlisting}
@@ -210,8 +210,16 @@ val r = MutCell(x)
 
 \subsubsection{Matching}
 
+The same principles apply for pattern matching as for evaluating place
+expressions. If a match happens on a value, the Scala match will be on the
+\passthrough{\lstinline!value!} field of that cell. If the scrutinee is a
+reference, then the Scala scrutinee is the mutable cell. The patterns are
+adapted to include the mutable cell wrappers of fields. Depending on whether a
+resulting binding of a match is a reference or not in Rust, the Scala pattern
+matches the cell or only its field, see \autoref{lst:pattern-match}.
+
 \begin{figure}
-\noindent\begin{minipage}[t]{.45\textwidth}
+\noindent\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[
   language=Rust,
   caption={In the first case, \lstinline!a! binds the value of \lstinline!x.a!
@@ -228,7 +236,7 @@ match x {
 }
 \end{lstlisting}
 \end{minipage}\hfill
-\begin{minipage}[t]{.45\textwidth}
+\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[
   language=Scala,
   caption={In the first case, \lstinline!a! matches the field \lstinline!value!
@@ -248,26 +256,19 @@ x.value match {
 \end{minipage}
 \end{figure}
 
-The same principles apply for pattern matching as for evaluating place
-expressions. If a match happens on a value, the Scala match will be on the
-\passthrough{\lstinline!value!} field of that cell. If the scrutinee is a
-reference, then the Scala scrutinee is the mutable cell. The patterns are
-adapted to include the mutable cell wrappers of fields. Depending on whether a
-resulting binding of a match is a reference or not in Rust, the Scala pattern
-matches the cell or only its field, see \autoref{lst:pattern-match}.
-
 
 \subsubsection{Assigning}
 
-Mutating values in both Rust and Scala is done by assigning new rvalues
-to lvalues. The translation for assignments is analogous to the one for
-accessing places and again unifies local variables and references. If a
-place expression is assigned an rvalue, the translation assigns to the
-\passthrough{\lstinline!value!} field of the cell, no matter whether the
-place expression is a local variable or a mutable reference.
+Mutating values in both Rust and Scala is done by assigning new rvalues to
+lvalues. The translation for assignments is analogous to the one for accessing
+places and again unifies local variables and references. If a place expression
+is assigned an rvalue, the translation assigns to the
+\passthrough{\lstinline!value!} field of the cell, no matter whether the place
+expression is a local variable or a mutable reference, see \autoref{lst:assign}.
 
+\begin{figure}
 \noindent\begin{minipage}[t]{.45\textwidth}
-\begin{lstlisting}[language=Rust]
+\begin{lstlisting}[language=Rust, caption={Dereferencing and assigning in Rust.}]
 let x: &mut i32 = ...
 *x = 123;
 let mut y = 456;
@@ -275,13 +276,18 @@ y = 789;
 \end{lstlisting}
 \end{minipage}\hfill
 \begin{minipage}[t]{.45\textwidth}
-\begin{lstlisting}[language=Scala]
+\begin{lstlisting}[
+  language=Scala,
+  label=lst:assign,
+  caption={Assignments in Scala always go to the \lstinline!value! field.}
+]
 val x: MutCell[Int] = ???
 x.value = 123
 val y = MutCell(456)
 y.value = 789
 \end{lstlisting}
 \end{minipage}
+\end{figure}
 
 \subsubsection{Function parameters}
 
@@ -309,7 +315,7 @@ f(456, &r);
 \end{lstlisting}
 \end{minipage}\hfill
 \begin{minipage}[t]{.45\textwidth}
-\begin{lstlisting}[language=Scala]
+\begin{lstlisting}[language=Scala, caption={This results in nested cell in Scala.}]
 def f(
   i: MutCell[Int],
   x: MutCell[MutCell[Int]]
