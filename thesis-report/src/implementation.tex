@@ -118,7 +118,7 @@ followed on \autoref{fig:flowchart}. Gaining insight into the pipeline will
 increase understanding of the design choices made.
 
 In \autoref{lst:example}, the Stainless library is imported such that the
-post-condition specification attribute \lstinline!#[post(...)]! is available.
+postcondition specification attribute \lstinline!#[post(...)]! is available.
 The attribute is implemented as a procedural macro\footnote{Procedural macros
 invoke user-provided code at compilation-time and thus allow for more complex
 transformations of the AST inside a macro \cite[section ``Procedural
@@ -128,7 +128,7 @@ Macros'']{rustref}.} and will be expanded to a closure inside the function
 \noindent\begin{minipage}[b]{.45\textwidth}
 \begin{lstlisting}[
   language=Rust,
-  caption={Rust program with a post-condition.},
+  caption={Rust program with a postcondition.},
   label={lst:example},
 ]
 extern crate stainless;
@@ -145,7 +145,7 @@ fn f(a: A) -> A {
 \begin{minipage}[b]{.52\textwidth}
 \begin{lstlisting}[
   language=Rust,
-  caption={Desugared post-condition.},
+  caption={Desugared postcondition.},
   label={lst:example2}
 ]
 fn f(a: A) -> A {
@@ -204,7 +204,7 @@ some minor transformations and passes it to the verification pipeline. In the
 end, it reports back the results in JSON format such that Rust-Stainless can
 print them. In the case of the example, Stainless returns a problem: the
 multiplication on line 6 of \autoref{lst:stainless-trees} could overflow and
-therefore, the post-condition does not hold.
+therefore, the postcondition does not hold.
 
 
 
@@ -872,6 +872,8 @@ because they do not use the same identifiers for variables.
 
 \hfill \break \noindent With this chapter, the entire Rust-Stainless system has
 been introduced and explained. Design choices and accompanying limitations were
-discussed in the last section and may be compared to other approaches, listed in
+discussed in the last section. Theoretical limitations of the mutability
+translation have already been discussed in \autoref{trans-limitations}. It may
+be interesting to compare this system to other approaches, listed in
 \autoref{related-work}. The next chapter evaluates our tool under different
 perspectives.

@@ -195,7 +195,7 @@ as possible.
 
 Thanks to the mutability translation and especially the \emph{in-place update}
 feature, I achieved that goal adequately, found a problem in the original
-specification and was able to strengthen the post-conditions of some methods.
+specification and was able to strengthen the postconditions of some methods.
 The verified version of the code is in \autoref{apx:peerlist} and by comparing
 with  the original one can see, that there are indeed no large
 changes.\footnote{The original version can be found here:
@@ -232,11 +232,11 @@ this currently impossible.
 
 Nonetheless, verifying the peer-list implementation with
 \passthrough{\lstinline!cargo stainless!} allowed me  to improve the
-specifications of the code. First, the pre-condition that the invariant must
+specifications of the code. First, the precondition that the invariant must
 hold before the two methods was not set in the code. Furthermore, I could
-strengthen the post-conditions of  both methods so as to also prove that the
+strengthen the postconditions of  both methods so as to also prove that the
 methods perform the correct changes. For example, \autoref{lst:postcondition}
-shows the post-condition of \lstinline!replace_faulty_primary!. If the method
+shows the postcondition of \lstinline!replace_faulty_primary!. If the method
 succeeds and returns an \lstinline!Ok! result, the \lstinline!self! not only has
 to satisfy the invariant but also that the primary given as argument  was
 actually put into the faulty nodes. This avoids that the method does nothing
@@ -246,7 +246,7 @@ specs.
 
 \begin{lstlisting}[
   language=Rust,
-  caption={Post-condition of the \lstinline!replace_faulty_primary! method.},
+  caption={Postcondition of the \lstinline!replace_faulty_primary! method.},
   label={lst:postcondition}
 ]
 #[post((matches!(ret, Ok(_))).implies(

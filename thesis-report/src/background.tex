@@ -569,24 +569,37 @@ also accepted by Rust-Stainless, which subsequently translates the program to
 Stainless and lets it prove correctness. The only difference is that
 specifications are added as function attributes rather than inline statements
 and that postconditions in Rust automatically have a \lstinline!ret! variable in
-scope that represents the return value. Other than that, the two are so similar
-that the following sections of this chapter will only show examples in Rust for
-simplicity. In both languages, one can in addition to specifications put
-assertions into function bodies, in Rust with \lstinline"assert!" macro.
-Stainless also proves that body assertions hold.
+scope that represents the return value. Otherwise, the two are so similar that
+the following sections will only show examples in Rust for simplicity. In both
+languages, one can in addition to specifications put assertions into function
+bodies, in Rust with \lstinline"assert!" macro. Stainless also proves that body
+assertions hold.
 
 So far, an imprecision has been made about Stainless's input language. Stainless
 does not support the full Scala language but rather a functional subset called
-\emph{PureScala}. Expressions in specifications also need to be in PureScala.
+\emph{PureScala}. Expressions in specifications need to be in PureScala.
 However, Stainless was extended to support some form of mutability \cite{regb}
-which this project relies upon. Chapter \ref{translation} will go into details
-about how this is used.
+which this project relies on. Chapter \ref{translation} will go into details
+about mutability.
 
 The methods of the container in the running example (fully displayed in
 \autoref{running-example}) show how the above features are applied to add
 specifications. The \lstinline!implies! function in line 26 is a library helper
 method provided by the \lstinline!stainless! crate. Body assertions are used in
 the main function to ensure that the code behaves as expected.
+
+Another library helper is the \lstinline!old! function. This is a very useful
+construct that can be used in postconditions to refer to the value of a mutable
+parameter, usually a mutable reference, before the function. For example in the
+following snippet, the \lstinline!old(i)! will return the value of \lstinline!i!
+before the function and  \lstinline!i! will have the value after the function.
+
+\begin{lstlisting}[language=Rust]
+#[post(*i == *old(i) + 1)]
+fn change_int(i: &mut i32) {
+  *i = *i + 1;
+}
+\end{lstlisting}
 
 \subsection{Algebraic Properties}
 \label{laws-intro}
@@ -599,24 +612,12 @@ for an equality trait with \texttt{eq} one would assume that all implementations
 are reflexive, i.e. $\forall x: x~\mathtt{eq}~x$. However, the compilers cannot
 guarantee that.
 
-As a solution, in Stainless one can specify contracts on traits. First, trait
-methods can have all specification attributes like regular functions. These will
-be checked to hold for all implementations. Furthermore, one can attach
-\emph{laws} to traits i.e.~algebraic properties the contract implementors need
-to fulfil \cite[section "Specifying Algebraic Properties"]{stainless-doc}.
-Stainless proves correctness of the laws for each implementation of the trait.
-
-The last addition to the running example, is a law on the \lstinline!Id! trait
-stating  that ids need to be positive. Of course, the toy implementation that
-hard-codes an id for strings, holds that contract (lines 7-8 in
-\autoref{running-example}). A more interesting example of laws in
-\autoref{lst:liskov1} shows a violation of the  Liskov Substitution principle
-\cite{liskov}. The trait defines four methods. Two of them have regular
-postconditions and the laws state that a change to the width should not change
-the height and vice versa. Clearly, the implementation in \autoref{lst:liskov2}
-holds these properties.
-
-\begin{lstlisting}[language=Rust, caption={Example trait with laws.}, label={lst:liskov1}]
+\begin{lstlisting}[
+  float=bt,
+  language=Rust,
+  caption={Example trait with laws.},
+  label={lst:liskov1}
+]
 trait Rectangle {
   #[post(ret > 0)]
   fn width(&self) -> u32;
@@ -636,13 +637,31 @@ trait Rectangle {
 }
 \end{lstlisting}
 
+
+As a solution, in Stainless one can specify contracts on traits. First, trait
+methods can have all specification attributes like regular functions. These will
+be checked to hold for all implementations. Furthermore, one can attach
+\emph{laws} to traits i.e.~algebraic properties the contract implementors need
+to fulfil \cite[section "Specifying Algebraic Properties"]{stainless-doc}.
+Stainless proves correctness of the laws for each implementation of the trait.
+
+The last addition to the running example, is a law on the \lstinline!Id! trait
+stating  that ids need to be positive. Of course, the toy implementation that
+hard-codes an id for strings, holds that contract (lines 7-8 in
+\autoref{running-example}). A more interesting example of laws in
+\autoref{lst:liskov1} shows a violation of the  Liskov Substitution principle
+\cite{liskov}. The trait defines four methods. Two of them have regular
+postconditions and the laws state that a change to the width should not change
+the height and vice versa. Clearly, the implementation in \autoref{lst:liskov2}
+holds these properties.
+
 Without the laws, it would be tempting to add a square implementation, see
 \autoref{lst:liskov3}. However, the square changes both dimensions at once --
 violating the laws. Stainless detects this, the square implementation fails
 verification, and thereby a possible bug is caught.
 
-\noindent
-\begin{minipage}[t]{.49\textwidth}
+\begin{figure}[hbt]
+\noindent \begin{minipage}[t]{.49\textwidth}
 \begin{lstlisting}[
   language=Rust,
   caption={Example implementation of the trait.},
@@ -688,6 +707,7 @@ impl Rectangle for Square {
 }
 \end{lstlisting}
 \end{minipage}
+\end{figure}
 
 \hfill \break \noindent This concludes this chapter's introduction on Rust and
 Stainless. All Rust features needed for writing the motivating example

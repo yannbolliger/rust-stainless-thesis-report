@@ -719,7 +719,7 @@ references.\footnote{\href{}{\texttt{\color{MidnightBlue}
 https://doc.rust-lang.org/std/clone/trait.Clone.html\#impl-Clone-121}}}
 Therefore, it is sufficient to check the assumption from
 \autoref{sec:clone-is-copy} to make sure that all types for which clone is
-translated will be \lstinline!freshCopy!'d'.
+translated will be \lstinline!freshCopy!'d.
 
 To summarise, the implementation deeply copies some of the moves to prevent
 aliasing in the resulting code. But, it never copies mutable references because
@@ -781,9 +781,11 @@ bindings. This can occur for local variables as in the example or also for
 
 \hfill \break \noindent This chapter presented a translation for mutability from
 Rust to Scala and refined it in several steps to make it useable with the
-imperative phase of Stainless. For each transformation, I argued that the
-overall property of runtime equivalence is upheld. The last section discussed a
-theoretical limitation of the approach. Further limitations that are more
-associated with the implementation  of the translation are discussed in
-\autoref{impl-limitations}. More generally, the next chapter sheds light on the
-engineering of Rust-Stainless and other new features than mutability.
+imperative phase of Stainless. The general translation is quite powerful and
+results in equivalent runtime semantics in Scala for mutability features of
+Rust. For each version of the translation, I argued that this overall
+equivalence is upheld. The last section discussed a theoretical limitation of
+the approach. Further limitations more associated with the implementation of
+this translation are discussed in \autoref{impl-limitations}. More generally,
+the next chapter sheds light on the engineering of Rust-Stainless and other new
+features than mutability.
