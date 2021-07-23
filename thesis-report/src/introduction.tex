@@ -40,15 +40,26 @@ developed by Informal Systems.\footnote{\url{https://informal.systems}} But even
 with type safety and memory safety at compile-time, Rust cannot guarantee
 correctness on its own.
 
-Therefore, we present \emph{Rust-Stainless}, a verification tool created by
-Georg Schmid, with the vision of combining the safety guarantees of Rust with
-formally verified correctness guarantees of Stainless.
+Therefore, and with the vision of combining the safety guarantees of Rust with
+formally verified correctness guarantees of Stainless, we present
+\emph{Rust-Stainless}, a verification tool created by Georg Schmid.
 Rust-Stainless\footnote{Pun not intended, but -- needless to say -- welcome.} is
 a frontend to the Stainless verifier capable of extracting a subset of the Rust
 language, translating it to a subset of Scala and verifying it with Stainless.
 In this thesis project, I substantially extend the fragment of Rust that can be
 translated by the tool including features like mutability, references and type
 classes.
+\newpage
+
+This thesis project was preceded by a semester project supervised by Georg
+Schmid, in which I  mainly worked on the Rust trait to Scala type class
+translation of Rust-Stainless. After that, the thesis project was a natural
+prolongation of the former and therefore, this report also presents some of the
+results of the previous project. Thanks to Georg and Prof. Viktor Kun\v{c}ak,
+the academic supervisor, I had the luck to conduct this thesis project as an
+internship at Informal Systems, where I was supervised by Romain Rüetschi. The
+blockchain and Rust focussed company provided the perfect motivation and
+context to push Rust-Stainless in the right direction.
 
 \subsubsection{Contributions}
 
