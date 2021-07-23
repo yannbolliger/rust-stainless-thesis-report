@@ -149,11 +149,16 @@ implementation language for critical systems. With that arises the need to prove
 stronger properties on Rust programs like functional correctness. This is the
 major motivation behind this project, but likewise, numerous other projects try
 to build verifiers for Rust. The wide interest in the topic can be seen from the
-sheer number of projects in the uncomplete list:\footnote{The list of verifiers
+sheer number of projects in the list:\footnote{The list of verifiers
 largely stems from
 \url{https://alastairreid.github.io/rust-verification-tools/}.}
 
 \begin{itemize}
+
+\item \textbf{CRUST} \cite{crust} tries to prove memory safety of Rust code
+using unsafe features, in the same manner as RustBelt. The approach is to
+translate Rust to C, generate test sequences of function calls and then verify
+the code with the CBMC bounded model checker for C.
 
 \item \textbf{RustHorn} \cite{rusthorn} translates Rust into \emph{constrained
 Horn clauses} that can be solved by an appropriate solver. The authors prove
