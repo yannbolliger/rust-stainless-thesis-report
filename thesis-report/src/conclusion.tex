@@ -1,0 +1,58 @@
+Presented tool
+
+showed efficacy with evaluation.
+\begin{itemize}
+\tightlist
+\item fast translation
+\item useability with actual crates/code
+\end{itemize}
+
+With mutability, freshCopy and mem::replace the frontend is now almost more
+expressive than Stainless itself!
+
+In particular, can implement and verify actual, performant code
+
+
+\paragraph{Extraction}
+\begin{itemize}
+\tightlist
+\item adding the missing features: loops, arrays mainly
+
+\item   external items!, would solve problems for
+\item vectors (more generally std items and stainless lib)
+\item but also for type classes (could you use the real ones)
+
+\item speaking of lib: that would unlock verified data structures by Samuel Chassot + list-map
+\end{itemize}
+
+
+\paragraph{Mutability}
+\begin{itemize}
+\tightlist
+\item probably maxed out current approach with current imperative phase,
+  because bugs
+
+\item even if no bugs: theoretical aliasing limitations by design
+\item nested mutable cells
+\item recursive functions returning mutable ref
+
+\item Solution: new imperative phase!
+
+\item par contre, using THIR seems like a good idea!
+
+\item also in comparison with other tools: counter-example generation for Rust!
+\end{itemize}
+
+
+\paragraph{New Ideas}
+\begin{itemize}
+\tightlist
+\item
+  use Rust instead of Scala + Stainless + GenC?
+\item
+  use Rust to create WASM?
+\item
+  smart contracts in Rust/WASM
+\item
+  Non-conflicting policies for Hermes relayer
+\end{itemize}
