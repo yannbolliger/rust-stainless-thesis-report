@@ -1,47 +1,46 @@
 This chapter presents how Rust-Stainless is tested and gives some examples of
 code that the tool can verify. Furthermore, it will decompose the running time
-of a typical execution into its subparts and finish by presenting a
-blockchain-related code example implemented by Informal Systems and verified
-with Rust-Stainless.
+of a typical execution into its subparts and finish by presenting a code example
+related to distributed systems implemented by Informal Systems and verified with
+Rust-Stainless.
 
 \section{Benchmarks}
 
-The Rust-Stainless repository contains a test suite of 65 passing (positive) and
+The Rust-Stainless repository contains a test suite of 67 passing (positive) and
 12 failing (negative) test code examples of in total around 3000
 lines.\footnote{Found under \texttt{stainless\_frontend/tests/[pass|fail]} on
 the \texttt{mutable-cells} branch.} The suite is run for every pull request and
 every commit to the \texttt{master} branch.
 
 To quantitatively evaluate Rust-Stainless, I collected some statistics of all
-the positive test examples, displayed in \autoref{measurements}.\footnote{All
-the tests were run on a MacBook Pro with a 2.8~GHz Quad-Core Intel Core i7 and
-16~GB of RAM.} Only the positive examples were used for the measurements because
-the negative examples may fail at different stages of the extraction or
-verification pipeline. Thus, the time measurement is only representative for the
-positive examples which complete the verification pipeline. The used benchmarks
-amount to 2100 lines of Rust code (LoC), Stainless generates in total 470
-verification conditions (VCs) and the accumulated running time is just under 6
-minutes (Total). Note that the test suite normally (when run with \texttt{cargo
-test}) runs multiple tests in parallel and thus completes in less than 2 minutes
-on the same machine.
+the positive test examples, displayed in \autoref{measurements}. Only the
+positive examples were used for the measurements because the negative examples
+may fail at different stages of the extraction or verification pipeline. Thus,
+the time measurement is only representative for the positive examples which
+complete the verification pipeline. The used benchmarks amount to 2100 lines of
+Rust code (LoC), Stainless generates in total 470 verification conditions (VCs)
+and the accumulated running time is just under 6 minutes (Total). Note that the
+test suite normally (when run with \texttt{cargo test}) runs multiple tests in
+parallel and thus completes in less than 2 minutes on the same
+machine.\footnote{All the tests were run on a MacBook Pro with a 2.8~GHz
+Quad-Core Intel Core i7 and 16~GB of RAM.}
 
-It is instructive to decompose the running time of the test examples into the
-different parts of the pipeline. As described in
-\autoref{sec:extraction-overview}, the frontend first needs to detect some
-standard library items before it can translate the user crate. Even if the
-detection iterates through the same crates on each run, one observes larger
-variations in its running time. On average, detection takes $199 \pm 33$~ms or
-equivalently 4~\% of the running time.
+It is instructive to decompose the running time into its different parts. As
+described in \autoref{sec:extraction-overview}, the frontend first needs to
+detect some standard library items before it can translate the user crate. Even
+if the detection iterates through the same crates on each run, one observes
+larger variations in its running time. On average, detection takes $199 \pm
+33$~ms or equivalently 4~\% of the running time.
 
 The actual translation is very fast, especially for the rather short examples
 that account for the majority of the test suite. It takes only 0.4~ms or about
 0.008~\% of the running time on average. By far the largest part of the running
 time of our tool is not spent in the frontend itself but rather in the JVM
 backend that performs verification. Verification time accounts for on average
-95~\% of the total running time. The rest of the time is made up of starting,
-serialising and reporting. This shows that translation time is inferior to
-verification time by 1-2 orders of magnitudes which is not surprising, given
-that verification is much more complex than the translation.
+95~\% of the total time. The rest is made up of starting, serialising and
+reporting. This shows that translation time is inferior to verification time by
+multiple orders of magnitudes which is not surprising, given that verification
+is much more complex than translation.
 
 \input{measurements/measurements.tex}
 
@@ -53,7 +52,7 @@ evaluate what it is capable of and to that end present some code examples. The
 first three examples stem from the test suite of Rust-Stainless and are included
 in the measurements from above. The fourth example is the running example from
 \autoref{background} and the last one is an implementation by Informal Systems
-used in the IBC implementation.
+used in the \texttt{tendermint-rs} repository.
 
 \subsection{Test Suite Examples}
 
@@ -187,10 +186,88 @@ def get_mut_by_id[K @mutable, V @mutable](
 \subsection{Peer-list Implementation}
 \label{peerlist}
 
-benchmarks of Informal
+One of the main motivations of this thesis project was to verify some real-world
+code examples of Informal Systems. The \lstinline!PeerList! data structure
+seemed like the perfect benchmark because it had already some runtime checked
+invariants, defined by Romain Rüetschi. Thus, a primary driver of this thesis
+was  to verify a version of the structure that was as close to the original code
+as possible.
 
-\begin{itemize}
-  \item show list map \& set
-  \item found problem
-  \item strengthened post-conditions
-\end{itemize}
+Thanks to the mutability translation and especially the \emph{in-place update}
+feature, I achieved that goal adequately, found a problem in the original
+specification and was able to strengthen the post-conditions of some methods.
+The verified version of the code is in \autoref{apx:peerlist} and by comparing
+with  the original one can see, that there are indeed no large
+changes.\footnote{The original version can be found here:
+\url{https://github.com/informalsystems/tendermint-rs/blob/d8e18c647cd8695d16610c4292b15ec6d1b45fbc/light-client/src/peer_list.rs}}
+
+The peer-list is a data structure that keeps track of different nodes in a
+distributed system context. Each node has a current value, recorded in the
+\lstinline!values! map, and each node is either the primary node of the system,
+a trusted witness, a simple but working full-node or a considered as a faulty
+node. These states are recorded with sets in the struct and the
+\lstinline!invariant! method returns true if the sets are in a valid
+configuration. For example, they all  need to be disjoint as each node is in
+exactly one state. The two methods of interest are
+\lstinline!replace_faulty_witness! and \lstinline!replace_faulty_primary! that
+both  change the states of some of the nodes.
+
+The only notable but crucial change from the original code is that instead of
+using the standard \lstinline!HashMap! and  \lstinline!HashSet!, the verified
+code uses two custom implementations, \lstinline!ListMap! and
+\lstinline!ListSet!. I implemented these two especially for the benchmark and
+they are in a separate module in the verified crate (\autoref{apx:listmap}). The
+need for list-backed  set and map implementations arose because some methods get
+an element from the collections with \lstinline!.iter().next()! in the original
+code. Neither does Rust-Stainless support iterators, nor do the map and set from
+the Stainless crate support element retrieval. Therefore, I created the
+list-backed collections and added a \lstinline!first! method.
+
+Ideally, the two list-collections should be in the Stainless crate as well and
+thus, be part of  the library and interface of Rust-Stainless. If that was the
+case, the original peer-list example would really only have to import the
+Stainless crate and change  the collection types to be verifiable.
+Unfortunately,  the one-crate-limitation (cf. \autoref{impl-limitations}) makes
+this currently impossible.
+
+Nonetheless, verifying the peer-list implementation with
+\passthrough{\lstinline!cargo stainless!} allowed me  to improve the
+specifications of the code. First, the pre-condition that the invariant must
+hold before the two methods was not set in the code. Furthermore, I could
+strengthen the post-conditions of  both methods so as to also prove that the
+methods perform the correct changes. For example, \autoref{lst:postcondition}
+shows the post-condition of \lstinline!replace_faulty_primary!. If the method
+succeeds and returns an \lstinline!Ok! result, the \lstinline!self! not only has
+to satisfy the invariant but also that the primary given as argument  was
+actually put into the faulty nodes. This avoids that the method does nothing
+which would also uphold the invariant. Note also the use of the
+\lstinline!old(&self)! helper to use the values before the function in the
+specs.
+
+\begin{lstlisting}[
+  language=Rust,
+  caption={Post-condition of the \lstinline!replace_faulty_primary! method.},
+  label={lst:postcondition}
+]
+#[post((matches!(ret, Ok(_))).implies(
+  Self::invariant(&self)
+    && old(&self).primary != self.primary
+    && self.faulty_nodes.contains(&old(&self).primary)
+    && old(&self).witnesses.contains(&self.primary)
+))]
+\end{lstlisting}
+
+An earlier version of the tool was also capable of verifying an immutable
+version  of another example from Informal Systems. The code stems from an
+\emph{inter-blockchain communication protocol (IBC)} handler implementation and
+was rewritte to be immutable and self-contained.\footnote{The PR with the
+example can be found here:
+\url{https://github.com/informalsystems/ibc-rs/pull/759}.}
+
+\hfill \break \noindent With five different examples showcasing each their own
+set of language features, this chapter showed what Rust-Stainless can currently
+process. It became clear that no matter how complicated the translations the
+frontend performs are, the running time is dominated by the verification time of
+the backend. For an overview of the tool's limitations, see
+\autoref{impl-limitations}. The next chapter, summarises research  work in
+related areas like ownership systems and formal verification.

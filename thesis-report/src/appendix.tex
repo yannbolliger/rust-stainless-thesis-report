@@ -23,3 +23,30 @@ These code examples are taken from the test suite of Rust-Stainless.
   caption={Type class example for an equality trait and two implementations.},
   label={lst:type-class}
 ]{code/type_class.rs}
+
+\clearpage
+\section{Informal Systems Code}
+
+\subsubsection{PeerList}
+
+The verified \lstinline!PeerList! module has two files. The data structure and
+a supporting list-map implementation in the second one.
+
+\lstinputlisting[
+  language=Rust,
+  caption={
+    Verified version of the PeerList data structure.
+    The original version can be found here:
+    \url{https://github.com/informalsystems/tendermint-rs/blob/d8e18c647cd8695d16610c4292b15ec6d1b45fbc/light-client/src/peer_list.rs}
+  },
+  label={apx:peerlist}
+]{code/lib.rs}
+
+\lstinputlisting[
+  language=Rust,
+  caption={
+    Supporting list-backed implementations to replace \lstinline!HashMap! and
+    \lstinline!HashSet!.
+  },
+  label={apx:listmap}
+]{code/list.rs}
