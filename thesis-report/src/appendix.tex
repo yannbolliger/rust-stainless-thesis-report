@@ -2,8 +2,10 @@
 \lstinputlisting[
   language=Rust,
   caption={Example of a function body in pretty-printed THIR.},
-  label={apx:thir-example}
+  label={apx:thir-example},
+  captionpos=t!
 ]{code/thir.rs}
+
 
 \clearpage
 \section{Rust Benchmarks}
@@ -14,15 +16,23 @@ These code examples are taken from the test suite of Rust-Stainless.
 \lstinputlisting[
   language=Rust,
   caption={{Insertion sort, translated from the equivalent Scala benchmark of Stainless.}},
-  label={lst:insertion-sort}
+  label={lst:insertion-sort},
+  framerule=15pt,
+   xleftmargin=20pt,
+   captionpos=t!
 ]{code/insertion_sort.rs}
+\hspace{5mm}
 
 \subsubsection{Type Class}
 \lstinputlisting[
   language=Rust,
   caption={Type class example for an equality trait and two implementations.},
-  label={lst:type-class}
+  label={lst:type-class},
+  framerule=15pt,
+   xleftmargin=20pt,
+   captionpos=t!
 ]{code/type_class.rs}
+
 
 \clearpage
 \section{Informal Systems Code}
@@ -39,7 +49,10 @@ a supporting list-map implementation in the second one.
     The original version can be found here:
     \url{https://github.com/informalsystems/tendermint-rs/blob/d8e18c647cd8695d16610c4292b15ec6d1b45fbc/light-client/src/peer_list.rs}
   },
-  label={apx:peerlist}
+  label={apx:peerlist},
+  framerule=15pt,
+   xleftmargin=20pt,
+   captionpos=t!
 ]{code/lib.rs}
 
 \lstinputlisting[
@@ -48,5 +61,8 @@ a supporting list-map implementation in the second one.
     Supporting list-backed implementations to replace \lstinline!HashMap! and
     \lstinline!HashSet!.
   },
-  label={apx:listmap}
+  label={apx:listmap},
+  framerule=15pt,
+   xleftmargin=20pt,
+   captionpos=t!
 ]{code/list.rs}

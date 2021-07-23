@@ -1,5 +1,3 @@
-//! Provides a peer list for use within the `Supervisor`
-
 extern crate stainless;
 use stainless::*;
 
@@ -111,8 +109,8 @@ impl<T> PeerList<T> {
         result
     }
 
-    /// Mark the primary as faulty and swap it for the next available witness,
-    /// if any. Returns the new primary on success.
+    /// Mark the primary as faulty and swap it for the next available
+    /// witness, if any. Returns the new primary on success.
     ///
     /// ## Errors
     /// - If there are no witness left, returns `ErrorKind::NoWitnessLeft`.
