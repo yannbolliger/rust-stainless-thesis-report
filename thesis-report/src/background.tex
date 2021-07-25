@@ -594,7 +594,7 @@ parameter, usually a mutable reference, before the function. For example in the
 following snippet, the \lstinline!old(i)! will return the value of \lstinline!i!
 before the function and  \lstinline!i! will have the value after the function.
 
-\begin{lstlisting}[language=Rust]
+\begin{lstlisting}[language=Rust, caption={The \lstinline!old! helper for postconditions with mutable parameters.}]
 #[post(*i == *old(i) + 1)]
 fn change_int(i: &mut i32) {
   *i = *i + 1;

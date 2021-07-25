@@ -125,7 +125,7 @@ transformations of the AST inside a macro \cite[section ``Procedural
 Macros'']{rustref}.} and will be expanded to a closure inside the function
 (\autoref{lst:example2}).
 
-\noindent\begin{minipage}[b]{.45\textwidth}
+\noindent\begin{minipage}[b]{.43\textwidth}
 \begin{lstlisting}[
   language=Rust,
   caption={Rust program with a postcondition.},
@@ -142,7 +142,7 @@ fn f(a: A) -> A {
 }
 \end{lstlisting}
 \end{minipage}\hfill
-\begin{minipage}[b]{.52\textwidth}
+\begin{minipage}[b]{.54\textwidth}
 \begin{lstlisting}[
   language=Rust,
   caption={Desugared postcondition.},
@@ -150,7 +150,7 @@ fn f(a: A) -> A {
 ]
 fn f(a: A) -> A {
   #[clippy::stainless::post]
-  |a: A, ret: A| -> bool {ret.0 >= 0};
+  |a: A, ret: A| -> bool { ret.0 >= 0 };
   A(a.0 * a.0)
 }
 \end{lstlisting}
@@ -299,7 +299,7 @@ Support was added for:
 \item
   \emph{struct update syntax}, a short-hand notation for creating a
   struct from an existing one,
-\begin{lstlisting}[language=Rust]
+\begin{lstlisting}[language=Rust, style=short]
 struct A { a: i32, b: bool, c: char }
 let x: A = A { a: 123, b: true, c: 'c' };
 let y: A = A { b: false, ..x }; // copies `x.b`, `x.c`
@@ -310,7 +310,7 @@ let y: A = A { b: false, ..x }; // copies `x.b`, `x.c`
   splitting up a crate into multiple files, and finally,
 \item
   panics in expression locations like an arm of a pattern match.
-\begin{lstlisting}[language=Rust]
+\begin{lstlisting}[language=Rust, style=short]
 match Option::Some(123) {
   Option::Some(x) => x,
   Option::None => panic!("no value"),
@@ -510,7 +510,7 @@ expressions of certain ADT types that do not necessarily occur in user code. For
 example for the Stainless map the translation needs to construct options
 (\passthrough{\lstinline!Some(v)!}), in other locations it creates tuples,
 e.g.~\passthrough{\lstinline!Tuple3(x, y, z)!}. Moreover, the fields of these
-ADTs also need to be available: \lstinline!tuple.\_0!.
+ADTs also need to be available: \lstinline!tuple._2!.
 
 The synthesis module benefits from the \lstinline!get_or_extract! pattern. For
 example, when a translation needs the option type, it triggers its synthesis.

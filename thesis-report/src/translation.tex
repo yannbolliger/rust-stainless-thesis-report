@@ -267,7 +267,7 @@ is assigned an rvalue, the translation assigns to the
 expression is a local variable or a mutable reference, see \autoref{lst:assign}.
 
 \begin{figure}
-\noindent\begin{minipage}[t]{.45\textwidth}
+\noindent\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[language=Rust, caption={Dereferencing and assigning in Rust.}]
 let x: &mut i32 = ...
 *x = 123;
@@ -275,7 +275,7 @@ let mut y = 456;
 y = 789;
 \end{lstlisting}
 \end{minipage}\hfill
-\begin{minipage}[t]{.45\textwidth}
+\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[
   language=Scala,
   label=lst:assign,
@@ -301,7 +301,7 @@ mutable to keep the invariant that each place corresponds to one cell. At
 function call site, all arguments are wrapped into newly created cells to ensure
 that local mutations on these parameters remain local to the callee.
 
-\noindent\begin{minipage}[t]{.45\textwidth}
+\noindent\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[
   language=Rust,
   caption={\lstinline!i! is only mutable inside the function.}
@@ -314,7 +314,7 @@ let r = 123;
 f(456, &r);
 \end{lstlisting}
 \end{minipage}\hfill
-\begin{minipage}[t]{.45\textwidth}
+\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[language=Scala, caption={This results in nested cell in Scala.}]
 def f(
   i: MutCell[Int],
