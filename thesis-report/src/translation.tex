@@ -738,15 +738,10 @@ extracted for which these semantics are correct.
 \label{trans-limitations}
 
 So far, mutable cells together with the \lstinline!freshCopy! primitive solved
-all cases of aliasing restriction problems. However, one particular pattern will
-still run into the aliasing restrictions of Stainless, the mutable binding of a
-mutable reference: \passthrough{\lstinline!mut x: &mut T!}. The variable
-\lstinline!x! is mutable in two ways, it can be dereferenced and assigned
-\lstinline!*x = ...! which changes the referred object, but it can also be
-reassigned with another mutable reference \lstinline!x = &mut ...!. To correctly
-translate both of these, the variable must be translated as
-\lstinline!MutCell[MutCell[T]]!. This is in fact what our translation does. An
-example of such a translation is in \autoref{lst:nested-cell}.
+all cases of aliasing restriction problems. However, there are patterns where
+that solution is not applicable and these constitute the theoretical limits of
+this translation with the current aliasing restrictions of Stainless -- runtime
+equivalence in full Scala is still valid.
 
 \begin{figure}
 \noindent\begin{minipage}[t]{.35\textwidth}
@@ -756,9 +751,9 @@ example of such a translation is in \autoref{lst:nested-cell}.
 ]
 let mut a = 123;
 let mut b = 456;
-let mut r = &mut a;
+let mut x = &mut a;
 
-r = &mut b;
+x = &mut b;
 \end{lstlisting}
 \end{minipage}\hfill
 \begin{minipage}[t]{.6\textwidth}
@@ -769,21 +764,52 @@ r = &mut b;
 ]
 val a: MutCell[Int] = MutCell[Int](123)
 val b: MutCell[Int] = MutCell[Int](123)
-val r: MutCell[MutCell[Int]] =
+val x: MutCell[MutCell[Int]] =
   MutCell[MutCell[Int]](a)
-r.value = MutCell[Int](b)
+x.value = MutCell[Int](b)
 \end{lstlisting}
 \end{minipage}
 \end{figure}
 
-Note that the code of \autoref{lst:nested-cell} runs correctly in Scala, hence
-the runtime equivalence is upheld. Unfortunately, the same cannot be said about
-Stainless. The assignment on line 5 of \autoref{lst:nested-cell} creates an
-alias of \lstinline!b! in \lstinline!r.value!, which Stainless does not permit.
-In other words, the translation for Stainless is fundamentally limited by the
-aliasing restrictions in that it cannot translate mutable references in mutable
-bindings. This can occur for local variables as in the example or also for
+The unsupported patterns occur when mutable references are used in locations
+where they cannot be \lstinline!freshCopy!'d to keep the semantics correct. For
+example, a mutable binding of a mutable reference: \passthrough{\lstinline!mut
+x: &mut T!}. The variable \lstinline!x! can be dereferenced and assigned
+\lstinline!*x = ...! which changes the referred object, but it can also be
+reassigned with another mutable reference \lstinline!x = &mut ...!. To correctly
+model both of these cases, the translation gives the type
+\lstinline!MutCell[MutCell[T]]! to \lstinline!x!, like in
+\autoref{lst:nested-cell}. Note that this example runs correctly in Scala.
+Unfortunately, the same cannot be said about Stainless. The assignment on line 5
+creates an alias of \lstinline!b! in \lstinline!x.value!, which Stainless does
+not permit. This can occur for local variables as in the example or also for
 \lstinline!mut! function parameters of mutable reference type.
+
+\begin{lstlisting}[
+  float=hb,
+  language=Rust,
+  label=lst:recursive-get-mut,
+  caption={A recursive method returning a mutable reference.}
+]
+impl<V> List<(u128, V)> {
+  pub fn get_mut(&mut self, key: &u128) -> Option<&mut V> {
+    match self {
+      List::Nil => None,
+      List::Cons(head, _) if head.0 == *key => Some(&mut head.1),
+      List::Cons(_, tail) => tail.get_mut(key),
+    }
+  }
+}
+\end{lstlisting}
+
+The other case of mutable references, i.e. mutable cells, that cannot be copied
+occurs in function return values. In the running example of
+\autoref{running-example}, \lstinline!get_mut_by_id! returns a mutable
+reference. This is correctly translated and also verified. However, Stainless
+does not allow the same for recursive functions, because of the third aliasing
+rule in \autoref{sec:aliasing-restrictions}. Thus, the same \lstinline!get_mut!
+method for a list, as shown in \autoref{lst:recursive-get-mut}, is rejected by
+Stainless.
 
 \hfill \break \noindent This chapter presented a translation for mutability from
 Rust to Scala and refined it in several steps to make it useable with the
