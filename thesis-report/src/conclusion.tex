@@ -1,58 +1,96 @@
-Presented tool
+With this thesis, I presented Rust-Stainless, a formal verification tool for Rust
+based on the Stainless verifier framework. Building on a solid foundation of
+existing software and infrastructure, I added many features to the tool and thus
+extended its usability and expressiveness significantly. Along with smaller
+language features the most important additions are immutable references and
+boxes, the trait to  type class translation and, first and foremost, the
+mutability translation. Further, this project includes the theoretical reasoning
+behind the correctness of the mutability translation as well as numerous
+bugfixes and additions to both Rust-Stainless and Scala Stainless.
 
-showed efficacy with evaluation.
-\begin{itemize}
-\tightlist
-\item fast translation
-\item useability with actual crates/code
-\end{itemize}
+The development went hand-in-hand with testing and evaluating the tool on more
+and more complex Rust examples. As an intern at Informal Systems, I had access
+to experienced Rust developers who advised me on the choice of features to
+support. Chapter \ref{evaluation} shows how the tool was evaluated against some
+code of Informal Systems and it also demonstrates that the translations
+performed by our tool are very fast, in comparison to the time it takes to
+verify the code.
 
-With mutability, freshCopy and mem::replace the frontend is now almost more
-expressive than Stainless itself!
-
-In particular, can implement and verify actual, performant code
+By combining Rust's borrow checking with Stainless's verification,
+Rust-Stainless gains an unimagined expressiveness. Thanks to Rust features like
+mutability and \lstinline!mem::replace! along with Stainless's new
+\lstinline!freshCopy! primitive, the tool can now process code that would fail
+Stainless's aliasing restrictions in Scala but is proven memory safe by the Rust
+compiler. The support for in-place updates with mutability unlocks the
+possibility of verifying actual, efficient Rust code with Stainless, like a
+search tree -- without using duplicate functional ghost structures for
+verification.
 
 
 \paragraph{Extraction}
-\begin{itemize}
-\tightlist
-\item adding the missing features: loops, arrays mainly
 
-\item   external items!, would solve problems for
-\item vectors (more generally std items and stainless lib)
-\item but also for type classes (could you use the real ones)
-
-\item speaking of lib: that would unlock verified data structures by Samuel Chassot + list-map
-\end{itemize}
-
+There are still some indispensable language features that Rust-Stainless needs
+to support before it can extract idiomatic Rust in all its facets. The primary
+ones are loops, arrays, and closures. However, the biggest limitation of the
+tool  is the one-crate-limitation inherited from the compile model of Rust.
+Solving it would solve many related problems. Instead of supporting vectors, one
+could add sensible contracts for vectors and iterators. More generally, with the
+ability to attach contracts to crate-external items, Rust-Stainless could
+finally  use standard library items like traits for equality, ordering and
+hashing. Additionally, we could provide real implementations in the Stainless
+crate instead of just providing bindings and replacing them with generated
+implementations. This would also enable the use of verified data structures like
+the list-map.
 
 \paragraph{Mutability}
-\begin{itemize}
-\tightlist
-\item probably maxed out current approach with current imperative phase,
-  because bugs
 
-\item even if no bugs: theoretical aliasing limitations by design
-\item nested mutable cells
-\item recursive functions returning mutable ref
+The mutability translation presented in this thesis can theoretically translate
+all Rust mutability to Scala, but the current implementation is limited by the
+imperative phase of Stainless. With the current backend, our tool has probably
+maximised the features that it can support. Even if the imperative phase was
+bug-free, there are still the two drastic limitations of recursive functions
+returning mutable references and mutable references in mutable variables.
 
-\item Solution: new imperative phase!
+The promising solution to that problem would be to use the new fully imperative
+phase that is currently developed for Stainless. That phase does not have
+aliasing restrictions but rather its own notion of heap references. Hence, one
+could remove some of the Stainless specific changes to the translation, thus
+making it simpler.  Additionally, I implemented the mutable cell synthesis in
+such a way that it would be easy to target the new heap reference cells instead.
 
-\item par contre, using THIR seems like a good idea!
 
-\item also in comparison with other tools: counter-example generation for Rust!
-\end{itemize}
+\paragraph{Counter-Examples}
+
+Even if Rust-Stainless seems to be the only formal verification project for Rust
+that translates from the THIR, instead of the lower-level MIR or LLVM IR, this
+thesis project showed the decision to be productive. Most Rust constructs can be
+translated in a one-to-one fashion to Stainless AST. Even more so,
+Rust-Stainless could turn  that decision into a virtue by becoming the first
+Rust verification tool that is counter-example complete! As Stainless is
+counter-example complete, it suffices to translate the Scala counter-examples
+back to Rust.
 
 
-\paragraph{New Ideas}
-\begin{itemize}
-\tightlist
-\item
-  use Rust instead of Scala + Stainless + GenC?
-\item
-  use Rust to create WASM?
-\item
-  smart contracts in Rust/WASM
-\item
-  Non-conflicting policies for Hermes relayer
-\end{itemize}
+
+\paragraph{New Applications}
+
+The ability of verifying high-level properties on Rust code sparks numerous
+ideas for new applications of Rust-Stainless. For example, if software needs to
+be verified and very efficient, one can write it in Scala, verify it with
+Stainless and then use Stainless's C-code-generation feature. The generated code
+is memory safe but of course not as optimised as hand-written C. A much simpler
+approach would be to use Rust-Stainless  to directly verify the efficient Rust
+code, given that it supports all the used language features.
+
+Another idea is to use Rust-Stainless to verify implementations that are
+compiled to \emph{Web Assembly (WASM)}. For example, the IBC relayer of Informal
+Systems reads policies that govern its functioning from WASM. Rust-Stainless
+could  be used to guarantee certain properties on these policies, e.g. that no
+rules are conflicting.
+
+
+\hfill \break \noindent  In summary, with this thesis and the implementation of
+our tool, Rust-Stainless, I showed that the combination of Rust and Stainless is
+very powerful. While the tool has its limitations, it also offers many promising
+paths for future work and  it can already be used to verify real-world Rust
+code, making systems more correct and safer.
