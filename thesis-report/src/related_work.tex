@@ -16,7 +16,7 @@ follow the same goal, the absence of inadvertent and even dangerous aliasing of
 (heap-allocated) objects.
 
 Many early approaches to linear and unique types originated in functional
-languages and some challenges arise when they are applied to object-oriented
+languages and some challenges arose when they were applied to object-oriented
 languages that may assign to values or clone objects. Shallowly copying an
 object in a language with owned data is problematic because it might copy unique
 pointers, hence creating illegal aliases. Deep copying would solve the problem
@@ -57,7 +57,7 @@ once.
 
 \item
   \textbf{Alms} is an attempt to popularise \emph{affine types},
-  e.g.~types that may be use \emph{at most once}, by \citet{alms}. The
+  e.g.~types that may be used \emph{at most once}, by \citet{alms}. The
   language is similar to OCaml and its primary goal is to create
   resource-aware abstractions, for solving problems like race
   conditions. In an Alms module, the programmer can mark types as
@@ -79,11 +79,11 @@ once.
 
 \section{Rust Formalisations}
 
-Even if Rust is a rather young language, there have already been
-numerous attempts at formalising its semantics of ownership, borrowing
-and reference lifetimes. The following list mentions three important and
-recent works. Other projects are are Patina \cite{patina}, Rusty
-Types \cite{rusty-types}, and KRust \cite{krust}.
+Even if Rust is a rather young language, there have already been numerous
+attempts at formalising its semantics of ownership, borrowing and reference
+lifetimes. The following list mentions three important and recent works. Other
+projects are Patina \cite{patina}, Rusty Types \cite{rusty-types}, and KRust
+\cite{krust}.
 
 \begin{itemize}
 \item
@@ -96,7 +96,7 @@ Types \cite{rusty-types}, and KRust \cite{krust}.
   abstractions of \passthrough{\lstinline!std::cell!} runs safely if it
   type checks. In contrast to the following works and Rust-Stainless
   however, RustBelt uses a continuation-passing style language
-  \(\lambda_{Rust}\) that is close to the MIR rather than Rust itself.
+  \(\lambda_{Rust}\) that is closer to the MIR rather than Rust itself.
 
 \item
   \textbf{Oxide} is a recent formalisation by some of Rust's maintainers
@@ -139,7 +139,7 @@ produces and minimises counter-examples for all failed verification conditions.
 Of particular interest to this project is the imperative phase of Stainless that
 was introduced by \citet{regb} and acts as main backend to the translation
 presented in this thesis. The new imperative phase by \citet{new-imperative} is
-likely to overcome the current limitations of imperative code in Stain less and
+likely to overcome the current limitations of imperative code in Stainless and
 may be the ideal target for Rust-Stainless.
 
 \subsubsection{Rust Verification}
@@ -149,7 +149,8 @@ implementation language for critical systems. With that arises the need to prove
 stronger properties on Rust programs like functional correctness. This is the
 major motivation behind this project, but likewise, numerous other projects try
 to build verifiers for Rust. The wide interest in the topic can be seen from the
-sheer number of projects in the list:\footnote{The list of verifiers
+sheer number of projects in the following list. The selection here focusses on
+the projects that are closer to Rust-Stainless.\footnote{The list of verifiers
 largely stems from
 \url{https://alastairreid.github.io/rust-verification-tools/}.}
 
@@ -176,7 +177,7 @@ properties.
 
 \item \textbf{SMACK} is a verification toolchain that translates LLVM-IR to
 Boogie \cite{boogie} and  has been extended to support Rust \cite{smack}. Like
-RustHorn, it is able to prove absence of runtime errors and correctness of
+RustHorn, it is able to prove the absence of runtime errors and correctness of
 assertions but no higher-level properties like laws in Rust-Stainless.
 
 \item \textbf{MIRAI} \cite{mirai} is an abstract interpreter for MIR developed

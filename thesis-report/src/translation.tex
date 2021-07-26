@@ -123,14 +123,15 @@ is correct as-is for moveable types. However, for copyable types, the
 translation needs to ensure that the newly created copy is distinct from the
 original object.
 
-This holds trivially for primitive JVM types as they are copied by value on the
-JVM as well. The same goes for shared Rust references, where the reference is
-copied but still points to the same object. Because the reference is shared, the
-designated object must be immutable, hence sharing is the same as copying.
-However, tuples of copyable types, for example tuples of numbers, are copyable
-as well in Rust. This is a problem for the translation. If it allows tuple
-objects to be shared upon a copy in Scala, the example in
-\autoref{lst:tuple-share} would be incorrect.
+This holds trivially for primitive JVM types\footnote{Numeric types,
+\lstinline!char! and booleans.} as they are copied by value on the JVM as well.
+The same goes for shared Rust references, where the reference is copied but
+still points to the same object. Because the reference is shared, the designated
+object must be immutable, hence sharing is the same as copying. However, tuples
+of copyable types, for example tuples of numbers, are copyable as well in Rust.
+This is a problem for the translation. If it allows tuple objects to be shared
+upon a copy in Scala, the example in \autoref{lst:tuple-share} would be
+incorrect.
 
 \begin{figure}
 \noindent\begin{minipage}[t]{.3\textwidth}

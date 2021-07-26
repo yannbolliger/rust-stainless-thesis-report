@@ -157,15 +157,15 @@ fn f(a: A) -> A {
 \end{minipage}
 
 The \lstinline!stainless_frontend! invokes the compiler via the
-\lstinline!rustc_driver! library and lets it run until all analyses are complete
-and pass, otherwise the tool fails with the error returned by \lstinline!rustc!.
-In particular, the compiler does the lexing, parsing, macro expansion and IR
-construction. Secondly, the compiler type and borrow checks the program. This is
-how the strong assumption from \autoref{correctness-claim} is achieved. Once
-analysis is complete, the extraction module is invoked on the HIR. As the HIR is
-only ever constructed for the current crate, Rust-Stainless also only translates
-the current crate. That limitation of our tool is discussed in
-\autoref{impl-limitations}.
+\lstinline!rustc_driver! library and lets it run until all analyses are
+completed and have passed, otherwise the tool fails with the error returned by
+\lstinline!rustc!. In particular, the compiler does the lexing, parsing, macro
+expansion and IR construction. Secondly, the compiler type and borrow checks the
+program. This is how the strong assumption from \autoref{correctness-claim} is
+achieved. Once analysis is complete, the extraction module is invoked on the
+HIR. As the HIR is only ever constructed for the current crate, Rust-Stainless
+also only translates the current crate. This limitation of our tool is discussed
+in \autoref{impl-limitations}.
 
 The extraction traverses all the \emph{items} of the crate, that is, top-level
 functions, structs, enums, \lstinline!impl! blocks and their methods, as well as
@@ -305,9 +305,9 @@ let x: A = A { a: 123, b: true, c: 'c' };
 let y: A = A { b: false, ..x }; // copies `x.b`, `x.c`
 \end{lstlisting}
 
-\item
-  crate local modules and imports, which includes the ability of
-  splitting up a crate into multiple files, and finally,
+\item crate-local modules and imports, which enables splitting up a crate into
+multiple files, and finally,
+
 \item
   panics in expression locations like an arm of a pattern match.
 \begin{lstlisting}[language=Rust, style=short]
@@ -697,8 +697,8 @@ verification.
 In general, language features not mentioned in \autoref{sec:supported-features}
 are not yet supported. However, there are mainly two features that are still
 mandatory to reach the goal of verifying \emph{idiomatic Rust}: closures and
-sequences. Other missing features provide prevent the programmer less from
-writing normal code, for example, \emph{unsafe Rust} is not supported. This is a
+sequences. Other missing features prevent the programmer less from writing
+normal code, for example, \emph{unsafe Rust} is not supported. This is a
 conscious decision as many translations rely on the assumption that only
 \emph{safe} Rust is used. User-annotated reference lifetimes are another
 example. Although, the borrow checking assumption enables the translation to
@@ -763,10 +763,10 @@ contracts for external items that emulate them. Indeed, this is the approach
 other tools take \cite{prusti, mirai}. The given contracts will be interpreted
 as correct and used to verify the user code. The library could also provide
 contracts for the most frequently used standard items, which is what
-\cite{mirai} does. Keeping such contracts up-to-date would still require less
-work than providing synthetic shadow implementations. The only disadvantage of
-this approach is that the user can state false contracts for external items,
-leading to incorrect results.
+\cite{mirai} does. Keeping such contracts up-to-date still requires less work
+than providing synthetic shadow implementations. The only disadvantage of this
+approach is that the user can state false contracts for external items, leading
+to incorrect results.
 
 \end{itemize}
 
@@ -836,9 +836,9 @@ imperative} phase using a \emph{heap encoding} has been proposed
 \cite{new-imperative}. That phase has explicit support for mutable references,
 \lstinline!AnyHeapRef!, which represent parts of the heap. Furthermore, it uses
 annotations on functions to state which references are read (\lstinline!reads!)
-and which are written to (\lstinline!modifies!) by the function. These two
-features are very promising to target from Rust-Stainless because they resemble
-things that are already in the mutability translation. \lstinline!AnyHeapRef! is
+and which are written (\lstinline!modifies!) by the function. These two features
+are very promising to target from Rust-Stainless because they resemble things
+that are already in the mutability translation. \lstinline!AnyHeapRef! is
 similar to mutable cells and it might be possible to infer the information
 needed for the read and write annotations from the mutability of the function
 parameters (which is explicitly stated in Rust).

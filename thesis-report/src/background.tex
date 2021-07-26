@@ -4,8 +4,8 @@ Stainless verifier. Both parts will use a running example of a Rust program
 to introduce Stainless with Rust  as it is built and usually used with Scala.
 However, thanks to Rust-Stainless the  usage of Stainless in Rust is so similar
 to the usage in Scala that it is suitable  to reuse the running Rust example.
-For a more detailed introduction to Stainless in Scala please refer to
-\cite{stainless-doc}.
+For a more detailed introduction to Stainless in Scala please refer to its
+documentation \cite{stainless-doc}.
 
 \section{Rust Language}
 
@@ -140,9 +140,9 @@ the struct's instance.
 
 Rust also has anonymous tuples. These behave exactly like tuple structs but
 don't need to be declared beforehand. One can simply instantiate tuples of any
-non-negative number of types (cf. \autoref{lst:tuples}). With that, the first
-part of the running example is simply a generic container struct that has an
-option of a tuple (\autoref{lst:container}).
+non-negative number of types (cf. \autoref{lst:tuples}). This is used in the
+first part of the running example that is a generic container struct with an
+option of a tuple (\autoref{lst:container}) as field.
 
 \noindent\begin{minipage}[t]{.45\textwidth}
 \begin{lstlisting}[language=Rust, style=short, caption={A two-tuple in Rust.}, label=lst:tuples]
@@ -162,10 +162,10 @@ struct Container<K, V> {
 With ADTs, especially enumerations, pattern matching comes naturally.
 \autoref{lst:match} shows how to match on the container struct from before. Like
 in Scala, the underscore is the wildcard pattern and match arms can be further
-refined by \lstinline!if! guards of any boolean expression. To simply check
+refined by \lstinline!if! guards of any boolean expression. To merely check
 whether a value matches a certain shape, one can use the
 \lstinline"matches!(opt, Some(_))" macro that is expanded to a regular pattern
-match returning true for the pattern and false otherwise.
+match which returns true if the given pattern matches and false otherwise.
 
 \begin{lstlisting}[language=Rust, caption={Pattern matching on a struct.}, label=lst:match]
 let c = Container { pair: None };
@@ -186,15 +186,17 @@ example, the first line of the block could just be \passthrough{\lstinline!impl
 Container<bool, i32>!}.
 
 The \lstinline!Self! in the first return type stands for the type this block is
-adding methods to, in our case \lstinline!Container<K, V>!. The \lstinline!new!
-method is a static method, it is not called on instances of containers. In
-contrast, the two other methods specify a receiver type as first parameter. That
-makes the methods available on instances of the container, for example
-\lstinline!c.is_empty()!. In methods with \lstinline!&self! as receiver, the
-\lstinline!self! keyword  contains a reference to the instance the method is
-called on, the same for \lstinline!&mut self! but mutably.\footnote{More on
-references in \autoref{references}.} It is also be possible to consume the
-instance by specifying \lstinline!self! as receiver.
+adding methods to, in the example that is \lstinline!Container<K, V>!. The
+\lstinline!new! method is a static method, it is not called on instances of
+containers. In contrast, the two other methods specify a receiver type as first
+parameter. That makes the methods available on instances of the container, for
+example \lstinline!c.is_empty()!. In methods with the \lstinline!&self!
+receiver, the \lstinline!self! keyword contains a reference to the instance on
+which the method was called, in the example from before that would be
+\lstinline!&c!. The same happens for \lstinline!&mut self! but
+mutably.\footnote{More on references in \autoref{references}.} Finally, it is
+also possible to consume the instance by specifying \lstinline!self! as
+receiver.
 
 \begin{lstlisting}[language=Rust, caption={Methods for the running example}, label=lst:impl1]
 impl<K, V> Container<K, V> {
@@ -238,9 +240,11 @@ impl Id for String {
 
 \subsubsection{Value Categories}
 
-Rust, like C but unlike Java or Scala, exposes memory management to the
-programmer and allows referencing data that is stack-allocated. Therefore,  one
-needs to distinguish between different \emph{value categories} of an expression:
+Rust, like C but unlike Scala or any language on the \emph{Java Virtual Machine
+(JVM)}, exposes memory management to the programmer and allows referencing data
+that is stack-allocated. Therefore, one needs to distinguish between the
+different \emph{value categories} of an expression. The general definitions
+stemming from C are:
 
 \begin{itemize}
 \tightlist
@@ -256,8 +260,8 @@ needs to distinguish between different \emph{value categories} of an expression:
 
 These two terms were replaced in Rust by \emph{place and value expressions}.
 Value expressions represent actual values and are defined by exclusion from
-place expressions. The latter evaluate to a \emph{place} which is essentially a
-memory location~\cite{rustref}.
+place expressions. On the other hand, place expressions evaluate to a
+\emph{place} which is essentially a memory location~\cite{rustref}.
 
 \begin{quote}
 {[}Place{]} expressions are paths which refer to local variables,
@@ -409,12 +413,11 @@ may read the referenced data,
 that is allowed to read and write to the data it does not own.
 \end{itemize}
 
-During the lifetime of a shared reference, the data can be read but not changed
-by the owning binding as well. In contrast, the mutable reference allows to
-change data without owning it under the condition that there exist no other
-references to that data. While the mutable reference is live, even the owning
-binding is neither allowed to read nor to write that place. In the words of
-\citet{oxide}:
+During the lifetime of a shared reference, the borrowed data can be read but not
+changed by the owning binding as well. In contrast, the mutable reference allows
+to change data without owning it under the condition that no other references to
+that data exist. While the mutable reference is live, even the owning binding is
+neither allowed to read nor to write that place. In the words of~\citet{oxide}:
 
 \begin{quote}
 {[...]} we understand Rust's borrow checking system as ultimately being a system
@@ -566,33 +569,34 @@ pub fn fact(x: i32) -> i32 {
 
 As \autoref{lst:fact-rust} illustrates, the same function and specification is
 also accepted by Rust-Stainless, which subsequently translates the program to
-Stainless and lets it prove correctness. The only difference is that
+Stainless and lets it prove its correctness. The only difference is that
 specifications are added as function attributes rather than inline statements
 and that postconditions in Rust automatically have a \lstinline!ret! variable in
-scope that represents the return value. Otherwise, the two are so similar that
-the following sections will only show examples in Rust for simplicity. In both
-languages, one can in addition to specifications put assertions into function
-bodies, in Rust with \lstinline"assert!" macro. Stainless also proves that body
-assertions hold.
+scope that represents the return value. Otherwise, the two are very similar
+which, for simplicity, allows to introduce Stainless in the following sections
+only with Rust code examples. In both languages, one can in addition to
+specifications put assertions into function bodies, in Rust with the
+\lstinline"assert!" macro. Stainless also proves that body assertions hold.
 
-So far, an imprecision has been made about Stainless's input language. Stainless
-does not support the full Scala language but rather a functional subset called
-\emph{PureScala}. Expressions in specifications need to be in PureScala.
-However, Stainless was extended to support some form of mutability \cite{regb}
-which this project relies on. Chapter \ref{translation} will go into details
-about mutability.
+Up until now, this section has been imprecise about Stainless's input language.
+Stainless does not support the full Scala language but rather a functional
+subset called \emph{PureScala}. Expressions in specifications need to be in
+PureScala. However, Stainless was extended to support some form of mutability
+\cite{regb} which this project relies on. Chapter \ref{translation} will go into
+details about mutability.
 
 The methods of the container in the running example (fully displayed in
-\autoref{running-example}) show how the above features are applied to add
+\autoref{running-example}) show how the features from above are applied to add
 specifications. The \lstinline!implies! function in line 26 is a library helper
 method provided by the \lstinline!stainless! crate. Body assertions are used in
 the main function to ensure that the code behaves as expected.
 
 Another library helper is the \lstinline!old! function. This is a very useful
-construct that can be used in postconditions to refer to the value of a mutable
-parameter, usually a mutable reference, before the function. For example in the
-following snippet, the \lstinline!old(i)! will return the value of \lstinline!i!
-before the function and  \lstinline!i! will have the value after the function.
+construct that can be used in postconditions to refer to the value a mutable
+parameter, usually a mutable reference, had before the function. For example in
+the following snippet, the \lstinline!old(i)! will return the value of
+\lstinline!i! before the function and  \lstinline!i! will have the value after
+the function.
 
 \begin{lstlisting}[language=Rust, caption={The \lstinline!old! helper for postconditions with mutable parameters.}]
 #[post(*i == *old(i) + 1)]
@@ -643,7 +647,8 @@ methods can have all specification attributes like regular functions. These will
 be checked to hold for all implementations. Furthermore, one can attach
 \emph{laws} to traits i.e.~algebraic properties the contract implementors need
 to fulfil \cite[section "Specifying Algebraic Properties"]{stainless-doc}.
-Stainless proves correctness of the laws for each implementation of the trait.
+Stainless proves the correctness of the laws for each implementation of the
+trait.
 
 The last addition to the running example, is a law on the \lstinline!Id! trait
 stating  that ids need to be positive. Of course, the toy implementation that

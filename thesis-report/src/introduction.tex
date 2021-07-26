@@ -1,26 +1,26 @@
 Everyone who has ever written a computer program knows, it never runs correctly
-at the first try. Writing correct software is a hard task, yet software
-dominates our lives the longer the more. While finding bugs in a student
-software project may be time-consuming but harmless, there are countless places
-where logical errors and worse, security problems cannot be tolerated. These are
+on the first try. Writing correct software is a hard task, yet the longer the
+more software dominates our lives. While finding bugs in a student software
+project may be time-consuming but harmless, there are countless places where
+logical errors and worse, security problems cannot be tolerated. These are
 usually systems where failure has too high of a cost in terms of money or even
-human safety, think a railway control system. Software errors are also
-intolerable in systems that or costly or impossible to \emph{upgrade} like
+human safety, imagine a railway control system. Software errors are also
+intolerable in systems that are costly or impossible to \emph{upgrade} like
 embedded systems or satellites.
 
-One type of system that has both a high financial cost of failure and is
+One type of systems that have both a high financial cost of failure and are
 difficult to upgrade are blockchains that power decentralised cryptocurrencies.
 Bitcoin \cite{bitcoin} and Ethereum \cite{ethereum} have become very popular and
-are valued at amounts reaching into the hundreds of billion dollars at the time
-of writing. Upgrading such distributed systems is hard because a majority of the
-participating machines needs to reach a consensus about the upgrade. This makes
-upgrading the two former blockchains nearly impossible and even systems that
-were designed with upgrades in mind like the Cosmos network \cite{cosmos} wish
-to minimise the number of upgrades required, hence the need for correct
+are valued at amounts reaching into the hundreds of billions of dollars at the
+time of writing. Upgrading such distributed systems is hard because a majority
+of the participating machines need to reach a consensus about the upgrade. This
+makes upgrading the two former blockchains nearly impossible and even systems
+that were designed with upgrades in mind like the Cosmos network \cite{cosmos}
+wish to minimise the number of upgrades required, hence the need for correct
 (blockchain) software.
 
 A powerful and strict approach to writing correct software is to mathematically
-prove the program correct in an automated fashion, called \emph{formal
+prove the correctness of a program in an automated fashion, called \emph{formal
 verification}. The Stainless verification framework \cite{stainless} is a formal
 verification tool for the Scala programming language. It enables programmers to
 prove high-level properties about functions and data structures, for instance
@@ -34,22 +34,21 @@ programmer. For C++ this is the primary source of security problems, Rust
 however guarantees memory safety by introducing a new type checking phase in its
 compiler, the \emph{borrow checker}. Therefore, Rust is well-suited for
 implementing highly performant, correct and safe blockchain systems, for example
-the  the \emph{Tendermint blockchain consensus}
+the \emph{Tendermint blockchain consensus}
 implementation\footnote{\url{https://github.com/informalsystems/tendermint-rs}}
 developed by Informal Systems.\footnote{\url{https://informal.systems}} But even
 with type safety and memory safety at compile-time, Rust cannot guarantee
 correctness on its own.
 
 Therefore, and with the vision of combining the safety guarantees of Rust with
-formally verified correctness guarantees of Stainless, we present
+the formally verified correctness guarantees of Stainless, we present
 \emph{Rust-Stainless}, a verification tool created by Georg Schmid.
 Rust-Stainless\footnote{Pun not intended, but -- needless to say -- welcome.} is
 a frontend to the Stainless verifier capable of extracting a subset of the Rust
 language, translating it to a subset of Scala and verifying it with Stainless.
 In this thesis project, I substantially extend the fragment of Rust that can be
 translated by the tool including features like mutability, references and type
-classes.
-\newpage
+classes. \newpage
 
 This thesis project was preceded by a semester project supervised by Georg
 Schmid, in which I  mainly worked on the Rust trait to Scala type class
@@ -76,7 +75,7 @@ numerous features that I added  to the implementation of the Rust-Stainless
 tool. In over 70 pull requests, I fixed bugs, added extraction capabilities for
 new Rust language fragments, implemented the mutability translation, and
 improved the user-facing \lstinline!stainless! library. Chapter
-\ref{implementation} first describes the overall design and pipeline of our
+\ref{implementation} first describes the overall design and pipeline of the
 tool. Then it establishes the state of the frontend before and after this thesis
 project.
 
