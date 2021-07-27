@@ -1,13 +1,13 @@
 Although Rust introduces many features and ideas from functional programming
 into systems programming, it still is a language for high performance and
-low-level programming. Therefore, idiomatic Rust makes heavy use of mutability.
-To avoid having to rewrite Rust source code before being able to verify it with
-our tool, we therefore need to support mutability in Rust-Stainless. In this
-chapter, I introduce a translation of Rust's owned types and references to Scala
-that is equivalent in runtime semantics. Further, I will argue that the
-translation is correct and then present some optimisations and usability results
-that make it possible to use the translation together with the current state of
-the Stainless verifier backend.
+low-level programming. Therefore, \emph{idiomatic Rust} makes heavy use of
+mutability. To avoid having to rewrite Rust source code before being able to
+verify it with our tool, we therefore need to support mutability in
+Rust-Stainless. In this chapter, I introduce a translation of Rust's owned types
+and references to Scala that is equivalent in runtime semantics. Further, I will
+argue that the translation is correct and then present some optimisations and
+usability results that make it possible to use the translation together with the
+current state of the Stainless verifier backend.
 
 \section{Translation for Runtime Equivalence}
 \label{sec:translation}

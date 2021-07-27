@@ -58,9 +58,9 @@ analysis, optimisations, and most importantly, the borrow check of the program.
 The last compilation phase is \emph{code generation}. The generic code is
 \emph{monomorphised} i.e.~copied and specialised for each type it is
 instantiated with. Then, a special IR for the \emph{LLVM} framework \cite{llvm}
-is generated. LLVM is a general purpose compiler backend, also used by C++. It
-will perform much more performance optimisations and finally generate the
-assembly code.
+is generated. LLVM is a general purpose compiler backend, also used by
+C\texttt{++}. It will perform much more performance optimisations and finally
+generate the assembly code.
 
 \section{System Overview}
 
@@ -696,16 +696,15 @@ verification.
 
 In general, language features not mentioned in \autoref{sec:supported-features}
 are not yet supported. However, there are mainly two features that are still
-mandatory to reach the goal of verifying \emph{idiomatic Rust}: closures and
-sequences. Other missing features prevent the programmer less from writing
-normal code, for example, \emph{unsafe Rust} is not supported. This is a
-conscious decision as many translations rely on the assumption that only
-\emph{safe} Rust is used. User-annotated reference lifetimes are another
-example. Although, the borrow checking assumption enables the translation to
-ignore exact lifetimes, the tool currently does not extract explicit lifetimes.
-Further missing but less complex to add features are supertraits, i.e. type
-class inheritance in Scala, top-level constants, and invariants on ADTs, known
-in Stainless.
+mandatory to reach the goal of verifying idiomatic Rust: closures and sequences.
+Other missing features prevent the programmer less from writing normal code, for
+example, \emph{unsafe Rust} is not supported. This is a conscious decision as
+many translations rely on the assumption that only \emph{safe} Rust is used.
+User-annotated reference lifetimes are another example. Although, the borrow
+checking assumption enables the translation to ignore exact lifetimes, the tool
+currently does not extract explicit lifetimes. Further missing but less complex
+to add features are supertraits, i.e. type class inheritance in Scala, top-level
+constants, and invariants on ADTs, known in Stainless.
 
 For closures, most of the infrastructure is already in place as they are
 represented like functions in the compiler. There are some difficulties

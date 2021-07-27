@@ -1,6 +1,6 @@
 Writing correct software is hard, yet in systems that have a high failure cost
 or are not easily upgraded, like blockchains, bugs and security problems cannot
-be tolerated. Therefore, these systems are prime use cases for \emph{formal
+be tolerated. Therefore, these systems are perfect use cases for \emph{formal
 verification}, the task of mathematically proving that a system conforms to its
 specification. Many recent blockchains are implemented in the Rust programming
 language because it guarantees memory safety at compile-time while providing
@@ -21,7 +21,7 @@ efficiently implemented data structures in Rust. Other new features are traits
 with verified contracts, references, and heap allocation.
 
 The tool is evaluated on real-world Rust examples from a blockchain context.
-Remaining limitations of the approach concern missing support for some Rust
-language features, the limitation of only processing one crate at a time, and
-certain restrictions of the current Stainless backend. Finally, I explore
+Remaining limitations concern missing support for some Rust language features,
+the limitation of only processing one crate at a time, and certain aliasing
+restrictions of the current Stainless backend for mutability. Finally, I explore
 possible promising ways for the future advancement of Rust-Stainless.
