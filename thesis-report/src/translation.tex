@@ -1,28 +1,27 @@
-Although Rust introduces many features and ideas from functional programming
-into systems programming, it still is a language for high performance and
-low-level programming. Therefore, \emph{idiomatic Rust} makes heavy use of
-mutability. To avoid having to rewrite Rust source code before being able to
-verify it with our tool, we therefore need to support mutability in
-Rust-Stainless. In this chapter, I introduce a translation of Rust's owned types
-and references to Scala that is equivalent in runtime semantics. Further, I will
-argue that the translation is correct and then present some optimisations and
-usability results that make it possible to use the translation together with the
-current state of the Stainless verifier backend.
+Although Rust introduces many ideas from functional programming into systems
+programming, it still is a language for high performance and low-level
+programming. Therefore, \emph{idiomatic Rust} heavily uses mutability. To avoid
+having to rewrite Rust source code before being able to verify it with
+Rust-Stainless, the tool needs to support mutability. In this chapter, I
+introduce a translation of Rust's owned types and references to Scala that has
+equivalent runtime semantics. Further, I argue that the translation is correct
+and then present some changes and optimisations that make it possible to use the
+translation together with the current state of the Stainless verifier backend.
 
 \section{Translation for Runtime Equivalence}
 \label{sec:translation}
 
-The translation works under the assumption that the input Rust code is the
-\emph{safe subset} \cite[section ``Unsafety'']{rustref} of the 2018 edition and
-that execution is single-threaded. Further, the translation requires the absence
-of \emph{interior mutability} \cite[section ``Interior Mutability'']{rustref}.
-That means that all types are immutable through shared references. This can be
-enforced by prohibiting the use of \emph{smart pointers} like the ones from
-\passthrough{\lstinline!std::cell!}. Moreover, the safe subset of Rust excludes
-features like raw pointers, \passthrough{\lstinline!union!}, unsafe functions
-and blocks, as well as external code, like linked C-code. In practice, all
-unsafe features are detected at extraction of the code and abort the
-translation.
+The translation works under the assumption that the input Rust code is from the
+\emph{safe subset} \cite[section ``Unsafety'']{rustref} of the 2018 edition of
+Rust and that execution is single-threaded. Further, the translation requires
+the absence of \emph{interior mutability} \cite[section ``Interior
+Mutability'']{rustref}. That means, all types are immutable through shared
+references. This can be enforced by prohibiting the use of \emph{smart pointers}
+like the ones from \passthrough{\lstinline!std::cell!}. Moreover, the safe
+subset of Rust excludes features like raw pointers,
+\passthrough{\lstinline!union!}, unsafe functions and blocks, as well as
+external code, like linked C-code. In practice, all unsafe features are detected
+at extraction of the code and abort the translation.
 
 
 \subsection{Algorithm}
@@ -38,11 +37,11 @@ case class MutCell[T](var value: t)
 \end{lstlisting}
 
 The mutable cell object is used as a layer of indirection on all Scala values
-and directly models the \emph{place} of a value, where the value is stored in
-the field (\lstinline!value!). Note that the field is mutable, which in
-principle allows changes to any place. After the translation, the mutable cell's
-field will even be the only mutable variable. All mutability in the original
-Rust program will be modelled with that field.
+and directly models the \emph{place} of a value in Rust, where the value is
+stored in the field (\lstinline!value!). Note that the field is mutable, which
+in principle allows changes to any place. After the translation, the mutable
+cell's field will even be the only mutable variable. All mutability in the
+original Rust program will be modelled with that field.
 
 \begin{quote}
 Whenever something is (possibly) mutable, we wrap it into a mutable cell.
@@ -94,12 +93,11 @@ assert(y.value == x.value.b.value)
 
 \subsubsection{Tuples}
 
-As for all structs, the mutability of tuples is decided at binding time in Rust,
-contrary to Scala, where tuples are always immutable. To allow for tuple
-mutation in Rust, tuples of any positive arity are translated as case classes
-instead of Scala tuples. The following example shows  such a class for a
-2-tuple. The empty tuple corresponds to the unit type in Rust and is translated
-as such.
+As for all structs, the mutability of tuples is decided at binding time of the
+instance in Rust. Contrary to Scala, where tuples are always immutable. To allow
+for tuple mutation in Rust, tuples of any positive arity are translated as case
+classes instead of Scala tuples. The following example shows  such a class for a
+2-tuple. The empty tuple corresponds to the unit type and is translated as such.
 
 \begin{lstlisting}[language=Scala, style=short]
 case class Tuple2[T0, T1](_0: MutCell[T0], _1: MutCell[T1])
@@ -112,30 +110,25 @@ If a field or a variable is read, the translation introduces an access to the
 happens for dereferencing. In other words, any place expression that is
 evaluated in a value context is translated as reading the
 \passthrough{\lstinline!value!} of the corresponding mutable cell object. This
-shows how our translation unifies the access of locally available bindings and
-references that may come from elsewhere.
+shows how the translation unifies the access of locally available bindings and
+references, that may come from elsewhere.
 
-\paragraph{Copy vs moving}
+\paragraph{Copy vs Moving}
 
-When place expressions are used in value contexts their data is used, i.e.~moved
-or copied. Subsection \ref{sec:correctness-by-value} argues that the translation
-is correct as-is for moveable types. However, for copyable types, the
-translation needs to ensure that the newly created copy is distinct from the
-original object.
+When place expressions are used in value contexts their data is  moved or
+copied. For copyable types, the translation needs to ensure that the newly
+created copy is distinct from the original object. This holds trivially for
+primitive JVM types\footnote{Numeric types, \lstinline!char!s and booleans.} as
+they are copied by value on the JVM as well. The same goes for shared Rust
+references, where the reference is copied but still points to the same object
+like on the JVM. However, tuples of copyable types, for example tuples of
+numbers, are copyable as well in Rust. This is a problem for the translation,
+because if it allows tuple objects to be shared by reference upon copy, the
+example in \autoref{lst:tuple-sharing} is incorrect in Scala.
 
-This holds trivially for primitive JVM types\footnote{Numeric types,
-\lstinline!char! and booleans.} as they are copied by value on the JVM as well.
-The same goes for shared Rust references, where the reference is copied but
-still points to the same object. Because the reference is shared, the designated
-object must be immutable, hence sharing is the same as copying. However, tuples
-of copyable types, for example tuples of numbers, are copyable as well in Rust.
-This is a problem for the translation. If it allows tuple objects to be shared
-upon a copy in Scala, the example in \autoref{lst:tuple-share} would be
-incorrect.
-
-\begin{figure}
+\begin{figure}[hbt]
 \noindent\begin{minipage}[t]{.3\textwidth}
-\begin{lstlisting}[language=Rust, caption={The tuple is copied on line 2.}, label={lst:tuple-share}]
+\begin{lstlisting}[language=Rust, caption={The tuple is copied on line 4.}, label={lst:tuple-share}]
 let x = (123, false);
 
 // copies `x`
@@ -150,7 +143,7 @@ assert!(x.0 == 123)
 \begin{lstlisting}[
   language=Scala,
   label=lst:tuple-sharing,
-  caption=In Scala the tuple object is shared not copied.
+  caption={In Scala, the tuple object is shared not copied.}
 ]
 val x =
   MutCell(Tuple2(MutCell(123), MutCell(false)))
@@ -172,29 +165,28 @@ functions that perform a deep copy of their argument. An implementation for
 these operators could be based on type classes for example, but implementation
 details are left open here. Whenever data is used, the translation wraps the
 field access of the cell's \lstinline!value! into one of the two operators,
-depending on the type of the data. For example in \autoref{lst:tuple-sharing} on
-line 4, the right-hand side of the assignment becomes
-\lstinline!MutCell(copy(x.value))!. For primitive JVM types, this can be omitted
-as an optimisation because they are also copied on the JVM.
+depending on the type of the data. For example on line 4 of
+\autoref{lst:tuple-sharing}, the right-hand side of the assignment becomes
+\lstinline!MutCell(copy(x.value))!. This is omitted for primitive JVM types as
+an optimisation.
 
-User-defined copyable types, i.e. types for which the user derives a Copy
-implementation with a macro, run into the same issue as copyable tuples. The
-translation currently ignores these because the current state of our extraction
-implementation does not yet accept such types. Nonetheless, the solution would
-be to use the \lstinline!copy! operator as well.
+User-defined copyable types, i.e. types for which the user derives a
+\lstinline!Copy! implementation with the macro, run into the same issue as
+copyable tuples. The translation currently ignores these because the current
+state of our extraction implementation does not yet accept such types.
+Nonetheless, the solution would be to use the \lstinline!copy! operator as well.
 
 \subsubsection{Referencing}
 
 A borrow in Rust creates a reference to a place and makes that reference
-available as a value in the program. After translation the place expression in
-Rust is equivalent to the JVM reference of the cell object. Hence, passing
-around Rust references as values can be translated to passing around cell
-objects in Scala. (Passing around the cells conveniently happens by reference on
-the JVM.)
+available as a value in the program. After translation, the place expression in
+Rust is equivalent to the JVM cell object. Hence, passing around Rust references
+as values can be translated as passing around cell objects in Scala. (Passing
+around the cells conveniently happens by reference on the JVM.)
 
 As an example, if a Rust reference is stored in a local variable, this creates
 two nested cells in the translation. The outer cell models the local variable
-and the value of its field holds the other cell which models the Rust reference.
+and its field holds the other cell which models the Rust reference.
 
 \noindent\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[language=Rust, caption={Taking a mutable reference in Rust.}]
@@ -214,12 +206,12 @@ val r = MutCell(x)
 The same principles apply for pattern matching as for evaluating place
 expressions. If a match happens on a value, the Scala match will be on the
 \passthrough{\lstinline!value!} field of that cell. If the scrutinee is a
-reference, then the Scala scrutinee is the mutable cell. The patterns are
-adapted to include the mutable cell wrappers of fields. Depending on whether a
-resulting binding of a match is a reference or not in Rust, the Scala pattern
-matches the cell or only its field, see \autoref{lst:pattern-match}.
+reference, then the Scala scrutinee is the cell object. The patterns are adapted
+to include the mutable cell wrappers of fields. Depending on whether a resulting
+binding of a match is a reference or not in Rust, the Scala pattern matches the
+cell or only its field, see \autoref{lst:pattern-match}.
 
-\begin{figure}
+\begin{figure}[htb]
 \noindent\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[
   language=Rust,
@@ -240,8 +232,8 @@ match x {
 \begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[
   language=Scala,
-  caption={In the first case, \lstinline!a! matches the field \lstinline!value!
-    of the cell, whereas in the other cases it matches the cell object.},
+  caption={In the first case, the binding \lstinline!a! matches \lstinline!x.value.a.value!
+    of the cell, whereas in the other cases it matches the cell object, \lstinline!x.value.a!.},
   label={lst:pattern-match}
 ]
 x.value match {
@@ -270,7 +262,7 @@ expression is a local variable or a mutable reference, see \autoref{lst:assign}.
 \begin{figure}
 \noindent\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[language=Rust, caption={Dereferencing and assigning in Rust.}]
-let x: &mut i32 = ...
+// `x` is of type `&mut i32`
 *x = 123;
 let mut y = 456;
 y = 789;
@@ -282,7 +274,7 @@ y = 789;
   label=lst:assign,
   caption={Assignments in Scala always go to the \lstinline!value! field.}
 ]
-val x: MutCell[Int] = ???
+// `x` is of type `MutCell[Int]`
 x.value = 123
 val y = MutCell(456)
 y.value = 789
@@ -292,20 +284,20 @@ y.value = 789
 
 \subsubsection{Function parameters}
 
-Rust functions can take parameters by reference or by value. This is modelled in
-the translation by wrapping the parameter in a mutable cell or directly passing
-it ``by value'' -- in the JVM sense. Additionally, it is possible to declare the
-parameter binding as mutable by marking it \passthrough{\lstinline!mut!}. To
-model that local mutability, the translation again wraps the parameter in a
-mutable cell. This is done regardless of whether the parameter is locally
-mutable to keep the invariant that each place corresponds to one cell. At
-function call site, all arguments are wrapped into newly created cells to ensure
-that local mutations on these parameters remain local to the callee.
+Rust functions can take parameters by reference or by value, see
+\autoref{lst:byval-byref}. By-reference parameters are wrapped in a mutable cell
+in the translation. Additionally, function parameters are also variables and
+thereby places in Rust. To account for that and model the possible local
+mutability of the parameters (when marked with \lstinline!mut!), the translation
+again wraps the parameter in a mutable cell, regardless of whether the parameter
+is \lstinline!mut! or not. At function call sites, all arguments are wrapped
+into newly created cells.
 
 \noindent\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[
   language=Rust,
-  caption={\lstinline!i! is only mutable inside the function.}
+  caption={\lstinline!i! is only mutable inside the function.},
+  label=lst:byval-byref,
 ]
 fn f(
   mut i: i32,
@@ -321,7 +313,7 @@ def f(
   i: MutCell[Int],
   x: MutCell[MutCell[Int]]
 ) = ???
-val r = MutCell(r)
+val r = MutCell(123)
 f(MutCell(456), MutCell(r))
 \end{lstlisting}
 \end{minipage}
@@ -340,8 +332,8 @@ To allow for in-place updates of mutable references, the translation supports
 the  Rust function \lstinline!std::mem::replace!. With all the machinery
 introduced so far, the function can be translated as a simple feature on top of
 the \lstinline!move! and \lstinline!copy! operators, as shown in
-\autoref{lst:replace}. Interestingly, the translation corresponds quite closely
-to the implementation -- in unsafe code -- of the function in the standard
+\autoref{lst:replace}. Interestingly, the translation corresponds closely to the
+implementation of the function -- in unsafe Rust -- from the standard
 library.\footnote{\href{}{\texttt{\color{MidnightBlue}
 https://doc.rust-lang.org/src/core/mem/mod.rs.html\#815}}}
 
@@ -380,19 +372,18 @@ def f(a: MutCell[A]): A = {
 \label{correctness-claim}
 
 \begin{quote}
-Under the assumption that the original Rust program type and borrow
-checks, I argue that the described translation of mutable Rust
-references and owned types to mutable cells in Scala is equivalent in
-runtime semantics, i.e.~when run the Scala translation yields the same
-result as the Rust program.
+Under the assumption that the original Rust program type and borrow checks, I
+argue that the translation of mutable Rust references and owned types to mutable
+cells in Scala is equivalent in runtime semantics, i.e.~when run the Scala
+translation yields the same result as the Rust program.
 \end{quote}
 
 The Rust borrow checker ensures that there is no unsafely aliased state,
-i.e.~aliased state that is mutated, in the original program. It may seem that
-this is an unnecessarily strict assumption, but Rust's ownership system is so
+i.e.~aliased state that is mutated, in the original program. This may seem like
+an unnecessarily strict assumption, but Rust's ownership system is so
 fundamental to the language that it is impossible to define Rust's semantics
 without borrow checking \cite{krust}. Consider \autoref{lst:move-err}, because
-\lstinline!y! moves out \lstinline!x! on line 3, \lstinline!x! can never be
+\lstinline!y! moves out \lstinline!x! on line 2, \lstinline!x! can never be
 reused and its value is undefined, even if some code could illegally read it
 again. Therefore, the borrow check assumption is necessary to reason about the
 semantics of the original program.
@@ -400,100 +391,97 @@ semantics of the original program.
 \begin{lstlisting}[
   language=Rust,
   label=lst:move-err,
-  caption={This code does not compile due to the use after move in line 5.}
+  caption={This code does not compile due to the use of \lstinline!x! on line 4, after the move.}
 ]
-struct A { a: i32 };
-let x = A { a: 123 };
+let x = A { a: "foo", b: 123 };
 let mut y = x;  // `x` is moved to `y`
-y.a = 456;
-assert!(x.a == 123) // ERROR, can't reuse `x`
+y.b = 456;
+assert!(x.b == 123) // ERROR, can't reuse `x`
 \end{lstlisting}
 
 The translation introduces a bijection between Rust places and mutable cell
 objects. As seen before, places can be variables or fields. The translation
 wraps each local variable, each function parameter and each field into a mutable
 cell, hence, each of these places corresponds to exactly one cell. Arrays would
-differ from that but they are not supported yet.
+differ from that but they are not yet supported.
 
-Secondly, observe that the translation unifies the access to values, as seen
-above. Dereferencing and using a local variable are both done through the cell
-object's field. In a way, the translation lifts everything into references; even
-local variables are accessed through the single gateway to the value that is the
-cell object. Furthermore, the cell's field is the only location where program
-data can reside. This corresponds to Rust's principle that data is always owned
-uniquely (by a cell) and otherwise referenced (through the cell).
+As seen above, the translation unifies the access to values. Dereferencing and
+using local variables are both done through the cell object's field. One could
+say, the translation lifts everything into references; even local variables are
+accessed through the single gateway to the value that is the cell object.
+Furthermore, the cell's field is the only location where program data can
+reside. This corresponds to Rust's principle that data is always owned uniquely
+(by a cell) and otherwise referenced (through a cell).
 
-More formally, I examine the three ways in which data can be accessed in Rust to
-argue that our translation results in correct Scala runtime semantics.
+More formally, I examine in the following the two ways in which data can be
+accessed in Rust, by value or by reference, to argue that the translation
+results in correct Scala runtime semantics.
 
 \subsubsection{By value}
 \label{sec:correctness-by-value}
 
-If data is used by value, it transfers ownership to the new binding. This holds
-for both moveable and copyable types. Only for the latter, the original binding
-and data stay intact, whereas for moveable types, the original owner is
-invalidated and the data de-initialised. In both cases, if the used data is
-later mutated, changes will not appear on the original binding. Therefore, the
-translation is correct in inserting the \lstinline!move! or \lstinline!copy!
-operator -- which for this argument can be taken as deep copies -- around
-by-value reads of a cell's data.
+If data is used by value, it grants ownership to the new binding. This holds for
+both moveable and copyable types. Only for the latter, the original binding and
+data stay intact, whereas for moveable types, the original owner is invalidated
+and the data de-initialised. In both cases, changes will not appear on the
+original binding if the used data is later mutated. Therefore, the translation
+is correct in inserting the \lstinline!move! or \lstinline!copy! operator --
+which for this argument can be taken as deep copies -- around by-value reads of
+a cell's data.
 
 Performing a deep copy for moveable types is correct because the original
 binding can never be reused. Thus, one can think of moving as performing a deep
 copy of the original object, assigning it to a new binding and then destroying
-the original object. Importantly, the changes made to the moved object never
-propagate back to the original.
+the original object. Importantly, the changes made to the new, moved object
+never propagate back to the original.
 
 For copyable types, the translation distinguishes between aggregate types and
-primitive types. Primitive JVM types are handled the same as in Rust and need no
+primitive types. Primitive JVM types are handled like in Rust and need no
 further examination. Aggregate types like tuples of numbers are translated to
 Scala objects with mutable cells as fields. Therefore, I need to show that the
-deep object copy our \lstinline!copy! operator performs is equivalent to the
-implicit bitwise copy of the struct in Rust.
-
-Indeed, bitwise copy for an aggregate type is trivially the same as deep copy as
-long as all contained types are present by value. That means all contained data
-is embedded in the bits of the aggregate structure and is simply copied deeply
-as well. It gets more complicated for shared references (mutable references are
-not copyable as they need to be unique). For a shared reference, Rust simply
-copies the reference, i.e.~the pointer value, but not the referenced object.
-Still, that operation is equivalent to a deep copy because the references are
-shared. Thus, by the borrow check assumption, as long as any shared reference to
-an object exists, that object cannot be mutated. In other words, under our
-assumptions a shared reference will never see its referenced value change.
-Therefore, it is equivalent to copy that object deeply when needed, the sharing
-can be viewed simply as an optimisation in Rust.
+deep object copy the \lstinline!copy! operator performs is equivalent to the
+implicit bitwise copy of the struct in Rust. Indeed, a bitwise copy for an
+aggregate type is trivially the same as a deep copy, as long as all contained
+types are present by value. That means, all contained data is embedded in the
+bits of the aggregate structure and is simply copied deeply (bitwise) as well.
+It gets more complicated for shared references (mutable references are not
+copyable as they need to be unique). For a shared reference, Rust simply copies
+the reference, i.e.~the pointer value, but not the referenced object. Still,
+that operation is equivalent to a deep copy because the reference is shared.
+Thus, by the borrow check assumption, as long as any shared reference to an
+object exists, that object cannot be mutated. In other words, under that
+assumption a shared reference will never see its referenced value change.
+Therefore, it is equivalent to copy that object deeply when needed, as it
+doesn't change. The sharing can be viewed simply as an optimisation in Rust.
 
 The above holds for tuples, arrays and user-defined \lstinline!Copy! types as
-long as our \lstinline!copy! operator supports them in Scala. Other copyable
-types like raw pointers and function pointers are not supported by the
-translation nor our extraction.
+long as the \lstinline!copy! operator supports them in Scala. Other copyable
+types like function pointers are not supported by the translation nor the
+extraction.
 
 \subsubsection{By reference}
 
 The counterpart of using data and transferring its ownership is taking
 references to places. The translation handles that by using the place's cell
-object which is defined and unique, as shown earlier. Thanks to the cells it
+object which is defined and unique, as shown earlier. Thanks to the cells, it
 becomes possible to reference places on the JVM; it suffices to mention, i.e.~to
 use, the correct cell object whenever a reference is needed. Cells are JVM
 objects, hence, they can simply be used in a by-value manner and reference
-handling is done by the JVM.
-
-In particular, when a cell is used in multiple locations it will not be cloned
-but all the locations will point to the same cell object. This exactly
-corresponds to the semantics of shared Rust references that are model by the
-cells and is thus correct.
+handling is done by the JVM. In particular, when a cell is used in multiple
+locations it will not be cloned but all the locations will point to the same
+cell object. This exactly corresponds to the semantics of shared Rust references
+that are model by the cells and is thus correct.
 
 For mutable references, the mechanism is entirely the same. Any changes made on
 a cell's value will be visible to all readers, because they share the cell
 object. This sounds dangerous but the borrow check assumption guarantees that no
-illegal sharing or aliasing can occur. For example it is guaranteed that all
+illegal sharing or aliasing can occur. For example, it is guaranteed that all
 shared references to an object end their lifetime \emph{before} the object is
-mutated. In the translation, such a shared reference in the form of a cell
-object might still exist somewhere on the JVM before the garbage collector
-passes, but it will never be read, thanks to the borrow checking. Hence, the
-translation is correct for mutable references as well.
-
+mutated. Thus, in the translation, a shared reference, in the form of a
+reference to a cell object, might still exist somewhere on the JVM when the cell
+is mutated and before the garbage collector passes, but it will never be read,
+thanks to the borrow checking. Therefore, the translation is correct for mutable
+references as well.
 
 
 \section{Translation for Stainless}
@@ -508,7 +496,7 @@ support for mutability. Therefore, I adapt the general translation step-by-step
 to yield Scala programs that are accepted by Stainless.
 
 This section presents the changes made to the translation to be compatible with
-Stainless on a theoretical level. Like before, I will argue  that all the
+Stainless at a theoretical level. Like before, I will argue  that all the
 deviations from the general translation uphold the overall correctness. For more
 low-level implementation details and an overview of the entire system please
 refer to \autoref{implementation}.
@@ -518,7 +506,7 @@ refer to \autoref{implementation}.
 \subsection{Avoiding Aliasing}
 \label{sec:aliasing-restrictions}
 
-The main difference between Scala and the supported imperative fragment of
+The main difference between full Scala and the imperative fragment supported by
 Stainless \cite[section ``Imperative'']{stainless-doc} is that Stainless imposes
 aliasing restrictions on the program. The restrictions permit a simple but
 strict aliasing invariant:
@@ -534,11 +522,10 @@ may contain \lstinline!var! fields or type parameters marked with
 
 \begin{itemize}
 \tightlist
-\item
-  For a function call, no mutable arguments of the call can share any
-  part of their memory. E.g. in a function call it is not allowed to
-  give an object as one argument and a field of the same object as
-  another argument.
+\item For a function call, no mutable arguments of the call can share
+any part of their memory. E.g. it is not allowed to give an object as one
+argument of a function call and a field of the same object as another argument.
+
 \item
   More generally, ``it is forbidden to assign a mutable variable to a
   new identifier'',
@@ -553,24 +540,23 @@ motivation of Stainless's aliasing restrictions is to make its imperative code
 elimination phase work \cite{regb}. That transformation relies on the fact, that
 there is a single path to a mutable object. However, the restrictions are quite
 severe and there are plenty of cases where an alias is safe but is not allowed
-by these rules.\footnote{For example, when there are shared references,
-i.e.~aliases, of a mutable object but that object is never changed.}
+by these rules.\footnote{For example, shared references, i.e.~aliases, of a
+mutable object but the object is never changed.}
 
 In Rust, the borrow checker ensures a very similar property: there is a
 \emph{unique} mutable reference to a place or otherwise it is safe to have
 multiple immutable references. The borrow check assumption guarantees that the
 program does not have illegal aliasing of mutable state, but the translation
 needs to convince Stainless of that fact. It does so with the \lstinline!move!
-and \lstinline!copy! operators.
-
-The translation already introduces \lstinline!move! and \lstinline!copy! when
-data is used by value. To work around Stainless's aliasing restrictions it
-additionally introduces \lstinline!copy! for function arguments that are shared
-references and lastly, it adds \lstinline!move! or \lstinline!copy! to return
-values of functions and inner blocks, unless the values contain mutable
-references. The correctness of that approach follows from the same argument as
-the correctness of using \lstinline!move! and \lstinline!copy! for using data by
-value (see \autoref{sec:correctness-by-value}).
+and \lstinline!copy! operators. The translation already introduces
+\lstinline!move! and \lstinline!copy! when data is used by value. To work around
+Stainless's aliasing restrictions, it additionally introduces \lstinline!copy!
+for function arguments that are shared references and lastly, it adds
+\lstinline!move! or \lstinline!copy! to the return values of functions and inner
+blocks, unless the values contain mutable references. The correctness of that
+approach follows from the same argument as the correctness of using
+\lstinline!move! and \lstinline!copy! for using data by value (see
+\autoref{sec:correctness-by-value}).
 
 To summarise, all types are \lstinline!move!'d or \lstinline!copy!'d when they
 could create an alias except for types that are or contain mutable references.
@@ -581,7 +567,7 @@ correct runtime semantics.
 \subsubsection{\texttt{move} is the identity}
 
 This subsection shows that the \lstinline!move! operator -- though very useful
-to work with Stainless -- is not necessary to the semantical correctness of the
+to work with Stainless -- is not necessary to the semantic correctness of the
 translation and may be omitted by implementations that do not need to comply
 with Stainless's aliasing restrictions.
 
@@ -592,20 +578,20 @@ serves as a way to make verification work with a simple aliasing analysis.
 \end{quote}
 
 As seen before, one can think of moving as performing a deep copy and
-invalidating the original. By copying during a move, one can avoid creating an
-alias to the source cell. But the borrow checker guarantees that a moved out
-value is never used again, hence the original will never be used again and its
-value does not matter for the correctness of the program.
+invalidating the original. The copying during a move avoids creating an alias to
+the source cell. But, the borrow checker guarantees that a moved out value is
+never used again, hence the original will never be read again and its value does
+not matter for the correctness of the program, it might as well change.
 
-It is easier, to see the argument on the example of \autoref{lst:move-err}. On
-line 3, the struct is moved out of \lstinline!x! into \lstinline!y!, that is,
-without the \lstinline!move! an alias of \lstinline!x!'s cell would be created.
-But the binding from \lstinline!x! will never be used again, hence this alias
-does not matter and the inserted \lstinline!move! only serves to communicate
-this fact to the simple aliasing analysis of Stainless. The same holds for
-function arguments and return values. Thus, in order to only achieve correct
-Scala runtime semantics, the \lstinline!move! can be omitted because it is
-equivalent to the identity.
+It is easier to see the argument in the example of \autoref{lst:move-err}. On
+line 2, the struct is moved out of \lstinline!x! into \lstinline!y!. That is,
+without the \lstinline!move! operator, an alias of \lstinline!x!'s cell would be
+created, but the binding of \lstinline!x! will never be used again. Hence,
+\lstinline!x! can be changed without problems and the inserted \lstinline!move!
+only serves to communicate this fact to the simple aliasing analysis of
+Stainless. The same holds for function arguments and return values. Thus, in
+order to only achieve correct Scala runtime semantics, the \lstinline!move! can
+be omitted because it is equivalent to the identity.
 
 \subsubsection{\texorpdfstring{\texttt{copy} is the functional
 identity}{copy is the functional identity}}
@@ -621,19 +607,19 @@ verification work with a simple aliasing analysis.
 \end{quote}
 
 Consider \autoref{lst:tuple-sharing}, the introduced aliasing of the tuple
-object is fixed by adding the \lstinline!copy! operator. But the aliasing only
-poses a problem because the tuple is later modified. If the tuple wasn't
-modified, sharing would be safe and the program correct.
+object on line 4 is fixed by adding the \lstinline!copy! operator, but the
+aliasing only poses a problem because the tuple is later modified. If the tuple
+wasn't modified, sharing would be safe and the program correct.
 
 More generally, in the absence of mutation, there are only shared references and
-immutable by-value bindings. For the latter, if data needs to be copied
-according to Rust semantics but is immutable, then it is safe to share the cell
-objects in the translation because the data cannot be changed at any time. The
-same holds for shared references. Remember that a shared reference can never see
-its referenced data change, therefore it is safe to deeply copy the referenced
-object. But again, if that data cannot change at all, one may as well share the
-objects. This shows that the \lstinline!copy! operator is equivalent to the
-identity in programs without mutation.
+immutable by-value bindings. If data needs to be copied according to Rust
+semantics but is immutable, then it is safe to share the cell object in the
+translation because the data cannot be changed at any time. The same holds for
+shared references. Remember that a shared reference can never see its referenced
+data change, therefore it is safe to deeply copy the referenced object. But
+again, if that data cannot change at all, one may as well share the objects.
+This shows that the \lstinline!copy! operator is equivalent to the identity in
+programs without mutation.
 
 \subsubsection{Cloning is copying}
 \label{sec:clone-is-copy}
@@ -644,12 +630,12 @@ their own implementation of the \lstinline!Clone! trait or they can let the
 \lstinline!derive! macro generate one.
 
 \begin{quote}
-Under the assumption that all \lstinline!Clone! instances in a program are
-derived by the macro, \lstinline!clone! is equivalent to a deep copy. Thus,
-\lstinline!clone! is correctly translated with the \lstinline!copy! operator.
+Under the assumption that all \lstinline!Clone! implementations in a program are
+derived by the macro, \lstinline!clone! is equivalent to a deep copy and can be
+translated with the \lstinline!copy! operator.
 \end{quote}
 
-Derived \lstinline!Clone! instances for struct types recursively call
+Derived \lstinline!Clone! implementations for struct types recursively call
 \lstinline!clone! on all the fields and return a new struct with the cloned
 fields. For copyable types, especially primitive types, the clone is trivially a
 bitwise copy like for
@@ -657,14 +643,15 @@ bitwise copy like for
 For shared references, \autoref{sec:correctness-by-value} shows that copying is
 equivalent to a deep copy of the referenced object.
 
-By a simple inductive argument, if the \lstinline!Clone! instances of all the
-fields are equivalent to deep copies, then so is the struct's \lstinline!Clone!
-instance. Hence, as long as all component types recursively are copyable types
-or have derived \lstinline!Clone! instances, the top-level instance is
-equivalent to a deep copy. The translation can therefore check that assumption
-and if it holds, translate calls to \lstinline!clone! with our \lstinline!copy!
-operator, that is the identity in completely functional programs or performs a
-deep copy otherwise.
+By a simple inductive argument, if the \lstinline!Clone! implementations of all
+the fields are equivalent to deep copies, then so is the struct's
+\lstinline!Clone! implementation. Hence, as long as all component types
+recursively are copyable types or have derived \lstinline!Clone!
+implementations, the top-level implementation is equivalent to a deep copy. The
+translation can therefore check that assumption and if it holds, translate calls
+to \lstinline!clone! with the \lstinline!copy! operator in Scala, which is
+equivalent to the identity in completely functional programs or performs a deep
+copy otherwise.
 
 
 
@@ -673,66 +660,68 @@ deep copy otherwise.
 
 Even if the translation presented here serves to add mutability features to
 Rust-Stainless, it should preserve the well-functioning parts of the frontend
-that deal with immutable Rust. To that end, the translation that is really
-implemented in software contains some optimisations that increase the usability
-of Rust-Stainless for functional Rust code. The following subsection presents
-the optimisations and again shows their correctness.
+that deal with immutable Rust. To that end, the translation that is implemented
+in software contains some optimisations that increase the usability of
+Rust-Stainless for functional Rust code. The following subsection presents these
+optimisations and argues that they uphold the overall correctness.
 
 
 \subsubsection{Immutable Bindings and References}
 
 The most important optimisation is that immutable bindings (local variables,
 function parameters) are not wrapped in mutable cells. Moreover, shared
-references are erased, like boxes, and their values  are used directly. It is
-possible to perform this optimisation thanks to excellent support of the Rust
-compiler which provides type information for every expression. With that, it is
-possible to distinguish immutable values and shared references at all times from
-possibly mutable ones that are still wrapped in cells.
+references are erased, like boxes, and their values  are used directly. This
+optimisation is possible thanks to excellent support of the Rust compiler which
+provides type information for every expression. With that, it is possible to
+distinguish immutable values and shared references at all times from possibly
+mutable ones that are still wrapped in cells.
 
 To convince the reader of the correctness of this optimisation, first note that
 only mutable data can be borrowed mutably. In other words, only for mutable data
 do we need the reference sharing in the translation, to propagate changes back
-to the original binding. For immutable data, there are no changes in the first
-place. Secondly, it is safe to directly use immutable values instead of
-references, even if the values get copied at some points, as
-\autoref{sec:correctness-by-value} showed. Therefore, it is correct to erase
-shared references and use their referred value directly.
+to the original object. Data declared without \lstinline!mut! is immutable and
+cannot change in the first place. Secondly, it is safe to directly use immutable
+values instead of references, even if the values get copied at some points,
+which again follows  from the argument that one may deeply copy shared
+references (cf. \autoref{sec:correctness-by-value}). Therefore, it is correct to
+erase shared references and use their referred values directly.
 
 \subsubsection{Preventing Aliasing}
 
 Previous sections showed how \lstinline!move! and \lstinline!copy! are used to
 emit code that complies with Stainless's aliasing restrictions. They also argued
-that \lstinline!copy! \emph{must} perform a semantical deep copy, while
+that \lstinline!copy! \emph{must} perform a semantic deep copy, while
 \lstinline!move! \emph{may} do a deep copy but might also be the identity. Our
-Stainless-backed implementation, uses a special Stainless primitive to emulate
-both operators: \lstinline!freshCopy[T](t: T): T!, performs a semantical deep
-copy of its argument. Because Rust-Stainless serves to verify Rust code, it does
-not matter that deep copy incurs a performance cost because the translated code
-is never run.
+Stainless-backed implementation uses a newly added Stainless primitive to
+emulate both operators: \lstinline!freshCopy[T](t: T): T! semantically performs
+a deep copy of its argument. It does not matter that many deep copies are
+introduced in the program in that way. The program is never run with these deep
+copies, they only serve for verification.
 
 The implementation decides for each location where data is used by value whether
 to insert a \lstinline!freshCopy! or not based on the type of the data. Types
 that are or contain mutable references, like \lstinline!Option<&mut T>!, are not
-\lstinline!freshCopy!'d and the copy is omitted for primitive JVM types.
+\lstinline!freshCopy!'d and the copy is also omitted for primitive JVM types.
 Additionally, the translation avoids \lstinline!freshCopy! around some control
-structures for by design it is clear that a \lstinline!freshCopy! will be
+structures for which it is clear by design that a \lstinline!freshCopy! will be
 inserted inside the structure. For example in a \lstinline!match! expression,
 the resulting value of each arm will be copied and therefore the entire match
-expression doesn't need an additional copy.
+expression doesn't need to be wrapped in an additional \lstinline!freshCopy!.
 
-For cloning, the same procedure is applied. Conveniently, the Rust compiler does
-not derive \lstinline!Clone! instances for types that are or contain mutable
-references.\footnote{\href{}{\texttt{\color{MidnightBlue}
+The same procedure is applied for cloning. Conveniently, the Rust compiler does
+not derive \lstinline!Clone! implementations for types that are or contain
+mutable references.\footnote{\href{}{\texttt{\color{MidnightBlue}
 https://doc.rust-lang.org/std/clone/trait.Clone.html\#impl-Clone-121}}}
-Therefore, it is sufficient to check the assumption from
-\autoref{sec:clone-is-copy} to make sure that all types for which clone is
-translated will be \lstinline!freshCopy!'d.
+Therefore, it is sufficient to check that all \lstinline!Clone! implementations
+are derived (cf. \autoref{sec:clone-is-copy}) to ensure that all types for which
+\lstinline!clone! is translated will be \lstinline!freshCopy!'d.
 
-To summarise, the implementation deeply copies some of the moves to prevent
-aliasing in the resulting code. But, it never copies mutable references because
-for those, the Rust compiler has made sure that there are no aliases. Lastly,
-the same happens for cloning because, by the check, only clone operations are
-extracted for which these semantics are correct.
+To summarise, the implementation deeply copies some of the moves and all the
+copies that happen in Rust to prevent aliasing in the resulting code. But, it
+never copies mutable references because for those, the Rust compiler has made
+sure that there are no aliases. Lastly, the same happens for cloning because, by
+the check, only clone operations are extracted for which these semantics are
+correct.
 
 
 \subsection{Limitations}
@@ -741,8 +730,8 @@ extracted for which these semantics are correct.
 So far, mutable cells together with the \lstinline!freshCopy! primitive solved
 all cases of aliasing restriction problems. However, there are patterns where
 that solution is not applicable and these constitute the theoretical limits of
-this translation with the current aliasing restrictions of Stainless -- runtime
-equivalence in full Scala is still valid.
+this translation with the current aliasing restrictions of Stainless -- the
+runtime equivalence in full Scala is still valid.
 
 \begin{figure}
 \noindent\begin{minipage}[t]{.35\textwidth}
@@ -764,7 +753,7 @@ x = &mut b;
   caption={Translation with nested mutable cells.}
 ]
 val a: MutCell[Int] = MutCell[Int](123)
-val b: MutCell[Int] = MutCell[Int](123)
+val b: MutCell[Int] = MutCell[Int](456)
 val x: MutCell[MutCell[Int]] =
   MutCell[MutCell[Int]](a)
 x.value = MutCell[Int](b)
@@ -776,18 +765,18 @@ The unsupported patterns occur when mutable references are used in locations
 where they cannot be \lstinline!freshCopy!'d to keep the semantics correct. For
 example, a mutable binding of a mutable reference: \passthrough{\lstinline!mut
 x: &mut T!}. The variable \lstinline!x! can be dereferenced and assigned
-\lstinline!*x = ...! which changes the referred object, but it can also be
+\lstinline!*x = ...!, which changes the referred object, but it can also be
 reassigned with another mutable reference \lstinline!x = &mut ...!. To correctly
 model both of these cases, the translation gives the type
 \lstinline!MutCell[MutCell[T]]! to \lstinline!x!, like in
-\autoref{lst:nested-cell}. Note that this example runs correctly in Scala.
+\autoref{lst:nested-cell}. Note that the example runs correctly in Scala.
 Unfortunately, the same cannot be said about Stainless. The assignment on line 5
 creates an alias of \lstinline!b! in \lstinline!x.value!, which Stainless does
-not permit. This can occur for local variables as in the example or also for
+not permit. This can occur for local variables as in the example but also for
 \lstinline!mut! function parameters of mutable reference type.
 
 \begin{lstlisting}[
-  float=hb,
+  float=htb,
   language=Rust,
   label=lst:recursive-get-mut,
   caption={A recursive method returning a mutable reference.}
@@ -803,22 +792,22 @@ impl<V> List<(u128, V)> {
 }
 \end{lstlisting}
 
-The other case of mutable references, i.e. mutable cells, that cannot be copied
-occurs in function return values. In the running example of
-\autoref{running-example}, \lstinline!get_mut_by_id! returns a mutable
+The other case of mutable references, i.e. mutable cells, that cannot be
+\lstinline!freshCopy!'d occurs in function return values. In the running example
+of \autoref{running-example}, \lstinline!get_mut_by_id! returns a mutable
 reference. This is correctly translated and also verified. However, Stainless
 does not allow the same for recursive functions, because of the third aliasing
 rule in \autoref{sec:aliasing-restrictions}. Thus, the same \lstinline!get_mut!
-method for a list, as shown in \autoref{lst:recursive-get-mut}, is rejected by
-Stainless.
+method for a list which is recursive, shown in \autoref{lst:recursive-get-mut},
+is rejected by Stainless. \newpage
 
 \hfill \break \noindent This chapter presented a translation for mutability from
 Rust to Scala and refined it in several steps to make it useable with the
-imperative phase of Stainless. The general translation is quite powerful and
-results in equivalent runtime semantics in Scala for mutability features of
-Rust. For each version of the translation, I argued that this overall
-equivalence is upheld. The last section discussed a theoretical limitation of
-the approach. Further limitations more associated with the implementation of
-this translation are discussed in \autoref{impl-limitations}. More generally,
-the next chapter sheds light on the engineering of Rust-Stainless and other new
+current imperative phase of Stainless. The general translation is quite powerful
+and results in equivalent runtime semantics in Scala for mutability features of
+Rust. For each version of the translation, I argued that the runtime equivalence
+is upheld. The last section discussed the theoretical limitation of the
+approach. Further limitations more associated with the implementation of this
+translation are discussed in \autoref{impl-limitations}. More generally, the
+next chapter sheds light on the engineering of Rust-Stainless and other new
 features than mutability.
