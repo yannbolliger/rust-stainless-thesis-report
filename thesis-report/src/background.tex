@@ -26,22 +26,22 @@ To live up to its promises, Rust introduces a flow-sensitive type checker, the
 been studied in research for years. The two main concepts are ownership
 \cite{ownership-types} and \emph{borrowing} that build on the research topics of
 \emph{uniqueness} \cite{alias-burying} and \emph{linearity}
-\cite{Wadler90lineartypes, once-upon-a-type}. Reference lifetimes are inspired
-by work on region-based memory management \cite{cyclone-region}.
+\cite{Wadler90lineartypes, once-upon-a-type}. More details on the research
+background are in \autoref{related-work}.
 
 
 \subsection{Syntax Overview}
 
-As a start, \autoref{lst:first-ex} shows a simple function in Rust that returns
-the square of the integer \lstinline!x!. Rust is statically typed, hence
-parameters types are annotated, \lstinline!i32! in this case, a signed 32-bit
-integer. Other integer types can be unsigned (\lstinline!u32!) or of other
-bit-lengths (\lstinline!u128!). The return type of the function is indicated
-after the arrow, if omitted it defaults to \lstinline!()!, the unit type. Note
-also, that the single (and last) expression in the function block is implicitly
-returned. Alternatively, one may employ the explicit return statement to return
-a value from any point in a function, like on line 4 of \autoref{lst:let}.
-Statements are delimited with semi-colons and produce the unit type.
+\autoref{lst:first-ex} shows a simple Rust function that returns the square of
+the integer \lstinline!x!. Rust is statically typed, hence parameter types are
+annotated: \lstinline!i32! in this case, a signed 32-bit integer. Other integer
+types can be unsigned (\lstinline!u32!) or of other bit-lengths
+(\lstinline!u128!). The return type of the function is indicated after the
+arrow, if omitted it defaults to \lstinline!()!, the unit type. Note also, that
+the single (and last) expression in the function block is implicitly returned.
+Alternatively, one may employ the explicit return statement to return a value
+from any point in a function, like on line 4 of \autoref{lst:let}. Statements
+are delimited with semi-colons and produce the unit type.
 
 \begin{lstlisting}[style=short, language=Rust, caption={A simple Rust function.}, label=lst:first-ex]
 fn square(x: i32) -> i32 { x * x }
@@ -50,16 +50,16 @@ fn square(x: i32) -> i32 { x * x }
 \subsubsection{Variables}
 
 The \lstinline!let! statement is used to create a new variable and bind the
-assigned value to it in Rust. Function parameters are also variables in
+assigned value to it. Function parameters are also variables in
 Rust~\cite{rustref}. By default, variables are immutable, that is, the compiler
 rejects any attempt to reassign to an initialised variable. On the other hand,
 Rust accepts to redeclare and thereby \emph{shadow} a binding, which is what
 happens on line 7 of \autoref{lst:let}.
 
-The compiler infers the type of most let-bindings, such that it  does not have
-to be annotated like for function parameters. In \autoref{lst:let}, all the
-types are inferred as the standard integer type \lstinline!i32!. This even works
-for bindings that shadow an earlier declaration with a different type.
+The compiler infers the type of most let-bindings, such that the type does not
+have to be annotated like for function parameters. In \autoref{lst:let}, all the
+types are inferred to be the standard integer type, \lstinline!i32!. This even
+works for bindings that shadow an earlier declaration of a different type.
 
 \noindent\begin{minipage}[t]{.45\textwidth}
 \begin{lstlisting}[language=Rust, caption={A Rust function doing some arithmetics.}, label=lst:let]
@@ -87,26 +87,26 @@ fn g(mut a: i32) -> i32 {
 
 \subsubsection{Mutability}
 
-As an imperative language Rust also offers mutable bindings. Mutable variables
-have to be explicitly declared as such by adding the \lstinline!mut! keyword. In
-general, Rust is very explicit about the distinction between mutable and
-immutable variables and references. \autoref{lst:mut-ex} has both a mutable
-function parameter and a mutable local variable.
+As an imperative language, Rust also offers mutable bindings. Mutable variables
+have to be explicitly declared with the \lstinline!mut! keyword. In general,
+Rust is very explicit about the distinction between mutable and immutable
+variables (and references). \autoref{lst:mut-ex} shows both a mutable function
+parameter and a mutable local variable.
 
 \subsubsection{Algebraic Data Types (ADTs)}
 
 Taking strong inspiration from C, user-defined data types in Rust are called
 \lstinline!struct!s and \lstinline!enum!s. Structs are product types and come in
-three forms: without fields like \lstinline!OnlyAMarker! in
+three forms: without fields, like \lstinline!OnlyAMarker! in
 \autoref{lst:struct-ex}, so called \emph{unit structs}; the tuple form with
 numerically indexed fields, e.g. \lstinline!a.0!; and the C-like structs with
 field names, \lstinline!b.field!. Enumerations are sum types and have members
-that are again in either unit, tuple or C-like form, like structs.
-\autoref{lst:option} shows  an example from the standard library, the option
-type. It also shows how a type parameter is used to create a generic data type.
+that are again in either unit, tuple or C-like form. \autoref{lst:option} shows
+an enumeration example from the standard library, the option type. It also shows
+how the type parameter \lstinline!T! is used to create a generic data type.
 
 \noindent\begin{minipage}[t]{.45\textwidth}
-\begin{lstlisting}[language=Rust, caption={All three types of structs.}, label=lst:struct-ex]
+\begin{lstlisting}[language=Rust, caption={All three forms of structs.}, label=lst:struct-ex]
 struct OnlyAMarker;
 struct A(i32, bool);
 struct B {
@@ -131,21 +131,21 @@ let opt: Option<i32> =
 \end{lstlisting}
 \end{minipage}
 
-Fields are not considered variables in Rust, rather they are part of their
+Fields are not considered variables in Rust, rather they are a part of their
 corresponding struct's variable~\cite{rustref}. Hence, fields inherit properties
 like mutability from their struct, e.g. the only mutable field in
 \autoref{lst:struct-ex} is \lstinline!b.field! because \lstinline!b! is mutable.
-Hence, mutability is not part of the field type but depends on the binding of
-the struct's instance.
+Thus, mutability is not part of the field type but depends on the binding of the
+corresponding struct's instance.
 
 Rust also has anonymous tuples. These behave exactly like tuple structs but
 don't need to be declared beforehand. One can simply instantiate tuples of any
 non-negative number of types (cf. \autoref{lst:tuples}). This is used in the
-first part of the running example that is a generic container struct with an
-option of a tuple (\autoref{lst:container}) as field.
+first part of the running example (\autoref{lst:container}) that is a generic
+container struct with an option of a tuple as field.
 
 \noindent\begin{minipage}[t]{.45\textwidth}
-\begin{lstlisting}[language=Rust, style=short, caption={A two-tuple in Rust.}, label=lst:tuples]
+\begin{lstlisting}[language=Rust, style=short, caption={A 2-tuple in Rust.}, label=lst:tuples]
 let t: (i32, bool) = (123, true);
 \end{lstlisting}
 \end{minipage}\hfill
@@ -161,11 +161,12 @@ struct Container<K, V> {
 
 With ADTs, especially enumerations, pattern matching comes naturally.
 \autoref{lst:match} shows how to match on the container struct from before. Like
-in Scala, the underscore is the wildcard pattern and match arms can be further
-refined by \lstinline!if! guards of any boolean expression. To merely check
-whether a value matches a certain shape, one can use the
-\lstinline"matches!(opt, Some(_))" macro that is expanded to a regular pattern
-match which returns true if the given pattern matches and false otherwise.
+in Scala, the underscore is the wildcard pattern and match arms can be  refined
+by \lstinline!if! guards of any boolean expression. To merely check whether a
+value matches a certain pattern, one can use the
+\passthrough{\lstinline"matches!(opt, Some(_))"} macro that is expanded to a
+regular pattern match which returns true if the given pattern matches and false
+otherwise.
 
 \begin{lstlisting}[language=Rust, caption={Pattern matching on a struct.}, label=lst:match]
 let c = Container { pair: None };
@@ -177,13 +178,14 @@ match c {
 
 \subsubsection{Implementations and Traits}
 
-Adding methods to data types is done with \lstinline!impl! blocks in Rust. There
-can be many such blocks for a given type. \autoref{lst:impl1} adds three methods
-to the running example of the container struct. The implementation block is
-generic in two type parameters, as is the struct. Note that adding methods only
-for certain instantiations of the  type parameters is also possible. For
-example, the first line of the block could just be \passthrough{\lstinline!impl
-Container<bool, i32>!}.
+Implementation blocks add methods to data types in Rust. There can be many such
+blocks for a given type. \autoref{lst:impl1} adds three methods to the container
+struct of the running example. The implementation block is generic in two type
+parameters \passthrough{\lstinline!K, V!}, as is the struct. Note that adding
+methods only for certain instantiations of the  type parameters is also
+possible. For example, the first line of the block could be
+\passthrough{\lstinline!impl Container<bool, i32>!}, to only add methods to
+containers of boolean keys and integer values.
 
 The \lstinline!Self! in the first return type stands for the type this block is
 adding methods to, in the example that is \lstinline!Container<K, V>!. The
@@ -192,13 +194,13 @@ containers. In contrast, the two other methods specify a receiver type as first
 parameter. That makes the methods available on instances of the container, for
 example \lstinline!c.is_empty()!. In methods with the \lstinline!&self!
 receiver, the \lstinline!self! keyword contains a reference to the instance on
-which the method was called, in the example from before that would be
-\lstinline!&c!. The same happens for \lstinline!&mut self! but
-mutably.\footnote{More on references in \autoref{references}.} Finally, it is
-also possible to consume the instance by specifying \lstinline!self! as
-receiver.
+which the method was called, in the example of \lstinline!c.is_empty()!, this is
+equivalent to \lstinline!is_empty(&c)!. The same happens for
+\passthrough{\lstinline!&mut self!} but mutably.\footnote{More on references in
+\autoref{references}.} Finally, it is also possible to consume the instance by
+specifying \lstinline!self! as receiver.
 
-\begin{lstlisting}[language=Rust, caption={Methods for the running example}, label=lst:impl1]
+\begin{lstlisting}[language=Rust, caption={Methods for the running example.}, label=lst:impl1]
 impl<K, V> Container<K, V> {
   pub fn new() -> Self { Container { pair: None } }
   pub fn is_empty(&self) -> bool { matches!(self.pair, None) }
@@ -210,14 +212,14 @@ Traits are used to specify interfaces in Rust. A trait \lstinline!X! can be
 implemented for a data type \lstinline!A! with an \passthrough{\lstinline!impl X
 for A!} block, providing implementations for the abstract methods of the trait,
 as in \autoref{lst:trait-impl2}. Traits can also be used to bound type
-parameters to only the types that implement a certain trait. For example, the
-trait bound \lstinline!K: Id!  in \autoref{lst:mut-ref-impl} states that any
-\lstinline!K! admissible to the function (or in other cases the block) needs to
-implement the \lstinline!Id! trait, i.e.~\passthrough{\lstinline!impl Id for K!}
-needs to be available.
+parameters to types that implement a certain trait. For example, the trait bound
+\lstinline!K: Id!  in \autoref{lst:mut-ref-impl} states that any \lstinline!K!
+admissible to the function (or in other cases the block) needs to implement the
+\lstinline!Id! trait, i.e.~\passthrough{\lstinline!impl Id for K!} needs to be
+available.
 
 \noindent\begin{minipage}[t]{.45\textwidth}
-\begin{lstlisting}[language=Rust, style=short, caption={Rust trait with one method.}, label=lst:trait-impl1]
+\begin{lstlisting}[language=Rust, style=short, caption={Rust trait with one abstract method.}, label=lst:trait-impl1]
 trait Id {
   fn id(&self) -> usize;
 }
@@ -227,7 +229,7 @@ trait Id {
 \begin{lstlisting}[
   language=Rust,
   style=short,
-  caption={Non-sensical implementation of the Id trait for strings.},
+  caption={Non-sensical implementation of the \texttt{Id} trait for strings.},
   label=lst:trait-impl2
 ]
 impl Id for String {
@@ -241,10 +243,10 @@ impl Id for String {
 \subsubsection{Value Categories}
 
 Rust, like C but unlike Scala or any language on the \emph{Java Virtual Machine
-(JVM)}, exposes memory management to the programmer and allows referencing data
-that is stack-allocated. Therefore, one needs to distinguish between the
-different \emph{value categories} of an expression. The general definitions
-stemming from C are:
+(JVM)}, exposes memory management to the programmer and allows referencing
+stack-allocated data. Therefore, one needs to distinguish between the different
+\emph{value categories} of an expression. The general definitions stemming from
+C are:
 
 \begin{itemize}
 \tightlist
@@ -275,7 +277,7 @@ Place expressions occur in \emph{place expression contexts} like on the
 left-hand side of let-bindings, as borrow operands or as field expression
 operands. Otherwise, if a place expression is evaluated in a \emph{value
 context}, e.g.~on the right-hand side of a binding, it evaluates to what is
-stored at the place it designates, its data is \emph{used}.
+stored at the place it designates. In other words, its data is \emph{used}.
 
 \subsubsection{Ownership}
 
@@ -291,12 +293,12 @@ own the same value \cite[page 5]{lightweight-formalism}.
 In other words, data is owned by exactly one binding and if some data is used,
 e.g. in an assignment or passed to a function, it will be \emph{moved out} of
 that binding, i.e. the ownership of the data is transferred to the new binding.
-The old binding is deinitialised and can never be reused. Moved data behaves
+The old binding is de-initialised and can never be reused. Moveable data behaves
 linearly \cite{oxide}, moving out can be seen as \emph{destructive read}
-\cite{islands-alias-protection}. On line 2 of \autoref{lst:move}, data is moved
+\cite{islands-alias-protection}. On line 4 of \autoref{lst:move}, data is moved
 out of \lstinline!a! and its ownership is transferred to \lstinline!b!.
 
-From \autoref{lst:move} it is clear, why Rust's borrow checker needs to be
+From the example it is clear, why Rust's borrow checker needs to be
 flow-sensitive. The move semantics render \lstinline!a! dead before it formally
 goes out of scope, e.g. at the end of the block. The same applies to individual
 fields. A field can be moved out of its struct and become inaccessible while
@@ -331,20 +333,21 @@ assert!(a == 123 && b == 124)
 \end{lstlisting}
 \end{minipage}
 
-\paragraph{Move vs. Copy}
+\paragraph{Move vs Copy}
 
-One departure from the move semantics are copyable types. Types that implement
-the \lstinline!Copy! trait get copy semantics. The compiler automatically
-implements that trait for primitive types\footnote{Primitive types in Rust are
-booleans, characters, \lstinline!str!, numeric types and the panic type
-\texttt{!}~\cite{rustref}} (cf. \autoref{lst:copy}) but also for shared
-references and tuples of copyable types \cite[section "Special types and
-traits"]{rustref}. When copyable data is used, it's implicitly copied and the
-original binding stays valid and independent. In contrast to shared references
-that are copyable, mutable references have move semantics because they need to
-stay unique, as will become clear shortly. Non-copyable types can still be
-explicitly copied by implementing the \lstinline!Clone! trait and calling the
-\lstinline!clone! method.
+Moveable types have \emph{move semantics}. One departure from that are copyable
+types. Types that implement the \lstinline!std::marker::Copy! trait get
+\emph{copy semantics}. The compiler automatically implements that trait for
+primitive types\footnote{Primitive types in Rust are booleans, characters,
+\lstinline!str!, numeric types and the panic type \texttt{!}~\cite{rustref}.}
+(cf. \autoref{lst:copy}) but also for shared references and tuples of copyable
+types \cite[section "Special types and traits"]{rustref}. When copyable data is
+used, it's implicitly copied and the original binding stays valid and
+independent. In contrast to shared references that are copyable, mutable
+references have move semantics because they need to stay unique, as will become
+clear shortly. Non-copyable types can still be explicitly copied by implementing
+the \lstinline!std::clone::Clone! trait and calling the \lstinline!clone!
+method.
 
 \paragraph{Heap Allocation}
 
@@ -353,7 +356,7 @@ surrounding function. To outlive a function, data needs to be heap-allocated
 which is achieved in Rust with the \lstinline!Box<T>! type. Everything that is
 put into a box is directly allocated on the heap (cf. \autoref{lst:box}). The
 binding that ``holds the box'', \lstinline!c_heap! in the example, is the unique
-owner of that data. But because boxes have move semantics, the ownership can be
+owner of that data. Because boxes have move semantics, the ownership can be
 transferred to other bindings, e.g. across function scopes.
 
 \begin{lstlisting}[language=Rust, label=lst:box, caption={A heap-allocated container.}, style=short]
@@ -369,14 +372,15 @@ away from the ownership invariant~\cite{lightweight-formalism}. References are
 created by \emph{borrowing} from a variable or field with the \lstinline!&! or
 \lstinline!&mut! operator, depending on the desired mutability of the created
 reference. One can either borrow from owned data directly or \emph{reborrow}
-from an existing reference. Passing a reference to an object in a function
-argument is called pass \emph{by reference}, as opposed to passing the entire
-object \emph{by value} and hence moving or copying it. The method of
-\autoref{lst:mut-ref-impl} is passed a mutable reference to the receiving
-container instance and returns a reborrowed mutable reference to the second part
-of its tuple.
+from an existing reference. Passing a reference to a function as an argument is
+called pass \emph{by reference}, as opposed to passing the entire designated
+object \emph{by value} and thereby moving or copying it. The method of
+\autoref{lst:mut-ref-impl} receives a mutable reference to the container
+instance in \lstinline!self! and returns a reborrowed mutable reference to the
+second part of its tuple.
 
 \begin{lstlisting}[
+  float,
   language=Rust,
   label={lst:mut-ref-impl},
   caption={An implementation block with a trait bound. The method returns a mutable reference to some interior part of the struct.}
@@ -392,14 +396,14 @@ impl<K: Id, V> Container<K, V> {
 \end{lstlisting}
 
 Rust's type and borrow checking system guarantees that all references are valid
-when they are used. That is, use-after free errors are impossible and
+when they are used. That is, use after free errors are impossible and
 stack-allocated data cannot escape its allocation scope. To achieve this, Rust
 infers the \emph{lifetime} of each reference, i.e. the part of the program in
 which the reference may still be used at a future point of any execution
 path~\cite{wiki:live-vars}. A reference or variable that is not used anymore is
 said to be \emph{dead}. The lifetime of a reference in Rust is constrained by
 the lifetime of the variable it borrows from. This is the main  mechanism to
-prevent use-after free problems. Furthermore, references need to adhere to a
+prevent use after free problems. Furthermore, references need to adhere to a
 strict set of rules. At any point of a program and for any data there can either
 exist:
 
@@ -414,10 +418,11 @@ that is allowed to read and write to the data it does not own.
 \end{itemize}
 
 During the lifetime of a shared reference, the borrowed data can be read but not
-changed by the owning binding as well. In contrast, the mutable reference allows
-to change data without owning it under the condition that no other references to
+changed by the owning binding. In contrast, the mutable reference allows to
+change data without owning it, under the condition that no other references to
 that data exist. While the mutable reference is live, even the owning binding is
-neither allowed to read nor to write that place. In the words of~\citet{oxide}:
+neither allowed to read nor to write to that place. In the words
+of~\citet{oxide}:
 
 \begin{quote}
 {[...]} we understand Rust's borrow checking system as ultimately being a system
@@ -426,30 +431,23 @@ for statically building a proof that data in memory is either
 \emph{collectively shared}, but not both.
 \end{quote}
 
-\paragraph{In-place Updates}
+\paragraph{In-Place Updates}
 
 It is common to implement mutable data structures in Rust with methods that
-alter the structure via a \passthrough{\lstinline!&mut self!} reference. Take
-for example \lstinline!insert! in \autoref{running-example}. This is simple, if
-the method just needs to change some struct field, like in the example. However,
-often the method needs to temporarily consume some part of the \lstinline!self!
-in order to change it.
+alter the structure via a \passthrough{\lstinline!&mut self!} reference, for
+example \lstinline!insert! in \autoref{running-example}. Such in-place updates
+are simple, if the method just needs to change some struct field, like in the
+example.
 
-Imagine a method on \lstinline!Option! that swaps a new value into a
-\lstinline!Some! and returns the old \lstinline!Some! value or \lstinline!None!.
-The naive approach of writing that method is shown in \autoref{lst:swap-naive}.
-But the snippet does not compile because the ownership system does not allow
-moving out of a mutable reference, as is done on line 3. This makes sense,
-because  the reference needs to stay valid, hence the data cannot disappear by
-moving out.
+However, the method often needs to temporarily consume some part of the
+\lstinline!self!, in order to change it. Imagine a method on \lstinline!Option!
+that swaps a new value into a \lstinline!Some! and returns the old option value.
+The naive approach to that method in \autoref{lst:swap-naive} does not compile
+because the ownership system does not allow moving out of a mutable reference,
+which happens on line 3. This makes sense, because the mutable reference needs
+to stay valid, hence the data cannot disappear by moving out.
 
-The solution to the problem is to use the special purpose function
-\lstinline!std::mem::replace! that atomically replaces the value in a mutable
-reference with the second argument and  returns the old value of the mutably
-borrowed place. In the case of the example in \autoref{lst:swap-replace}, this
-is all the method needs to do.
-
-\begin{figure}[htb]
+\begin{figure}[hbt]
 \noindent\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[
   language=Rust,
@@ -483,32 +481,38 @@ impl<T> Option<T> {
 \end{minipage}
 \end{figure}
 
+The solution is to use the special purpose function
+\lstinline!std::mem::replace! that atomically replaces the value in a mutable
+reference with its second argument and returns the old value of the mutably
+borrowed place. For the \lstinline!swap! in \autoref{lst:swap-replace}, this is
+already the entire method.
+
 
 \subsection{Rust Compared to Scala}
 
 \subsubsection{Mutability}
 
-In Scala, there are local mutable variables (\passthrough{\lstinline!var!})
-comparable to \passthrough{\lstinline!let mut!} in Rust. Class fields however
-are immutable by default. At the class declaration one can opt into mutability
-for a certain field by marking it as \lstinline!var!. That field is then mutable
-on all instances of the class and irrespective of whether an instance is locally
-bound with the immutable \lstinline!val! or the mutable \lstinline!var!.
+Scala has local mutable variables (\lstinline!var!) comparable to
+\passthrough{\lstinline!let mut!} in Rust. Class fields however are immutable by
+default. One can opt into mutability for a certain field by marking it as
+\lstinline!var! at the class declaration. Such a field is then mutable on all
+instances of the class and irrespective of whether its corresponding instance is
+locally bound with the immutable \lstinline!val! or the mutable \lstinline!var!.
 
 \subsubsection{References}
 
 Places or lvalues are not programatically accessible in Scala, as in JVM
 languages there is no way to take a reference to a place explicitly. That means
-it's impossible to generalise over whether one wants to assign to a local
-variable or an object field by taking a reference to it.
+it's possible a priori to generalise over whether one wants to assign to a local
+variable or an object field by taking a reference to that lvalue/place.
 
 As in all JVM languages, objects in Scala are heap-allocated and function
-parameters are always passed by value. However, for objects this value is just a
-reference to the object in the heap. This is very efficient for sharing
+parameters are always passed ``by value''. However, for objects this value is
+just a reference to the object in the heap. This is very efficient for sharing
 immutable objects while retaining by-value semantics. But as a consequence, the
 by-value passing of references closely resembles by-reference passing for
-mutable objects. The translation presented in \autoref{translation} will
-extensively exploit this fact.
+objects, which is mainly important for mutable objects. The translation
+presented in \autoref{translation} will extensively exploit this fact.
 
 
 
@@ -518,32 +522,32 @@ extensively exploit this fact.
 
 With a solid understanding of Rust, it is time to introduce verification.
 Stainless \cite{stainless} is a formal verification tool for Scala. It lets
-programmers add contracts or specifications to functions and invariants to data
-structures. Stainless then transforms the input program in multiple phases to a
-purely functional language understood by its backend \emph{Inox} \cite{inox}
-which tries to prove or disprove the contracts by using Z3 \cite{z3} or a
-similar solver.
+programmers add contracts or specifications to functions and data structures.
+Stainless transforms the input program in multiple phases to a purely functional
+language understood by its backend \emph{Inox} \cite{inox} which then tries to
+prove or disprove that the contracts hold by using Z3 \cite{z3} or a similar
+solver.
 
 \subsection{Specifications}
 
 The simplest example of a specification is shown in \autoref{lst:fact-scala}.
 The expression in \lstinline!require! is called a \emph{precondition}, it has to
-hold when the function is called, the \lstinline!ensuring! is a
-\emph{postcondition} that must hold if the precondition holds. Simply put,
-Stainless establishes just the latter, that the postconditions hold assuming the
-preconditions hold. Of course, Stainless is more sophisticated and additionally
-proves that the program finishes for all inputs (\emph{termination}), that
-preconditions hold at static call sites of functions, that pattern matches are
-exhaustive, and that the program does not crash at runtime (except for
-out-of-memory errors) \cite{stainless-doc}. If these properties are invalid,
-then Stainless finds a counter-example input for the function that leads to a
-crash or violation of the specification.
+hold when the function is called; the \lstinline!ensuring! is a
+\emph{postcondition} that must hold after the function if the precondition
+holds. Simply put, Stainless establishes just the latter: that the
+postconditions hold assuming the preconditions hold. Of course, Stainless is
+more sophisticated and additionally proves that the program finishes for all
+inputs (\emph{termination}), that preconditions hold at static call sites of
+functions, that pattern matches are exhaustive, and that the program does not
+crash at runtime (except for out-of-memory errors) \cite{stainless-doc}. If
+these properties are invalid, then Stainless finds a counter-example input for
+the crashing or faulty function.
 
 \noindent\begin{minipage}[t]{.47\textwidth}
 \begin{lstlisting}[
   language=Scala,
   label=lst:fact-scala,
-  caption={The factorial with specifications.}
+  caption={The factorial with specifications in Scala.}
 ]
 def fact(x: Int): Int = {
   require(x >= 0 && x < 10)
@@ -556,11 +560,11 @@ def fact(x: Int): Int = {
 \begin{lstlisting}[
   language=Rust,
   label=lst:fact-rust,
-  caption={The factorial in Rust.}
+  caption={The same factorial in Rust.}
 ]
 #[pre(x >= 0 && x < 10)]
 #[post(ret >= 0)]
-pub fn fact(x: i32) -> i32 {
+fn fact(x: i32) -> i32 {
   if x <= 0 { 1 }
   else { fact(x - 1) * x }
 }
@@ -574,13 +578,13 @@ specifications are added as function attributes rather than inline statements
 and that postconditions in Rust automatically have a \lstinline!ret! variable in
 scope that represents the return value. Otherwise, the two are very similar
 which, for simplicity, allows to introduce Stainless in the following sections
-only with Rust code examples. In both languages, one can in addition to
-specifications put assertions into function bodies, in Rust with the
+only with Rust code examples. In both languages, one can put assertions into
+function bodies in addition to specifications, in Rust with the
 \lstinline"assert!" macro. Stainless also proves that body assertions hold.
 
 Up until now, this section has been imprecise about Stainless's input language.
 Stainless does not support the full Scala language but rather a functional
-subset called \emph{PureScala}. Expressions in specifications need to be in
+subset called \emph{PureScala}. The expressions in specifications need to be in
 PureScala. However, Stainless was extended to support some form of mutability
 \cite{regb} which this project relies on. Chapter \ref{translation} will go into
 details about mutability.
@@ -591,14 +595,17 @@ specifications. The \lstinline!implies! function in line 26 is a library helper
 method provided by the \lstinline!stainless! crate. Body assertions are used in
 the main function to ensure that the code behaves as expected.
 
-Another library helper is the \lstinline!old! function. This is a very useful
-construct that can be used in postconditions to refer to the value a mutable
-parameter, usually a mutable reference, had before the function. For example in
-the following snippet, the \lstinline!old(i)! will return the value of
-\lstinline!i! before the function and  \lstinline!i! will have the value after
-the function.
+Another library helper is the \lstinline!old! function. This is very useful in
+postconditions to refer to the value of a mutable reference before the function
+was executed. For example in \autoref{lst:old}, the \lstinline!old(i)! will
+return the value of \lstinline!i! before the function and  \lstinline!i! will
+have the value after the function.
 
-\begin{lstlisting}[language=Rust, caption={The \lstinline!old! helper for postconditions with mutable parameters.}]
+\begin{lstlisting}[
+  language=Rust,
+  caption={The \lstinline!old! helper for postconditions with mutable parameters.},
+  label=lst:old,
+]
 #[post(*i == *old(i) + 1)]
 fn change_int(i: &mut i32) {
   *i = *i + 1;
@@ -608,12 +615,12 @@ fn change_int(i: &mut i32) {
 \subsection{Algebraic Properties}
 \label{laws-intro}
 
-Traits are a very useful way of specifying mandatory interfaces in both Scala
-and Rust. Common properties like equality and ordering are often modelled with
-traits, but while the languages can enforce implementors of traits to provide
-all abstract methods, they cannot enforce higher-level contracts. For example,
-for an equality trait with \texttt{eq} one would assume that all implementations
-are reflexive, i.e. $\forall x: x~\mathtt{eq}~x$. However, the compilers cannot
+Traits are the way to specify mandatory interfaces in both Scala and Rust.
+Common properties like equality and ordering are often modelled with traits.
+While the languages can enforce implementors of traits to provide all abstract
+methods, they cannot enforce higher-level contracts. For example, for an
+equality trait with \texttt{eq} one would assume that all implementations are
+reflexive, i.e. $\forall x: x~\mathtt{eq}~x$. However, both compilers cannot
 guarantee that.
 
 \begin{lstlisting}[
@@ -642,12 +649,12 @@ trait Rectangle {
 \end{lstlisting}
 
 
-As a solution, in Stainless one can specify contracts on traits. First, trait
-methods can have all specification attributes like regular functions. These will
-be checked to hold for all implementations. Furthermore, one can attach
-\emph{laws} to traits i.e.~algebraic properties the contract implementors need
-to fulfil \cite[section "Specifying Algebraic Properties"]{stainless-doc}.
-Stainless proves the correctness of the laws for each implementation of the
+As a solution, one can specify contracts on traits in Stainless. First, trait
+methods can have specification attributes like regular functions. These will be
+proven to hold for all implementations. Furthermore, one can attach \emph{laws}
+to traits, i.e.~algebraic properties that implementors need to
+fulfil~\cite[section "Specifying Algebraic Properties"]{stainless-doc}.
+Stainless also proves the correctness of the laws for each implementation of the
 trait.
 
 The last addition to the running example, is a law on the \lstinline!Id! trait
@@ -658,18 +665,17 @@ hard-codes an id for strings, holds that contract (lines 7-8 in
 \cite{liskov}. The trait defines four methods. Two of them have regular
 postconditions and the laws state that a change to the width should not change
 the height and vice versa. Clearly, the implementation in \autoref{lst:liskov2}
-holds these properties.
-
-Without the laws, it would be tempting to add a square implementation, see
-\autoref{lst:liskov3}. However, the square changes both dimensions at once --
-violating the laws. Stainless detects this, the square implementation fails
-verification, and thereby a possible bug is caught.
+conforms to these properties. Without the laws, it would be tempting to add a
+square implementation, as in \autoref{lst:liskov3}. However, the square changes
+both dimensions at once -- violating the laws. Stainless detects this, the
+square implementation fails verification, and thereby a possible bug is caught.
+\newpage
 
 \begin{figure}[hbt]
 \noindent \begin{minipage}[t]{.49\textwidth}
 \begin{lstlisting}[
   language=Rust,
-  caption={Example implementation of the trait.},
+  caption={Example implementation of the rectangle trait.},
   label={lst:liskov2},
   basicstyle=\footnotesize\ttfamily,
 ]
@@ -714,20 +720,18 @@ impl Rectangle for Square {
 \end{minipage}
 \end{figure}
 
-\hfill \break \noindent This concludes this chapter's introduction on Rust and
-Stainless. All Rust features needed for writing the motivating example
-(\autoref{running-example}) were introduced as well as the verification features
-of Rust-Stainless, at the completion of this project. The goal of the remaining
-chapters is now to extend Rust-Stainless with all the features required to
-verify the example. Most of these features were added in the course of this
-thesis project. In particular, \autoref{translation} will explain how mutability
-and mutable references are translated to Scala. Chapter \ref{implementation}
-distinguishes between existing and added features, then gives some
-implementation details.
+\hfill \break \noindent This concludes the introduction to Rust and Stainless.
+All Rust features needed for the motivating example (\autoref{running-example})
+were introduced, as were the verification features of Rust-Stainless.  Most of
+these features were only added in the course of this thesis project. The goal of
+the remaining chapters is now to extend Rust-Stainless with all these features.
+In particular, \autoref{translation} will explain how mutability and mutable
+references are translated to Scala. Chapter \ref{implementation} distinguishes
+between existing and added features, then gives some implementation details.
 
 \lstinputlisting[
   float,
   language=Rust,
-  caption={The full running example for \autoref{background}. It showcases most of the newly introduced features of Rust-Stainless.},
+  caption={The full running example for \autoref{background} showcasing most of the newly introduced features of Rust-Stainless.},
   label={running-example}
 ]{code/thesis_example.rs}
