@@ -19,72 +19,68 @@ the current implementation.
 
 \subsection{Rust Compiler}
 
-To translate Rust without doing too much busy-work, Rust-Stainless leverages the
-heavy lifting done by the Rust compiler \cite{rustc-guide}, \lstinline!rustc!.
-The compiler takes Rust source code as input and produces an executable binary.
-This process involves multiple phases that each transform or \emph{lower} the
-higher-level input source into a lower-level representation. The following
-paragraphs give a brief overview of the compilation process and the leftmost
-column of \autoref{fig:flowchart} illustrates the different phases.
+To translate Rust without too much busy-work, Rust-Stainless leverages the heavy
+lifting done by the Rust compiler \cite{rustc-guide}, \lstinline!rustc!. The
+compiler takes Rust source code as input and produces an executable binary. This
+process involves multiple phases that each transform or \emph{lower} a
+higher-level input to a lower-level representation. The following paragraphs
+give a brief overview of the compilation process and the leftmost column of
+\autoref{fig:flowchart} illustrates the different phases.
 
 The Rust compiler always operates on a single crate. That is, each crate is
 compiled separately and only afterwards linked to potential other crates. This
-means that the \emph{intermediate representations} described hereafter are only
-available for items of the currently compiled crate with some exceptions for
-metadata of public items, like function signatures that need to be accessible
-across crates.
+means that the \emph{intermediate representations (IRs)} described hereafter are
+only available for items of the currently compiled crate with some exceptions
+for metadata of public items, like function signatures that need to be
+accessible across crates.
 
-The first two compilation phases are concerned with transforming the input text
-into a token stream -- lexing -- and then into an \emph{abstract syntax tree
-(AST)} -- parsing. First syntactical validations, name resolutions and macro
-expansion are performed on the AST. While the AST is already a representation of
-the program, it still maps directly to the source code and can be seen as a data
-structure representation of the source text.
+The first two compilation phases transform the input text into a token stream --
+lexing -- and then into an \emph{abstract syntax tree (AST)} -- parsing. First
+syntactical validations, name resolutions and the macro expansion are performed
+on the AST. While the AST is already a representation of the program, it still
+maps directly to the source code and can be seen as a data structure
+representation of the source text.
 
-The first intermediate representation (IR) constructed from the AST is the
-\emph{high-level IR (HIR)}. It contains much less high-level features than
-surface Rust, because many have been desugared. The HIR is used to type check
-the program. In that process an even lower-level IR is created, the \emph{typed
-HIR (THIR)}. Still in the form of a syntax tree, the THIR contains fully
-explicit type information.
+The first intermediate representation constructed from the AST is the
+\emph{high-level IR (HIR)}. It contains less high-level features than surface
+Rust, because many have been desugared. The HIR is used to type check the
+program. In that process another IR is created, the \emph{typed HIR (THIR)}.
+Still in the form of a syntax tree, the THIR contains fully explicit type
+information.
 
 The THIR is used to construct the \emph{mid-level IR (MIR)} that has the form of
 a \emph{control-flow graph (CFG)}. Such a graph is a diagram that consists of
 \emph{basic blocks} of code and arrows between them that represent all the
 possible paths the control flow can take. The MIR still has generic types but
-because it is a CFG it is much more convenient for processes like liveness
+because it is a CFG, it is much more convenient for processes like liveness
 analysis, optimisations, and most importantly, the borrow check of the program.
 
-The last compilation phase is \emph{code generation}. The generic code is
-\emph{monomorphised} i.e.~copied and specialised for each type it is
-instantiated with. Then, a special IR for the \emph{LLVM} framework \cite{llvm}
-is generated. LLVM is a general purpose compiler backend, also used by
-C\texttt{++}. It will perform much more performance optimisations and finally
-generate the assembly code.
+The last compilation phase is \emph{code generation}. Generic code is
+\emph{monomorphised}, i.e.~copied and specialised for each type it is
+instantiated with. Then, a special IR for \emph{LLVM} \cite{llvm} is generated.
+LLVM is a general purpose compiler backend, also used by C\texttt{++}. It will
+perform much more performance optimisations and finally generate the assembly
+code for the target architecture.
 
 \section{System Overview}
 
 \subsection{Design}
 
 Our tool consists of multiple components, most of which are implemented as their
-own crate. Each component modularly fulfils a step in the overarching goal of
-translating Rust for Stainless.
-
-Rust-Stainless has itself a frontend and a backend.
-\lstinline!stainless_frontend! is the frontend crate and contains two
-executables that start the tool and deal with command line arguments. The
-subcommand for the Cargo build tool \passthrough{\lstinline!cargo stainless!} is
-the most common way of running Rust-Stainless. Internally, it calls the second
-stand-alone binary \lstinline!rustc_to_stainless! which runs the actual
-frontend.
+own crate. Rust-Stainless has itself a frontend and a backend.
+\lstinline!stainless_frontend! contains two executables that start the tool and
+deal with command line arguments. The subcommand for the Cargo build tool,
+\passthrough{\lstinline!cargo stainless!}, is the most common way of running
+Rust-Stainless. Internally, it calls the second stand-alone binary,
+\lstinline!rustc_to_stainless!, which runs the actual frontend.
 
 \begin{figure}
   \begin{center}
   \input{img/flowchart}
   \caption{
-    The Rust-Stainless pipeline depicted with all intermediate representations
-    of the user program. The left column on its own shows the normal compilation
-    pipeline of Rust's compiler. The grey parts are not executed in Rust-Stainless.
+    The Rust-Stainless pipeline represented by all intermediate representations
+    of the program. The left column on its own shows the normal compilation
+    pipeline of Rust. The grey parts are not executed in Rust-Stainless.
   }
   \label{fig:flowchart}
   \end{center}
@@ -106,24 +102,25 @@ Finally, \lstinline!stainless_backend! is responsible for spawning and
 interacting with a JVM subprocess of the Stainless executable. The executable
 consist of the normal Stainless verification pipeline but with a custom
 entry-point called \lstinline!Noxt-Frontend!. ``Noxt'' stands for \emph{no
-extraction} which means it takes as input serialised trees instead of extracting
-trees from the Scala compiler.
+extraction}; it takes serialised trees as input instead of extracting trees from
+the Scala compiler.
 
 \subsection{Pipeline}
 \label{sec:pipeline}
 
 Having introduced the system's components, the next section traces the path of
 an exemplary program through the pipeline in more detail. The path can also be
-followed on \autoref{fig:flowchart}. Gaining insight into the pipeline will
-increase understanding of the design choices made.
+followed in \autoref{fig:flowchart}. Gaining insight into the pipeline will
+increase the understanding of the design choices made.
 
 In \autoref{lst:example}, the Stainless library is imported such that the
-postcondition specification attribute \lstinline!#[post(...)]! is available.
-The attribute is implemented as a procedural macro\footnote{Procedural macros
-invoke user-provided code at compilation-time and thus allow for more complex
+postcondition specification attribute \lstinline!#[post(...)]! is available. The
+attribute is implemented as a procedural macro\footnote{Procedural macros invoke
+user-provided code at compilation-time and thus allow for more complex
 transformations of the AST inside a macro \cite[section ``Procedural
 Macros'']{rustref}.} and will be expanded to a closure inside the function
-(\autoref{lst:example2}).
+(\autoref{lst:example2}). More details on the specification encoding follow in
+\autoref{spec-encoding}.
 
 \noindent\begin{minipage}[b]{.43\textwidth}
 \begin{lstlisting}[
@@ -160,33 +157,28 @@ The \lstinline!stainless_frontend! invokes the compiler via the
 \lstinline!rustc_driver! library and lets it run until all analyses are
 completed and have passed, otherwise the tool fails with the error returned by
 \lstinline!rustc!. In particular, the compiler does the lexing, parsing, macro
-expansion and IR construction. Secondly, the compiler type and borrow checks the
-program. This is how the strong assumption from \autoref{correctness-claim} is
-achieved. Once analysis is complete, the extraction module is invoked on the
-HIR. As the HIR is only ever constructed for the current crate, Rust-Stainless
-also only translates the current crate. This limitation of our tool is discussed
-in \autoref{impl-limitations}.
+expansion, and IR construction. Secondly, it type and borrow checks the program.
+This is how the strong assumption from \autoref{correctness-claim} is achieved.
+Once analysis is complete, the extraction module is invoked on the HIR. As the
+HIR is only ever constructed for the current crate, Rust-Stainless also only
+translates the current crate. This limitation of the tool is discussed in
+\autoref{impl-limitations}.
 
 The extraction traverses all the \emph{items} of the crate, that is, top-level
-functions, structs, enums, \lstinline!impl! blocks and their methods, as well as
-traits. It directly constructs Stainless definitions for ADTs. For function
-bodies, the extraction uses the THIR, which is guaranteed to exist as the type
+functions, structs, enums, \lstinline!impl! blocks with methods, as well as
+traits. For ADTs, the extraction directly constructs Stainless definitions. For
+function bodies, it uses the THIR, which is guaranteed to exist because the type
 check passed. For illustration, \autoref{apx:thir-example} shows the THIR for
 the body of the function in \autoref{lst:example}.
 
-If all the THIR can be translated to Stainless AST without errors, i.e.~there
-are no unsupported features in the program, the AST is serialised to a custom
-binary format understood by Stainless. At this point, the program is represented
-by a list of functions, a list of ADTs and a list of classes
-(\autoref{lst:stainless-trees}).
-
 \begin{lstlisting}[
+  float=bht,
   language=Scala,
   label={lst:stainless-trees},
   caption={Extracted Stainless ADTs and functions, printed as code.}
 ]
 sealed case class A(_0: MutCell[Int])
-sealed case class MutCell[T @mutable]((value: T @mutable) @var)
+@synthetic sealed case class MutCell[T @mutable]((value: T @mutable) @var)
 
 @pure
 def f(a: A): A = {
@@ -196,15 +188,21 @@ def f(a: A): A = {
 }
 \end{lstlisting}
 
+If all the THIR bodies are translated to Stainless AST without errors,
+i.e.~there are no unsupported features in the program, the Stainless AST is
+serialised to a custom binary format understood by Stainless. At this point, the
+program is represented by a list of functions, a list of ADTs and a list of
+classes (\autoref{lst:stainless-trees}).
+
 If the user specified to export the AST, the binary format is simply written to
 a file. Otherwise, Rust-Stainless spawns a subprocess with the
-\lstinline!Noxt-Frontend! of Stainless and communicates with it via standard
-input and output. The subprocess reads the AST from a temporary file, performs
-some minor transformations and passes it to the verification pipeline. In the
-end, it reports back the results in JSON format such that Rust-Stainless can
-print them. In the case of the example, Stainless returns a problem: the
-multiplication on line 6 of \autoref{lst:stainless-trees} could overflow and
-therefore, the postcondition does not hold.
+\lstinline!Noxt-Frontend! of Stainless. The subprocess reads the binary format
+from a temporary file, performs some minor transformations and passes it to the
+verification pipeline. In the end, it reports back the results in JSON format
+via standard output such that Rust-Stainless can print them. In this example,
+Stainless returns a problem: the integer multiplication on line 6 of
+\autoref{lst:stainless-trees} could overflow and therefore, the postcondition
+does not hold.
 
 
 
@@ -246,25 +244,24 @@ pub fn fact(x: i32) -> i32 {
 
 \subsubsection{Existing Features}
 
-The initial fragment of the Rust language that the tool could extract and
-translate underlay strict restrictions: all code needed to be functional,
-immutable and the only allowed side-effect was \lstinline"panic!". References,
-heap allocation and with it recursive data types were impossible.
-
-Apart from that, a large part of the language was already supported, i.e.~most
-of the control-flow syntax, top-level functions with bodies, integer and boolean
+The fragment of Rust that the tool could extract and translate before this
+project underlay strict restrictions: all code needed to be functional,
+immutable, and the only allowed side-effect was \lstinline"panic!". References,
+heap allocation and with it recursive data types were unsupported. Apart from
+that, a large part of the language was already supported, i.e.~most of the
+control-flow syntax, top-level functions with bodies, integer and boolean
 expressions, string literals, pattern matching, ADTs, including tuples (without
 their pattern matching), and generics. Function specifications (specs), that is
 pre- and postconditions, could be stated with the \lstinline!pre! and
 \lstinline!post! attributes from the \lstinline!stainless! crate.
 
-The argument of a spec is a regular Rust expression that must have no effect on
-any variables of the function body. This posed a problem in the absence of
+The expression in a spec is a regular Rust expression that must have no effect
+on any variables of the function body. This posed a problem in the absence of
 references because oftentimes, the expression would consume a function parameter
-of moveable type multiple times which does not borrow check. As a work-around,
+of moveable type multiple times, which does not borrow check. As a work-around,
 one could add multiple specs of the same kind to a function, which is equivalent
 to multiple \lstinline!&&!-concatenated expressions. With all of the above, an
-example of supported and verified Rust code before this thesis project is
+example of supported and verified Rust code before this project is
 \autoref{lst:existing}.
 
 \subsubsection{New Features}
@@ -292,10 +289,10 @@ Support was added for:
 \item
   the \passthrough{\lstinline!return!} keyword at most points
   of a function (but not in \lstinline!if! conditions and guards),
-\item
-  \passthrough{\lstinline!usize!} and \passthrough{\lstinline!isize!}
-  integer types that have the bit-length of a pointer on the targeted
-  platform,
+
+\item \passthrough{\lstinline!usize!} and \passthrough{\lstinline!isize!}
+integer types that have the bit-length of a pointer on the target platform,
+
 \item
   \emph{struct update syntax}, a short-hand notation for creating a
   struct from an existing one,
@@ -309,7 +306,7 @@ let y: A = A { b: false, ..x }; // copies `x.b`, `x.c`
 multiple files, and finally,
 
 \item
-  panics in expression locations like an arm of a pattern match.
+  panics in expression locations like in a pattern match arm.
 \begin{lstlisting}[language=Rust, style=short]
 match Option::Some(123) {
   Option::Some(x) => x,
@@ -322,14 +319,14 @@ match Option::Some(123) {
 \paragraph{Immutable References and Heap Allocation}
 
 It is now possible to immutably borrow places, pass immutable references as
-values and allocate data on the heap with boxes. Although already presented in
+values, and allocate data on the heap with boxes. Although already presented in
 \autoref{translation}, the feature is mentioned here because it exists
 independently of the mutability translation.
 
-The above enables recursive data types like the typical, functional linked-list.
-Additionally, this eases the problem of borrow checking spec expressions because
-expressions that only read data, like most specifications do, can now take a
-reference instead of consuming the data.
+The above enables recursive data types like the typical, functional linked-list
+(see below). Additionally, it eases the problem of borrow checking spec
+expressions because expressions that only read data, like most specifications
+do, can now take a reference instead of consuming the data.
 
 \begin{lstlisting}[language=Rust, style=short]
 pub enum List<T> {
@@ -344,7 +341,7 @@ Recursive proofs in Stainless often require the programmer to state the
 induction variable with a \lstinline!decreases! call in Scala. This helps
 Stainless infer the so called \emph{measure} of the proof, with which it checks
 termination. The same feature was introduced in Rust as a new spec attribute
-which enables verification of recursive functions, like \autoref{lst:measure}.
+that enables verification of recursive functions, like \autoref{lst:measure}.
 
 \begin{lstlisting}[
   language=Rust,
@@ -364,18 +361,17 @@ fn size<T>(l: &List<T>) -> u32 {
 
 The \lstinline!stainless! crate is exposed to the programmer and contains
 helpers for specifying proofs and conditions. This is the equivalent of the
-\lstinline!stainless! package in Scala. In addition to the pre-, post- and
-measure attributes \lstinline!libstainless! now offers an immutable, infinite
-set \passthrough{\lstinline!stainless::Set<T>!} and map
-\passthrough{\lstinline!stainless::Map<K, V>!} implementation, see
-\autoref{lst:map-set}.
+\lstinline!stainless! package in Scala. In addition to the spec attributes,
+\lstinline!libstainless! now offers an immutable, infinite set
+\passthrough{\lstinline!stainless::Set<T>!} and map
+\passthrough{\lstinline!stainless::Map<K, V>!}, see \autoref{lst:map-set}.
 
-In extraction, both of these types are translated to Stainless's built-in
-infinite set and map type. Hence, they are backed and well-understood by
-Stainless which enables their proof utility. At runtime, the collections are
-backed by a runnable implementation that relies on the
+In extraction, both types are translated to Stainless's built-in infinite set
+and map type. Hence, they are backed and well-understood by Stainless which
+enables their proof utility. At runtime, the collections are backed by a
+runnable implementation that relies on the
 \lstinline!im!\footnote{\url{https://docs.rs/im/15.0.0/im/}} crate. The Rust
-interface of the collections was designed so as to resemble the
+interface of the collections was designed to resemble the
 \lstinline!std::collections::HashSet! and \lstinline!HashMap! as closely as
 possible.
 
@@ -407,9 +403,12 @@ Map<K, V> {
 }
 \end{lstlisting}
 
-Furthermore, the library provides a helper function
-\passthrough{\lstinline!implies!} that let's one write the logical
-implication $p \implies q \equiv \neg{p} \land q$ over boolean expressions.
+Furthermore, the library provides a helper function \lstinline!implies! that
+lets one write the logical implication $p \implies q \equiv \neg{p} \land q$
+over boolean expressions. The library also  offers the \lstinline!old! helper
+for postconditions that  returns the value a mutable variable had before the
+function.
+
 
 
 \paragraph{External and Synthesised ADTs}
@@ -438,10 +437,10 @@ example, the Rust compiler automatically and implicitly resolves which trait
 implementation to use for any given trait method call. If no suitable
 implementation is in scope, it signals an error.  A similar mechanism can be
 achieved in Scala by means of \emph{type classes}. The resolution of type class
-methods and instances is done through the \emph{implicits mechanism} of regular
+methods and instances is done through the \emph{implicits mechanism} in regular
 Scala. In Stainless however, this resolution has to be done manually. Therefore,
-Rust-Stainless not only extracts type classes from Rust traits, but it also
-infers which type class instance to call at each method call site.
+Rust-Stainless not only extracts type classes from Rust traits but also infers
+which type class instance to call at each method call site.
 
 Furthermore, our tool is capable of extracting laws and specifications of traits
 and their implementations, including specification attributes on abstract
@@ -470,28 +469,28 @@ like panic, standard library items like \lstinline!Box<T>! and
 identifiers (the \lstinline!DefId!s) of those items in order to recognise them
 in user code and trigger their specialised treatment. Unfortunately, these
 \lstinline!DefId!s are not stable across compilation runs and therefore, the
-detection needs to be done for each run of our tool.
+detection needs to happen at each run of the tool.
 
 Initially, only the \emph{definition paths} of the items to detect are
-known\footnote{For example: \lstinline!stainless::Set::<T>::new!.}, but that
+known,\footnote{For example: \lstinline!stainless::Set::<T>::new!.} but that
 does not suffice because \lstinline!rustc! does not have an API to query items
 from other crates \emph{by path} at the time of writing. All the lookups are
 done by \lstinline!DefId!. Therefore, the implementation has to enumerate all
 \lstinline!DefId!s from the \lstinline!std! and \lstinline!stainless! crate,
-compare them by name to the desired items and register them if needed. This
+compare them by name to the desired items, and register the required ones. This
 approach is clearly a brute-force work-around to the lack of by-path lookups in
 \lstinline!rustc!, but as the number of crates to take into consideration is
-fixed and low, the lookup time is constant still relatively low (cf.
+fixed and low, the lookup time is constant and relatively low (cf.
 \autoref{evaluation}).
 
-After standard item detection the tool can turn to user code. The main procedure
-of the extraction enumerates all top-level
+After standard item detection, the tool can turn to user code. The main
+procedure of the extraction enumerates all top-level
 items\footnote{\url{https://doc.rust-lang.org/nightly/nightly-rustc/rustc_hir/hir/enum.ItemKind.html}}
-of the crate. For enums and structs, the phase directly proceeds and translates
-the HIR definition to a Stainless ADT definition. Because enumeration order is
+of the crate. For enums and structs, the phase directly translates the HIR
+definition to a Stainless ADT definition. Because the enumeration order is
 undefined, all the top-level methods of the extraction follow the same idea:
 \lstinline!get_or_extract!. That is, the first time an item is visited, it is
-extracted and its definition is stored in state, then on subsequent encounters
+extracted and its definition is stored in state, then on subsequent encounters,
 the definition is simply retrieved.
 
 For functions, the extraction distinguishes between external, abstract, and
@@ -500,46 +499,44 @@ two are the same (with the first parameter of methods being the receiver).
 External and abstract functions are only extracted from the HIR as they only
 have a signature. For local functions, the body expression is queried from the
 THIR and extracted by the \lstinline!expr! module which takes a
-\lstinline!thir::Expr! and returns a \lstinline!st::Expr!, i.e. it contains all
-the translation details.
+\lstinline!rustc_mir_build::thir::Expr! and returns a
+\lstinline!stainless_data::ast::Expr!, i.e. it performs the translation.
 
 \subsubsection{Synthesis}
 
 Multiple translations in Rust-Stainless rely on the ability to synthesise
-expressions of certain ADT types that do not necessarily occur in user code. For
-example for the Stainless map the translation needs to construct options
-(\passthrough{\lstinline!Some(v)!}), in other locations it creates tuples,
+expressions of certain ADT types. For it creates tuple ADTs,
 e.g.~\passthrough{\lstinline!Tuple3(x, y, z)!}. Moreover, the fields of these
 ADTs also need to be available: \lstinline!tuple._2!.
 
 The synthesis module benefits from the \lstinline!get_or_extract! pattern. For
 example, when a translation needs the option type, it triggers its synthesis.
-But all synthesis methods internally implement a \lstinline!get_or_create!
+But, all synthesis methods internally implement a \lstinline!get_or_create!
 logic, i.e.~if the option type has already been either extracted from user code
 or synthesised by a former synthesis call, it is simply reused and the demanded
-ADT expression can be built with the existing definition. That way, ADTs are
-only synthesised on demand and there is no risk of synthesising a definition
-that has already been extracted.
+ADT expression is built with the existing definition. That way, ADTs are only
+synthesised on demand and there is no risk of synthesising a definition that has
+already been extracted.
 
 \subsubsection{Trait to Type Class Translation}
 \label{type-class-extraction}
 
-Rust-Stainless extracts traits and models them as type classes in Scala. This
-introduces a distinction between regular \lstinline!impl! blocks for which it
-suffices to extract the methods as top-level functions, and
+Rust-Stainless extracts Rust traits and models them as type classes in Scala.
+This introduces a distinction between regular \lstinline!impl! blocks for which
+it suffices to extract the methods as top-level functions, and
 \passthrough{\lstinline!impl TraitX for TypeA!} blocks that need to be extracted
 as type class implementations, i.e.~\emph{case classes} or \emph{case objects}.
 Traits themselves are extracted as \emph{abstract classes}, see
 \autoref{lst:clstranslation0}.
 
 Internally, Rust represents \passthrough{\lstinline!impl TraitX for TypeA!}
-blocks with a \emph{trait bound} on the block i.e.~\passthrough{\lstinline!Self:
+blocks with a trait bound on the block, i.e.~\passthrough{\lstinline!Self:
 TraitX!}, while Scala uses inheritance (\passthrough{\lstinline!extends!}).
 Furthermore, Rust traits are implemented on the implicit \lstinline!Self! type
 parameter, whereas Scala type classes always have at least one type parameter
 representing the type for which the class is implemented. Fortunately, the Rust
 compiler internally treats the \lstinline!Self! like a regular type parameter,
-hence internally it is already in the Scala form.
+hence it is internally already in the Scala form.
 
 \begin{figure}
 \begin{minipage}[t]{.49\textwidth}
@@ -585,7 +582,7 @@ abstract class Equals[Self] {
   def notEquals(
     self: T, x: T
   ): Boolean =
-    !this.equals(x, y)
+    !this.equals(self, x)
 }
 abstract class Other[Self, X, Y]
   { ... }
@@ -617,20 +614,20 @@ like \passthrough{\lstinline!abstract!} and
 \passthrough{\lstinline!methodOf(i32asEquals)!} to methods. The challenge of
 method calls is to resolve the receiver instance they are called on. For
 example, \autoref{lst:clstranslation} shows a call to \lstinline!this.equals!
-inside the type class. In Rust, the call is on the first parameter of the
+inside the type class. In Rust, the call happens on the first parameter of the
 function which is also the receiver. This is implicitly resolved by the
 compiler. In Stainless however, the call needs to happen on the type class
 instance and because our type class instances are only created in the
-extraction, the tool also has to resolve the receivers itself.
+extraction, the tool has to resolve the receivers itself.
 
-Instance resolution takes a triple of type class identifier, receiver type and
+Instance resolution takes a triple of type class identifier, receiver type, and
 type parameters, as well as the current surrounding class to resolve the
 receiver instance. For example, inside a type class, the \lstinline!this!
 instance is accessible, inside classes with evidence parameters, the evidence
-instances are available (e.g. \lstinline!ev0.eq(x, y)! in
+instances are available (e.g. \lstinline!ev0.equals(a, b)! in
 \lstinline!ListasEquals[T]!) and ground case objects are always in scope. As a
-last resort, instance resolution recursively checks whether it can create a new
-type class instance by providing it the required evidence arguments. This
+last resort, the instance resolution recursively checks whether it can create a
+new type class instance by providing it the required evidence arguments. This
 happens for example for the call on line 20 of \autoref{lst:clstranslation0}. It
 gets translated to a new instance of \lstinline!ListasEquals! that is created
 with the ground object \lstinline!i32asEquals!.
@@ -638,54 +635,52 @@ with the ground object \lstinline!i32asEquals!.
 
 
 \subsubsection{Spec Closure Encoding}
+\label{spec-encoding}
 
-Subsection \ref{sec:pipeline} already highlighted how specification attributes
-on functions are desugared by the procedural macro of \lstinline!libstainless!
-into an annotated closure nested inside the function (\autoref{lst:example2}).
-The extraction recognises the closures by their annotation and translates them
-to Scala's \lstinline!require!, \passthrough{\lstinline!ensures!} and
-\passthrough{\lstinline!decreases!}. Stainless later checks on its own that the
-specifications do not have any effects.
+\autoref{lst:example2} highlighted how specification attributes are desugared by
+the procedural macro of \lstinline!libstainless! into an annotated closure
+nested inside the function. The extraction recognises the closures by their
+annotation and translates them to Scala's \lstinline!require!,
+\passthrough{\lstinline!ensures!} and \passthrough{\lstinline!decreases!}.
+Stainless later checks that the specifications do not have any effects.
 
 The encoding with nested closures is the third spec encoding that I explored and
 implemented. It unifies the advantages of the two previous designs: it works for
-\emph{all} kinds of functions, be they top-level, implementation methods, and
-abstract or default trait methods; and it can use type parameters of the
-original function.
+\emph{all} kinds of functions, be they top-level, implementation methods, or
+abstract trait methods; and it can use type parameters of the original function.
 
 The first encoding desugared closures to nested functions in the original
 function. This served mainly to circumvent the borrow checker. The nested
-functions duplicated the parameters of their parent. In that way, new bindings
-were created without borrow interference with the actual parameters but with the
-same types and identifiers. The problem was that this encoding was neither able
-to use type parameters of the surrounding function, nor could it use the
-\passthrough{\lstinline!self!} parameter of methods because neither are
-available to inner functions in Rust.
+functions duplicated the parameters of their parent. That way, new bindings were
+created without borrow interference with the actual parameters but with the same
+types and identifiers. The problem was that this encoding was neither able to
+use type parameters of the surrounding function, nor the \lstinline!self!
+parameter of methods, because neither are available to inner functions in Rust.
 
 Therefore, the second encoding was created only for methods in \lstinline!impl!
-blocks. There, specs were desugared to sibling functions with a special name
-such that they could declare a \lstinline!self! parameter. However, there were
-now two different encodings in use simultaneously and even the sibling functions
-couldn't provide spec attributes on trait methods.
+blocks. Specs were desugared to sibling functions with a special name such that
+they could declare a \lstinline!self! parameter. However, there were now two
+different encodings in use simultaneously and even the sibling functions
+couldn't provide spec attributes on trait methods. Rust does not allow
+additional items other than the specified methods in trait implementations.
 
-Rust does not allow additional items other than the specified methods in trait
-implementations. To support specs on trait methods, the third encoding therefore
-uses nested closures. They can even use surrounding type parameters, at the cost
-of not being able to use the \lstinline!self! parameter. To solve that, the
-encoding replaces \lstinline!self! with a \passthrough{\lstinline!\_self: Self!}
-parameter on the closure. Later, extraction will again correlate this parameter
-with the correct receiver.
+To support specs on trait methods, the current encoding therefore uses nested
+closures. Closures can use surrounding type parameters, at the cost of not
+having a \lstinline!self! parameter. To solve that, the encoding replaces
+\lstinline!self! with a \passthrough{\lstinline!\_self: Self!} parameter on the
+closure. Later, the extraction will again substitute this parameter with the
+correct receiver.
 
 Finally, abstract trait methods do not have a body in which one can nest a
 closure. A simple solution is to add a body with the spec closure and an
 \lstinline"unimplemented!" panic. Yet, that makes the method a default method
 which prevents the compiler from enforcing its implementation by all
-implementors. That  was too much of a sacrifice and the solution was to use
-conditional compilation. The spec closures are desugared with a
-\lstinline!#[cfg(stainless)]! attribute that makes them vanish in normal
-compilation, hence, the compiler enforces implementation, but keeps them when
-the compiler is run with the \lstinline!stainless! flag which happens at
-verification.
+implementors of the trait. The solution to that last problem is conditional
+compilation. The inserted bodies are annotated with
+\lstinline!#[cfg(stainless)]! which makes them vanish in normal compilation,
+hence, the compiler enforces that the methods are implemented, but the bodies
+are kept when the compiler is run with the \lstinline!stainless! flag, which
+happens at verification.
 
 
 
@@ -704,7 +699,7 @@ User-annotated reference lifetimes are another example. Although, the borrow
 checking assumption enables the translation to ignore exact lifetimes, the tool
 currently does not extract explicit lifetimes. Further missing but less complex
 to add features are supertraits, i.e. type class inheritance in Scala, top-level
-constants, and invariants on ADTs, known in Stainless.
+constants, and Stainless invariants on ADTs.
 
 For closures, most of the infrastructure is already in place as they are
 represented like functions in the compiler. There are some difficulties
@@ -713,26 +708,26 @@ includes moving variables from the surrounding scope into the closure. This
 becomes difficult to manage for Stainless if these variables are mutable
 \cite[section 3.4.3]{regb}. The second problem arises with higher-order
 functions that take closures as parameters. In Rust, the function parameter type
-for a closure must be a type parameter with a trait bound like
-\passthrough{\lstinline!F: Fn(i32) -> i32!} because the exact shape of the
+for a closure type must be a type parameter with a trait bound like
+\passthrough{\lstinline!F: Fn(i32) -> i32!}, because the exact shape of the
 closure is not clear in advance. This polymorphism is harder to translate than
-directly specified lambda types, like in Scala \passthrough{\lstinline!Int =>
+directly specified lambda types, like in Scala: \passthrough{\lstinline!Int =>
 Int!}.
 
-By sequences I mean vectors, arrays, iterators, but also loops. Implementing
+By sequences, I mean vectors, arrays, iterators, but also loops. Implementing
 loops and even arrays should be feasible as these are already supported in
 Stainless \cite[section ``Imperative'']{stainless-doc}. On the other hand,
 iterators and vectors are very difficult to translate because they are not
-inherent \emph{language} features but rather some of the most important but also
-complex items of the standard library.
+inherent \emph{language} features but rather important and complex items of the
+standard library.
 
 
 \paragraph{One Crate Limitation}
 
 For standard library items, Rust-Stainless runs into the limitation imposed by
 the one-crate-a-time compilation model of \lstinline!rustc!. The tool is
-currently not able to extract code of standard library items because they are
-not part of the user crate, hence no HIR is available. This is currently the
+currently unable to extract code of standard library items because they are not
+part of the user crate, hence, no HIR is available. This is currently the
 biggest \emph{engineering limitation} of Rust-Stainless. Various approaches
 could be explored to solve it:
 
@@ -742,26 +737,24 @@ could be explored to solve it:
 the tool could translate a crate, serialise the representation and read it again
 when working on the next crate. This way, the relevant items from the standard
 library could be extracted and later imported, when translating the user crate.
-
 The problem of that approach is that many of the widely used standard library
 items like vectors are implemented with very advanced features like unsafe Rust.
-Extracting code that complex is currently out of scope.
+Extracting code of that complexity is currently out of scope.
 
 \item The contrary approach would be to provide completely synthetic definitions
 of standard items. That is, the tool would detect items like vectors and
-synthesise some implementation for them, like it does for the Stainless set and
-map.
-
-While this approach would be technically feasible, it would be an unstable and
-labour-intensive endeavour because the synthetic shadow implementation would
-need to stay in sync with the standard library. Moreover, Rust's standard
-library is large and it would be difficult to  choose which features to provide.
+synthesise some implementation for them, like it currently does for the
+Stainless set and map. While this approach would be technically feasible, it
+would be an unstable and labour-intensive endeavour because the synthetic shadow
+implementation would need to stay in sync with the standard library. Moreover,
+Rust's standard library is large and it would be difficult to choose which
+features to support.
 
 \item The most promising way of dealing with crate-external items is to extract
-contracts for external items that emulate them. Indeed, this is the approach
-other tools take \cite{prusti, mirai}. The given contracts will be interpreted
-as correct and used to verify the user code. The library could also provide
-contracts for the most frequently used standard items, which is what
+contracts for them that emulate the items. Indeed, this is the approach other
+tools take \cite{prusti, mirai}. The given contracts will be assumed to be
+correct and used to verify the user code. The library could also provide
+contracts for the most frequently used standard items, which is what MIRAI
 \cite{mirai} does. Keeping such contracts up-to-date still requires less work
 than providing synthetic shadow implementations. The only disadvantage of this
 approach is that the user can state false contracts for external items, leading
@@ -774,20 +767,20 @@ to incorrect results.
 \subsubsection{Type Classes}
 
 Traits are omnipresent in Rust. For example, Rust does not have an equality
-operation on all types by default like Scala. Rather, comparison operators are
-only defined on primitive types in the language and for other types, for example
-the \lstinline!==! operator is desugared to a call to the trait method
-\lstinline!PartialEq::eq! of the standard library. Most types however provide a
+operation on all types by default, like Scala does. Rather, comparison operators
+are only defined in the language for primitive types. For other types, for
+example the \lstinline!==! operator is desugared to a call to the trait method
+\lstinline!PartialEq::eq! of the standard library. Most types then provide a
 derived implementation of \lstinline!PartialEq! that performs structural
-comparison.
+comparison. For other operators it works the same.
 
 On one hand, this shows how important our translation of traits to type classes
-is. On the other hand, it poses a problem for Stainless because in Scala
-structural equality exists on all types. To deal with trait methods, the
-frontend needs to extract the trait implementations of \lstinline!PartialEq!
-with its type class mechanism. This either forces the user to provide an
-implementation for equality, or it requires the solution of the crate-external
-items problem, discussed in the previous section.
+is. On the other hand, it poses a problem for Stainless because structural
+equality exists on all types in Scala. To deal with trait methods, the frontend
+needs to extract the trait implementations of \lstinline!PartialEq! with its
+type class mechanism. This either forces the user to provide an implementation
+for equality, or it requires the solution of the crate-external items problem,
+discussed in the previous section.
 
 The second problem with type classes is that they are expensive in verification
 with the current Stainless pipeline. Functions that rely on type class instances
@@ -808,7 +801,7 @@ translation can be tailored around the specific aliasing restrictions of the
 Stainless backend. This is by itself a limitation; if Stainless worked for the
 entire language, one could simply use the general translation. Nonetheless,
 thanks to the borrow checking guarantees, the translation can be adapted rather
-well to the restrictions but some limitations remain, as
+well to the restrictions although some limitations remain, as
 \autoref{trans-limitations} discusses.
 
 From an implementation point of view, the imperative phase of Stainless is not
@@ -817,7 +810,7 @@ Rust-Stainless targets that phase as a new frontend in unforeseen ways  and
 thereby found multiple bugs. Most of the bugs have already been
 solved.\footnote{For example an incorrect constant propagation:
 \url{https://github.com/epfl-lara/stainless/issues/1090}.} However, for code
-using mutability in complex ways it is still possible to find new bugs in the
+using mutability in complex ways, it is still possible to find new bugs in the
 backend.
 
 As discussed in the previous section, refinement lifting makes examples using
@@ -840,34 +833,34 @@ are very promising to target from Rust-Stainless because they resemble things
 that are already in the mutability translation. \lstinline!AnyHeapRef! is
 similar to mutable cells and it might be possible to infer the information
 needed for the read and write annotations from the mutability of the function
-parameters (which is explicitly stated in Rust).
+parameters (which is explicit in Rust).
 
 A radically different approach for dealing with mutability would be to extract
 the Rust program not from the THIR but from the lower-level MIR. The next
 subsection is dedicated to that discussion.
 
-\subsection{Design Limitations}
+\subsection{Design Limitation}
 \label{mir-thir}
 
-The current approach of using the THIR has many advantages. The THIR is well
-suited for translation to Stainless AST because it is still in the form of an
-AST but all the type information is explicit and implicit features like method
-calls and dereferences have been resolved or desugared. In that sense, the THIR
-is the representation closest to Stainless AST and errors, counter-examples, or
-insights coming from Stainless are easily mapped back and forth between the two.
-On the downside, the THIR still has many features that all need to be understood
-by our translation, which becomes more complex. More importantly, the THIR does
-not have any information about liveness, reference lifetimes, and borrowing
-because all these analyses are only performed later, on the MIR. This is the
-fundamental limitation of translating from the THIR.
+The most important design choice of Rust-Stainless is to use the THIR instead of
+the MIR. The THIR is well suited for translation to Stainless AST because it is
+still in the form of an AST but all the type information is explicit and
+implicit features, like method calls and dereferences, have been resolved or
+desugared. In that sense, the THIR is the closest representation to Stainless
+AST and errors, counter-examples, or insights coming from Stainless are easily
+mapped back and forth between the two. On the downside, the THIR still has many
+features that all need to be understood by our translation, which becomes more
+complex. More importantly, the THIR does not have any information about liveness
+and reference lifetimes because these analyses are only performed later, on the
+MIR. This is the fundamental limitation of translating from the THIR.
 
-The advantage of the MIR is that the representation is even more explicit, there
-are less features to translate, and lifetimes have been resolved. That means, it
-would be possible to manually propagate changes back to borrowed variables at
-the lifetime end of mutable borrows. On the other hand, the MIR is in CFG form
-and it should be challenging to transform that graph back to a syntax tree for
-Stainless AST. It is also nearly impossible to combine the THIR and the MIR
-because they do not use the same identifiers for variables.
+The advantage of the MIR would be that the representation is even more explicit,
+there are less features to translate, and lifetimes have been resolved. That
+means, it would be possible to manually propagate changes back to borrowed
+variables at the lifetime end of mutable borrows. On the other hand, the MIR is
+in CFG form and it would be challenging to transform that graph back to a syntax
+tree for Stainless AST. It would also be nearly impossible to combine the THIR
+and the MIR because they do not use the same identifiers for variables.
 
 \hfill \break \noindent With this chapter, the entire Rust-Stainless system has
 been introduced and explained. Design choices and accompanying limitations were

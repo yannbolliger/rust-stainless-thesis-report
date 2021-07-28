@@ -36,11 +36,11 @@ The actual translation is very fast, especially for the rather short examples
 that account for the majority of the test suite. It takes only 0.4~ms or about
 0.008~\% of the running time on average. By far the largest part of the running
 time of our tool is not spent in the frontend itself but rather in the JVM
-backend that performs verification. Verification time accounts for on average
-95~\% of the total time. The rest is made up of starting, serialising and
-reporting. This shows that translation time is inferior to verification time by
-multiple orders of magnitudes which is not surprising, given that verification
-is much more complex than translation.
+backend. Verification time accounts for on average 95~\% of the total time. The
+rest is made up of starting, serialising and reporting. This shows that
+translation time is inferior to verification time by multiple orders of
+magnitudes which is not surprising, given that verification is much more complex
+than translation.
 
 \input{measurements/measurements.tex}
 
@@ -60,14 +60,15 @@ used in the \texttt{tendermint-rs} repository.
 
 The first example is \autoref{lst:insertion-sort}, an implementation of
 \emph{insertion sort} on the already mentioned functional linked-list. The
-recursive data type is enabled by the support for boxes. As this example was
-translated from an equivalent Scala example in Stainless's test suite, it shows
-a functional way of writing Rust; there is no mutation in the entire example. In
-idiomatic Rust, one would probably use a vector instead of a linked-list.
+recursive data type is made possible by the support for boxes. This example was
+translated from an equivalent Scala example in Stainless's test suite, therefore
+it shows a functional way of writing Rust; there is no mutation in the entire
+example. In idiomatic Rust, one would probably use a vector instead of a
+linked-list.
 
 The example further showcases the use of implementation blocks and specs on
-methods. For proving termination of the recursive implementation it is also
-crucial to add the new \lstinline!measure! attributes. Also note that the
+methods. For proving termination of the recursive implementation it is crucial
+to add the new \lstinline!measure! attribute. Also note that the
 \lstinline!Option! type is the one of the standard library.
 
 \paragraph{Type Class}
@@ -76,18 +77,16 @@ The next example in \autoref{lst:type-class} is also completely immutable and
 demonstrates the use of a trait for equality (\lstinline!Equals!) with two
 implementations. Note that one would usually use the traits from the standard
 library (\lstinline!Eq! and \lstinline!PartialEq!) and let the macro derive
-implementations them. Here however, equality is implemented in the program
-because it serves as a good example for the contract one can add on a trait. The
-trait contains three laws corresponding to the three properties of the equality
-relation.
+implementations for them. Here however, equality is implemented in the program
+because it serves as a good example for contracts on traits. The trait contains
+three laws corresponding to the three properties of the equivalence relation.
 
 The implementation for \lstinline!i32! is trivial except that it needs to
 dereference the two operands. This is to force the compiler of using the
 primitive comparison operator instead of  \lstinline!PartialEq::eq!. The
 linked-list implementation (\autoref{lst:equals-list}) is a good example of a
-trait bound (\lstinline!T: Equals!) that will be translated to an evidence
-argument. The two type class method calls on line 5 will be translated with the
-correct receivers.
+trait bound (\lstinline!T: Equals!) and two type class method calls that will be
+resolved in the translation.
 
 \begin{lstlisting}[
   language=Rust,
@@ -109,11 +108,11 @@ impl<T: Equals> Equals for List<T> {
 Lastly, note that the three laws need to be reimplemented in the list
 implementation. This is due to Stainless not being able to recursively proof the
 properties without some guidance by the programmer. However, the same is
-necessary in an equivalent Scala example. Hence, this is not a limitation of the
+necessary in an equivalent Scala example. Thus, this is not a limitation of the
 Rust frontend but of Stainless itself. On the other hand, the law
 implementations show another construct that the frontend is able to translate:
-the static method calls like \lstinline!Self::law_transitive(xs, ys, zs)! are
-correctly translated to calls on the right receiver instances.
+static method calls like \lstinline!Self::law_transitive(xs, ys, zs)! are
+translated to calls on the correct type class instance.
 
 \paragraph{Local Mutability}
 
@@ -144,10 +143,12 @@ pub fn main() {
 
 \paragraph{Mutable References}
 
-The running example \autoref{running-example} from \autoref{background} is
+The running example (\autoref{running-example}) from \autoref{background} is
 equivalent to the most complicated mutability benchmark on the
-\texttt{mutable-cells} branch. In particular, it shows how a mutable reference
-is matched upon and then a sub-reference is returned. The sub-reference is later
+\texttt{mutable-cells}
+branch\footnote{\url{https://github.com/epfl-lara/rust-stainless/blob/mutable-cells/stainless_frontend/tests/pass/mut_ref_borrow_12.rs}}
+with the addition of a trait. In particular, it shows how a mutable reference is
+matched upon and then a sub-reference is returned. The sub-reference is later
 used to alter the container struct. In summary, the example requires support for
 mutable borrows, pattern matching on mutable references, passing mutable
 references as values, and struct mutation via references.
@@ -156,9 +157,9 @@ In the translation of \lstinline!get_mut_by_id!
 (\autoref{lst:mut-ref-translated}), one can observe how the optimisations of
 \autoref{optimisations} apply. The \lstinline!id! argument is not wrapped in a
 mutable cell because it is immutable. The pattern match binds the mutable cell
-\lstinline!v! inside the tuple ADT instead of its value, such that it can later
-be used to modify the original object. Furthermore, the evidence argument
-responsible for the trait method is added as parameter.
+object \lstinline!v! inside the tuple ADT instead of its value. Furthermore, the
+evidence argument responsible for the trait method, \lstinline!ev0.id! on line
+8, is added as parameter.
 
 \begin{lstlisting}[
   language=Scala,
@@ -186,63 +187,60 @@ def get_mut_by_id[K @mutable, V @mutable](
 \subsection{Peer-List Implementation}
 \label{peerlist}
 
-One of the main motivations of this thesis project was to verify some real-world
-code examples of Informal Systems. The \lstinline!PeerList! data structure
-seemed like the perfect benchmark because it had already some runtime checked
-invariants, defined by Romain Rüetschi. Thus, a primary driver of this thesis
-was  to verify a version of the structure that was as close to the original code
-as possible.
+A principal motivation of this thesis project was to verify real-world code
+examples of Informal Systems. The \lstinline!PeerList! data structure seemed
+like the perfect benchmark because it already had runtime-checked invariants
+defined by Romain Rüetschi. Thus, a primary driver of this thesis was to verify
+a version of the data structure that was as close to the original code as
+possible.
 
-Thanks to the mutability translation and especially the \emph{in-place update}
-feature, I achieved that goal adequately, found a problem in the original
-specification and was able to strengthen the postconditions of some methods.
-The verified version of the code is in \autoref{apx:peerlist} and by comparing
-with  the original one can see, that there are indeed no large
-changes.\footnote{The original version can be found here:
-\url{https://github.com/informalsystems/tendermint-rs/blob/d8e18c647cd8695d16610c4292b15ec6d1b45fbc/light-client/src/peer_list.rs}}
+Thanks to the mutability translation and especially the in-place updates, I
+achieved that goal adequately, found a problem in the original specification and
+was able to strengthen the postconditions of some methods. The verified version
+of the code is in \autoref{apx:peerlist} and by comparing it with the original
+code one can see that there are indeed no large changes.\footnote{The original
+version can be found here:
+\url{https://github.com/informalsystems/tendermint-rs/blob/d8e18c647cd8695d16610c4292b15ec6d1b45fbc/light-client/src/peer_list.rs}.}
 
 The peer-list is a data structure that keeps track of different nodes in a
 distributed system context. Each node has a current value, recorded in the
 \lstinline!values! map, and each node is either the primary node of the system,
-a trusted witness, a simple but working full-node or a considered as a faulty
+a trusted witness, a simple but working full-node, or considered as a faulty
 node. These states are recorded with sets in the struct and the
 \lstinline!invariant! method returns true if the sets are in a valid
-configuration. For example, they all  need to be disjoint as each node is in
-exactly one state. The two methods of interest are
+configuration. For example, they all  need to be disjoint as each node must be
+in exactly one state. The two methods of interest are
 \lstinline!replace_faulty_witness! and \lstinline!replace_faulty_primary! that
-both  change the states of some of the nodes.
+both change the state of some of the nodes.
 
 The only notable but crucial change from the original code is that instead of
-using the standard \lstinline!HashMap! and  \lstinline!HashSet!, the verified
-code uses two custom implementations, \lstinline!ListMap! and
-\lstinline!ListSet!. I implemented these two especially for the benchmark and
-they are in a separate module in the verified crate (\autoref{apx:listmap}). The
-need for list-backed  set and map implementations arose because some methods get
-an element from the collections with \lstinline!.iter().next()! in the original
-code. Neither does Rust-Stainless support iterators, nor do the map and set from
-the Stainless crate support element retrieval. Therefore, I created the
-list-backed collections and added a \lstinline!first! method.
-
-Ideally, the two list-collections should be in the Stainless crate as well and
-thus, be part of  the library and interface of Rust-Stainless. If that was the
-case, the original peer-list example would really only have to import the
-Stainless crate and change  the collection types to be verifiable.
-Unfortunately,  the one-crate-limitation (cf. \autoref{impl-limitations}) makes
-this currently impossible.
+the standard \lstinline!HashMap! and \lstinline!HashSet!, the verified code uses
+two custom implementations, \lstinline!ListMap! and \lstinline!ListSet!. I
+implemented these two specially for the benchmark. They are in a separate module
+in the verified crate (\autoref{apx:listmap}). The need for list-backed set and
+map implementations arose because some methods get an element from the
+collections with \lstinline!.iter().next()! in the original code. Neither does
+Rust-Stainless support iterators, nor do the map and set from Stainless support
+element retrieval. Therefore, I created the list-backed collections and added a
+\lstinline!first! method. Ideally, the two list-collections should be in the
+Stainless crate and be part of the library. If that was the case, the peer-list
+example would only have to import the Stainless crate and change  the collection
+types, to be verifiable. Unfortunately, the one-crate-limitation (cf.
+\autoref{impl-limitations}) currently forces us to have the collections in the
+user crate.
 
 Nonetheless, verifying the peer-list implementation with
 \passthrough{\lstinline!cargo stainless!} allowed me  to improve the
-specifications of the code. First, the precondition that the invariant must
-hold before the two methods was not set in the code. Furthermore, I could
-strengthen the postconditions of  both methods so as to also prove that the
-methods perform the correct changes. For example, \autoref{lst:postcondition}
-shows the postcondition of \lstinline!replace_faulty_primary!. If the method
-succeeds and returns an \lstinline!Ok! result, the \lstinline!self! not only has
-to satisfy the invariant but also that the primary given as argument  was
-actually put into the faulty nodes. This avoids that the method does nothing
-which would also uphold the invariant. Note also the use of the
-\lstinline!old(&self)! helper to use the values before the function in the
-specs.
+specifications of the code. First, the precondition that the invariant must hold
+before the two methods was not set in the code. Furthermore, I could strengthen
+the postconditions of  both methods so as to also prove that the methods perform
+the correct changes. For example, \autoref{lst:postcondition} shows the
+postcondition of \lstinline!replace_faulty_primary!. If the method succeeds and
+returns an \lstinline!Ok! result, the \lstinline!self! not only has to satisfy
+the invariant but the faulty primary given as argument also needs to be in the
+faulty nodes. This prevents the method from doing nothing which would also
+uphold the invariant. Note also the use of the \lstinline!old(&self)! helper to
+use the value of \lstinline!self! before the function.
 
 \begin{lstlisting}[
   language=Rust,
@@ -257,17 +255,17 @@ specs.
 ))]
 \end{lstlisting}
 
-An earlier version of the tool was also capable of verifying an immutable
-version  of another example from Informal Systems. The code stems from an
-\emph{inter-blockchain communication protocol (IBC)} handler implementation and
-was rewritte to be immutable and self-contained.\footnote{The PR with the
-example can be found here:
+The tool is also capable of verifying another example from Informal Systems. The
+code stems from an \emph{inter-blockchain communication protocol (IBC)} handler
+implementation and was rewritten to be immutable and self-contained because it
+was used on an earlier version of the tool. The current implementation still
+verifies the example.\footnote{The PR with the example can be found here:
 \url{https://github.com/informalsystems/ibc-rs/pull/759}.}
 
-\hfill \break \noindent With five different examples showcasing each their own
-set of language features, this chapter showed what Rust-Stainless can currently
-process. It became clear that no matter how complicated the translations the
-frontend performs are, the running time is dominated by the verification time of
-the backend. For an overview of the tool's limitations, see
-\autoref{impl-limitations}. The next chapter, summarises research  work in
+\hfill \break \noindent With five different examples showcasing each their set
+of language features, this chapter showed what Rust-Stainless can currently
+process. It became clear that no matter how complicated the translations in the
+frontend are, the running time is dominated by the verification time of the
+backend. For an overview of the tool's limitations, see
+\autoref{impl-limitations}. The next chapter summarises research  work in
 related areas like ownership systems and formal verification.
