@@ -33,14 +33,14 @@ background are in \autoref{related-work}.
 \subsection{Syntax Overview}
 
 \autoref{lst:first-ex} shows a simple Rust function that returns the square of
-the integer \lstinline!x!. Rust is statically typed, hence parameter types are
-annotated: \lstinline!i32! in this case, a signed 32-bit integer. Other integer
-types can be unsigned (\lstinline!u32!) or of other bit-lengths
+the integer \lstinline!x!. Rust is statically typed. Function parameter types
+are annotated: \lstinline!i32! in this case, a signed 32-bit integer. Other
+integer types can be unsigned (\lstinline!u32!) or of other bit-lengths
 (\lstinline!u128!). The return type of the function is indicated after the
 arrow, if omitted it defaults to \lstinline!()!, the unit type. Note also, that
 the single (and last) expression in the function block is implicitly returned.
 Alternatively, one may employ the explicit return statement to return a value
-from any point in a function, like on line 4 of \autoref{lst:let}. Statements
+from any point in a function, like on line 3 of \autoref{lst:let}. Statements
 are delimited with semi-colons and produce the unit type.
 
 \begin{lstlisting}[style=short, language=Rust, caption={A simple Rust function.}, label=lst:first-ex]
@@ -54,44 +54,22 @@ assigned value to it. Function parameters are also variables in
 Rust~\cite{rustref}. By default, variables are immutable, that is, the compiler
 rejects any attempt to reassign to an initialised variable. On the other hand,
 Rust accepts to redeclare and thereby \emph{shadow} a binding, which is what
-happens on line 7 of \autoref{lst:let}.
+happens on line 6 of \autoref{lst:let}.
 
 The compiler infers the type of most let-bindings, such that the type does not
 have to be annotated like for function parameters. In \autoref{lst:let}, all the
-types are inferred to be the standard integer type, \lstinline!i32!. This even
-works for bindings that shadow an earlier declaration of a different type.
+types are inferred to be the standard \lstinline!i32!. This even works for
+bindings that shadow an earlier declaration of a different type.
 
-\noindent\begin{minipage}[t]{.45\textwidth}
 \begin{lstlisting}[language=Rust, caption={A Rust function doing some arithmetics.}, label=lst:let]
 fn f(z: i32) -> i32 {
   let x = z * 10;
-  if x > 100 {
-    return z;
-  }
+  if x > 100 { return z; }
   let y = z * 100;
   let z = 3;
   x + y + z
 }
 \end{lstlisting}
-\end{minipage}\hfill
-\begin{minipage}[t]{.45\textwidth}
-\begin{lstlisting}[language=Rust, caption={Mutable variable bindings.}, label=lst:mut-ex]
-fn g(mut a: i32) -> i32 {
-  let mut b = 10;
-  a += b;
-  b = 100;
-  a * b
-}
-\end{lstlisting}
-\end{minipage}
-
-\subsubsection{Mutability}
-
-As an imperative language, Rust also offers mutable bindings. Mutable variables
-have to be explicitly declared with the \lstinline!mut! keyword. In general,
-Rust is very explicit about the distinction between mutable and immutable
-variables (and references). \autoref{lst:mut-ex} shows both a mutable function
-parameter and a mutable local variable.
 
 \subsubsection{Algebraic Data Types (ADTs)}
 
@@ -105,18 +83,16 @@ that are again in either unit, tuple or C-like form. \autoref{lst:option} shows
 an enumeration example from the standard library, the option type. It also shows
 how the type parameter \lstinline!T! is used to create a generic data type.
 
-\noindent\begin{minipage}[t]{.45\textwidth}
+\noindent\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[language=Rust, caption={All three forms of structs.}, label=lst:struct-ex]
 struct OnlyAMarker;
 struct A(i32, bool);
 struct B {
   field: u8
 }
-let a = A(0, true);
-let mut b = B { field: 2 };
 \end{lstlisting}
 \end{minipage}\hfill
-\begin{minipage}[t]{.45\textwidth}
+\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[
   language=Rust,
   caption={The standard option type as an example of a generic enumeration.},
@@ -131,25 +107,18 @@ let opt: Option<i32> =
 \end{lstlisting}
 \end{minipage}
 
-Fields are not considered variables in Rust, rather they are a part of their
-corresponding struct's variable~\cite{rustref}. Hence, fields inherit properties
-like mutability from their struct, e.g. the only mutable field in
-\autoref{lst:struct-ex} is \lstinline!b.field! because \lstinline!b! is mutable.
-Thus, mutability is not part of the field type but depends on the binding of the
-corresponding struct's instance.
-
 Rust also has anonymous tuples. These behave exactly like tuple structs but
 don't need to be declared beforehand. One can simply instantiate tuples of any
 non-negative number of types (cf. \autoref{lst:tuples}). This is used in the
 first part of the running example (\autoref{lst:container}) that is a generic
 container struct with an option of a tuple as field.
 
-\noindent\begin{minipage}[t]{.45\textwidth}
+\noindent\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[language=Rust, style=short, caption={A 2-tuple in Rust.}, label=lst:tuples]
 let t: (i32, bool) = (123, true);
 \end{lstlisting}
 \end{minipage}\hfill
-\begin{minipage}[t]{.45\textwidth}
+\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[language=Rust, style=short, label={lst:container}, caption={The struct for the running example.}]
 struct Container<K, V> {
   pair: Option<(K, V)>,
@@ -168,13 +137,53 @@ value matches a certain pattern, one can use the
 regular pattern match which returns true if the given pattern matches and false
 otherwise.
 
-\begin{lstlisting}[language=Rust, caption={Pattern matching on a struct.}, label=lst:match]
+\begin{lstlisting}[
+  float,
+  language=Rust,
+  caption={Pattern matching on a struct.},
+  label=lst:match
+]
 let c = Container { pair: None };
 match c {
   Container { pair: Some((k, v)) } if k == 123 => Some(v),
   _ => None,
 }
 \end{lstlisting}
+
+\subsubsection{Mutability}
+
+As an imperative language, Rust also offers mutable bindings. Mutable variables
+have to be explicitly declared with the \lstinline!mut! keyword. In general,
+Rust is very explicit about the distinction between mutable and immutable
+variables (and references). \autoref{lst:mut-ex} shows both a mutable function
+parameter and a mutable local variable.
+
+\noindent\begin{minipage}[t]{.48\textwidth}
+\begin{lstlisting}[language=Rust, caption={Mutable variable bindings.}, label=lst:mut-ex]
+fn g(mut a: i32) -> i32 {
+  let mut b = 10;
+  a += b;
+  b = 100;
+  a * b
+}
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.48\textwidth}
+\begin{lstlisting}[
+  language=Rust,
+  caption={Mutable variable bindings.},
+  label={lst:mut-ex-2},
+]
+let mut b = B { field: 2 };
+b.field = 123;
+\end{lstlisting}
+\end{minipage}
+
+Fields are not variables in Rust but rather a part of their corresponding
+struct's variable~\cite{rustref}. Therefore, they inherit the mutability of
+their struct. For example, \lstinline!b.field! in \autoref{lst:mut-ex-2} is
+mutable because \lstinline!b! is mutable. Thus, mutability is not
+part of the field type but depends on the binding of the struct.
 
 \subsubsection{Implementations and Traits}
 
@@ -186,6 +195,19 @@ methods only for certain instantiations of the  type parameters is also
 possible. For example, the first line of the block could be
 \passthrough{\lstinline!impl Container<bool, i32>!}, to only add methods to
 containers of boolean keys and integer values.
+
+\begin{lstlisting}[
+  float=hbt,
+  language=Rust,
+  caption={Methods for the running example.},
+  label=lst:impl1
+]
+impl<K, V> Container<K, V> {
+  pub fn new() -> Self { Container { pair: None } }
+  pub fn is_empty(&self) -> bool { matches!(self.pair, None) }
+  pub fn insert(&mut self, k: K, v: V) { self.pair = Some((k, v)) }
+}
+\end{lstlisting}
 
 The \lstinline!Self! in the first return type stands for the type this block is
 adding methods to, in the example that is \lstinline!Container<K, V>!. The
@@ -200,14 +222,6 @@ equivalent to \lstinline!is_empty(&c)!. The same happens for
 \autoref{references}.} Finally, it is also possible to consume the instance by
 specifying \lstinline!self! as receiver.
 
-\begin{lstlisting}[language=Rust, caption={Methods for the running example.}, label=lst:impl1]
-impl<K, V> Container<K, V> {
-  pub fn new() -> Self { Container { pair: None } }
-  pub fn is_empty(&self) -> bool { matches!(self.pair, None) }
-  pub fn insert(&mut self, k: K, v: V) { self.pair = Some((k, v)) }
-}
-\end{lstlisting}
-
 Traits are used to specify interfaces in Rust. A trait \lstinline!X! can be
 implemented for a data type \lstinline!A! with an \passthrough{\lstinline!impl X
 for A!} block, providing implementations for the abstract methods of the trait,
@@ -218,14 +232,14 @@ admissible to the function (or in other cases the block) needs to implement the
 \lstinline!Id! trait, i.e.~\passthrough{\lstinline!impl Id for K!} needs to be
 available.
 
-\noindent\begin{minipage}[t]{.45\textwidth}
+\noindent\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[language=Rust, style=short, caption={Rust trait with one abstract method.}, label=lst:trait-impl1]
 trait Id {
   fn id(&self) -> usize;
 }
 \end{lstlisting}
 \end{minipage}\hfill
-\begin{minipage}[t]{.45\textwidth}
+\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[
   language=Rust,
   style=short,
@@ -306,7 +320,7 @@ another field of the same struct is still available. This is called a
 \emph{partial move}. The struct itself also becomes inaccessible as soon as one
 of its fields is moved.
 
-\noindent\begin{minipage}[t]{.47\textwidth}
+\noindent\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[
   language=Rust,
   label=lst:move,
@@ -319,7 +333,7 @@ let b = a;
 // `a` can never be used again
 \end{lstlisting}
 \end{minipage}\hfill
-\begin{minipage}[t]{.47\textwidth}
+\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[
   language=Rust,
   label=lst:copy,
@@ -335,19 +349,19 @@ assert!(a == 123 && b == 124)
 
 \paragraph{Move vs Copy}
 
-Moveable types have \emph{move semantics}. One departure from that are copyable
-types. Types that implement the \lstinline!std::marker::Copy! trait get
-\emph{copy semantics}. The compiler automatically implements that trait for
-primitive types\footnote{Primitive types in Rust are booleans, characters,
-\lstinline!str!, numeric types and the panic type \texttt{!}~\cite{rustref}.}
-(cf. \autoref{lst:copy}) but also for shared references and tuples of copyable
-types \cite[section "Special types and traits"]{rustref}. When copyable data is
-used, it's implicitly copied and the original binding stays valid and
-independent. In contrast to shared references that are copyable, mutable
-references have move semantics because they need to stay unique, as will become
-clear shortly. Non-copyable types can still be explicitly copied by implementing
-the \lstinline!std::clone::Clone! trait and calling the \lstinline!clone!
-method.
+The semantics of moveable types are called \emph{move semantics}. One departure
+from that are copyable types. Types that implement the
+\lstinline!std::marker::Copy! trait get \emph{copy semantics}. The compiler
+automatically implements that trait for primitive types\footnote{Primitive types
+in Rust are booleans, characters, \lstinline!str!, numeric types and the panic
+type \texttt{!}~\cite{rustref}.} (cf. \autoref{lst:copy}) but also for shared
+references and tuples of copyable types \cite[section "Special types and
+traits"]{rustref}. When copyable data is used, it's implicitly copied bit-by-bit
+by the compiler and the original binding stays valid and independent. In
+contrast to shared references that are copyable, mutable references have move
+semantics because they need to stay unique, as will become clear shortly.
+Non-copyable types can still be explicitly copied by implementing the
+\lstinline!std::clone::Clone! trait and calling the \lstinline!clone! method.
 
 \paragraph{Heap Allocation}
 
@@ -439,7 +453,7 @@ example \lstinline!insert! in \autoref{running-example}. Such in-place updates
 are simple, if the method just needs to change some struct field, like in the
 example.
 
-However, the method often needs to temporarily consume some part of the
+However, the method often needs to temporarily consume some part of
 \lstinline!self!, in order to change it. Imagine a method on \lstinline!Option!
 that swaps a new value into a \lstinline!Some! and returns the old option value.
 The naive approach to that method in \autoref{lst:swap-naive} does not compile
@@ -526,7 +540,7 @@ programmers add contracts or specifications to functions and data structures.
 Stainless transforms the input program in multiple phases to a purely functional
 language understood by its backend \emph{Inox} \cite{inox} which then tries to
 prove or disprove that the contracts hold by using Z3 \cite{z3} or a similar
-solver.
+solver like CVC4~\cite{cvc4}.
 
 \subsection{Specifications}
 
@@ -595,11 +609,12 @@ specifications. The \lstinline!implies! function in line 26 is a library helper
 method provided by the \lstinline!stainless! crate. Body assertions are used in
 the main function to ensure that the code behaves as expected.
 
-Another library helper is the \lstinline!old! function. This is very useful in
-postconditions to refer to the value of a mutable reference before the function
-was executed. For example in \autoref{lst:old}, the \lstinline!old(i)! will
-return the value of \lstinline!i! before the function and  \lstinline!i! will
-have the value after the function.
+Another library helper is the \lstinline!old! function. This is very useful to
+refer to the value of a mutable reference before the function was executed in
+postconditions. For example in the postcondition of \autoref{lst:old}, the
+\lstinline!old(i)! will return the value of \lstinline!i! before the function
+and \lstinline!i! will have the value after the function. The helper can only be
+used in postconditions.
 
 \begin{lstlisting}[
   language=Rust,
@@ -665,11 +680,10 @@ hard-codes an id for strings, holds that contract (lines 7-8 in
 \cite{liskov}. The trait defines four methods. Two of them have regular
 postconditions and the laws state that a change to the width should not change
 the height and vice versa. Clearly, the implementation in \autoref{lst:liskov2}
-conforms to these properties. Without the laws, it would be tempting to add a
-square implementation, as in \autoref{lst:liskov3}. However, the square changes
-both dimensions at once -- violating the laws. Stainless detects this, the
-square implementation fails verification, and thereby a possible bug is caught.
-\newpage
+conforms to these properties. Without laws, it would be tempting to add a square
+implementation, as in \autoref{lst:liskov3}. However, the square changes both
+dimensions at once -- violating the laws. Stainless detects this, the square
+implementation fails verification, and thereby a possible bug is caught.
 
 \begin{figure}[hbt]
 \noindent \begin{minipage}[t]{.49\textwidth}

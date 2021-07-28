@@ -9,16 +9,16 @@ full control over efficiency to the programmer.
 To explore the powerful combination of the safety guarantees of Rust's compiler
 with the ability to formally verify high-level properties on programs, we
 present \emph{Rust-Stainless}. Stainless is a formal verification tool for Scala
-built on an SMT solver backend. Rust-Stainless is a frontend for Stainless that
-extracts a subset of Rust, translates it to Scala and verifies it with
-Stainless. In this thesis project, I significantly advance the feature set of
-Rust-Stainless, increasing its expressiveness to programs that cannot be
-processed in Scala Stainless. In particular, this thesis adds support for
-mutability and in-place updates, by introducing a theoretical translation from
-Rust to Scala. I argue that the translation yields equivalent runtime semantics
-in both languages and refine it to work with Stainless. This allows to verify
-efficiently implemented data structures in Rust. Other new features are traits
-with verified contracts, references, and heap allocation.
+backed by SMT solvers. Rust-Stainless is a frontend for Stainless that extracts
+a subset of Rust, translates it to Scala and verifies it with Stainless. In this
+thesis project, I significantly advance the feature set of Rust-Stainless,
+increasing its expressiveness to programs that cannot be processed in Scala
+Stainless. In particular, this thesis adds support for mutability and in-place
+updates, by introducing a translation from Rust to Scala. I argue that the
+translation yields equivalent runtime semantics in both languages and refine it
+to work with Stainless. This allows to verify data structures implemented in
+Rust without sacrificing performance. Other new features are traits with
+verified contracts, references, and heap allocation.
 
 The tool is evaluated on real-world Rust examples from a blockchain context.
 Remaining limitations concern missing support for some Rust language features,

@@ -5,8 +5,8 @@ project may be time-consuming but harmless, there are countless places where
 logical errors and worse, security problems cannot be tolerated. These are
 usually systems where failure has too high of a cost in terms of money or even
 human safety, imagine a railway control system. Software errors are also
-intolerable in systems that are costly or impossible to \emph{upgrade} like
-embedded systems or satellites.
+intolerable in systems that are costly or impossible to upgrade like embedded
+systems or satellites.
 
 One type of systems that have both a high financial cost of failure and are
 difficult to upgrade are blockchains that power cryptocurrencies. Bitcoin
@@ -20,12 +20,12 @@ to minimise the number of upgrades required, hence the need for correct
 software.
 
 A powerful and strict approach to writing correct software is to mathematically
-prove the correctness of a program in an automated fashion, called \emph{formal
-verification}. The Stainless verification framework \cite{stainless} is a formal
-verification tool for the Scala programming language. It enables programmers to
-prove high-level properties about functions and data structures, for instance
-that they conform to their specification. Additionally, Stainless establishes
-program termination and the absence of runtime crashes.
+prove the correctness of a program, called \emph{formal verification}. The
+Stainless verification framework \cite{stainless} is a formal verification tool
+for the Scala programming language. It enables programmers to prove high-level
+properties about functions and data structures, for instance that they conform
+to their specification, in a semi-automated fashion. Additionally, Stainless
+establishes program termination and the absence of runtime crashes.
 
 However, blockchains are usually not implemented in Scala, but rather in
 C\texttt{++}, Go or Rust for performance reasons. While Go achieves high
@@ -50,8 +50,8 @@ In this thesis project, I substantially extend the fragment of Rust that can be
 translated by the tool, adding features like mutability, references, and type
 classes. \newpage
 
-Before this thesis project, I mainly worked on the Rust trait to Scala type
-class translation, in the context of a semester project supervised by Georg
+Before this thesis project, I mainly worked on the translation of Rust traits to
+Scala type classes, in the context of a semester project supervised by Georg
 Schmid. The thesis project was the best way to continue  the ongoing work on
 Rust-Stainless. Therefore, this report also presents some of the results of the
 previous project. Thanks to Georg and Prof. Viktor Kun\v{c}ak, my academic
@@ -79,9 +79,9 @@ describes the overall design and pipeline of the tool, then it outlines the
 state of the frontend before and after this project.
 
 \item \textbf{Bugfixes} By using Stainless only as a backend and with unforeseen
-Scala-atypical inputs, we uncovered 14 issues in Stainless from which I solved
-or helped solve eight. Furthermore, I added the \lstinline!freshCopy! primitive
-to the imperative phase of Stainless.
+Scala-atypical inputs, we uncovered 14 issues in Stainless of which I solved or
+helped solve eight. Furthermore, I added the \lstinline!freshCopy! primitive to
+the imperative phase of Stainless.
 
 \item \textbf{User Perspective} The internship at Informal Systems allowed me to
 test our tool on real-world code, see \autoref{peerlist}. This helped taking on
