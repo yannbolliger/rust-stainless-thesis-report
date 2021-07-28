@@ -1,7 +1,7 @@
 \section{Background Topics}
 
 Rust's type and ownership system has been heavily inspired by decades of
-research in the programming language area. The main topics to consider are
+research in the programming language community. The main topics to consider are
 linear and unique types, ownership, as well as region-based memory management.
 
 Linearity was introduced by \citet{girard} and \citet{Wadler90lineartypes}.
@@ -19,15 +19,15 @@ Many early approaches to linear and unique types originated in functional
 languages and some challenges arose when they were applied to object-oriented
 languages that may assign to values or clone objects. Shallowly copying an
 object in a language with owned data is problematic because it might copy unique
-pointers, hence creating illegal aliases. Deep copying would solve the problem
-but there is also a more efficient approach called \emph{sheep cloning}. First
-described by \citet{dynamic-alias-protection}, Rust implements a version close
-to \cite{sheep-cloning}: owned data, that is, data pointed at by unique pointers
+pointers, creating illegal aliases. Deep copying would solve the problem but
+there is a more efficient approach called \emph{sheep cloning}. First described
+by \citet{dynamic-alias-protection}, Rust implements a version close to
+\cite{sheep-cloning}: owned data, that is, data pointed at by unique pointers,
 is deeply copied, while shared data, i.e.~immutable references, can be safely
 aliased.
 
 To make unique types work with assignments, values need to be moved or destroyed
-after read. This notion of \emph{destructive reads} was introduced by
+after a read. This notion of \emph{destructive reads} was introduced by
 \citet{islands-alias-protection}, with the goal of protecting from aliasing in
 object-oriented languages. Rust implements such reads for its move semantics by
 making the borrow checker flow-sensitive, similar to the proposition of
@@ -38,42 +38,35 @@ Other, less practically used languages with substructural typing or
 similar ideas are:
 
 \begin{itemize}
-\item
-  \textbf{Mezzo}, an ML-language by \citet{mezzo}, controls aliasing
-  and ownership by offering \emph{duplicable types} that are immutable
-  and can be copied, and on the other hand \emph{mutable types} that are
-  linear. This is similar to Rust's distinction of copyable and moveable
-  types. Mezzo also uses a flow-sensitive type checker to enforce its
-  discipline but it does so with permissions embedded in the type system
-  rather than lifetimes.
+\item \textbf{Mezzo}, an ML-language by \citet{mezzo}, controls aliasing and
+ownership by offering \emph{duplicable types} that are immutable and can be
+copied, and \emph{mutable types} that are linear. This is similar to Rust's
+copyable and moveable types. Mezzo also uses a flow-sensitive type checker to
+enforce its discipline but it does that with permissions embedded in the type
+system rather than lifetimes.
 
 \item \textbf{Linear Haskell} by \citet{linear-haskell} tries to bring linear
 types to Haskell in a backwards-compatible way, i.e.~existing code compiles
 alongside linear types. The key difference of this approach is that linearity is
 attached to functions instead of having linear and non-linear types like Mezzo
-or Rust. A linear function is then restricted in the way it uses its arguments:
-when its result is consumed exactly once, then its argument is consumed exactly
-once.
+or Rust. A linear function is restricted in the way it uses its arguments: when
+its result is consumed exactly once, then its argument has to be consumed
+exactly once.
 
-\item
-  \textbf{Alms} is an attempt to popularise \emph{affine types},
-  e.g.~types that may be used \emph{at most once}, by \citet{alms}. The
-  language is similar to OCaml and its primary goal is to create
-  resource-aware abstractions, for solving problems like race
-  conditions. In an Alms module, the programmer can mark types as
-  affine, contrary to Rust where everything is moveable, i.e.~affine,
-  unless otherwise specified, by implementing
-  \passthrough{\lstinline!Copy!}.
+\item \textbf{Alms} is an attempt to popularise \emph{affine types}, e.g.~types
+that can be used \emph{at most once}, by \citet{alms}. The language is similar
+to OCaml and its primary goal is to create resource-aware abstractions, for
+solving problems like race conditions. In an Alms module, the programmer can
+mark types as affine, contrary to Rust where everything is moveable,
+i.e.~affine, unless otherwise specified (by implementing \lstinline!Copy!).
 
-\item
-  \textbf{Cyclone} was intended as a save alternative to C and is among
-  the languages that inspired Rust the most. In particular,
-  \citet{cyclone-region} designed Cyclone with memory management based
-  on regions that includes ideas like region subtyping and deallocation
-  by region. Unlike Rust however, in Cyclone the programmer specifies
-  whether an object should be on the heap, on the stack or in a dynamic
-  region. In Rust, the lifetime mechanism is applied to all references
-  and memory locations, ownership is used to trigger deallocation.
+\item \textbf{Cyclone} was intended as a save alternative to C and is among the
+languages that inspired Rust the most. In particular, \citet{cyclone-region}
+designed Cyclone with memory management based on regions. That includes ideas
+like region subtyping and deallocation by region. Unlike Rust, the programmer
+specifies whether an object should be on the heap, on the stack or in a dynamic
+region. In Rust, the lifetime mechanism is applied to all references and memory
+locations, ownership is used to trigger deallocation.
 \end{itemize}
 
 
@@ -86,40 +79,33 @@ projects are Patina \cite{patina}, Rusty Types \cite{rusty-types}, and KRust
 \cite{krust}.
 
 \begin{itemize}
-\item
-  \textbf{RustBelt} by \citet{rustbelt} is important to mention because
-  it bridges the gap of most other works: it proves the safety of
-  implementations in \emph{unsafe Rust} -- ``securing the foundations of
-  Rust''. The authors develop an automated way of proving correctness of
-  a subset of the language and apply it to libraries that internally use
-  unsafe features. For example, they proved that a program using the
-  abstractions of \passthrough{\lstinline!std::cell!} runs safely if it
-  type checks. In contrast to the following works and Rust-Stainless
-  however, RustBelt uses a continuation-passing style language
-  \(\lambda_{Rust}\) that is closer to the MIR rather than Rust itself.
+\item \textbf{RustBelt} by \citet{rustbelt} is important because it bridges the
+gap of most other works: it proves the safety of implementations in \emph{unsafe
+Rust} -- ``securing the foundations of Rust''. The authors develop an automated
+way of proving correctness for a subset of the language and apply it to
+libraries that internally use unsafe features. For example, they prove that a
+program using the abstractions of \passthrough{\lstinline!std::cell!} runs
+safely if it type checks. In contrast to the following works and Rust-Stainless
+however, RustBelt uses a continuation-passing style language,
+\(\lambda_{Rust}\), that is closer to the MIR than Rust itself.
 
-\item
-  \textbf{Oxide} is a recent formalisation by some of Rust's maintainers
-  \citet{oxide}. The goal of the project is to provide formal semantics
-  for a language close to surface Rust called Oxide. The authors present
-  the first syntactic proof of type safety for the borrow checking of
-  (the considered subset of) Rust and implemented a type-checker for the
-  language. It is important to note that the interpretation of lifetimes
-  in Oxide is already compatible with the future version of Rust's
-  borrow checker called \emph{Polonius} \cite{polonius}.
+\item \textbf{Oxide} is a recent formalisation by some of Rust's maintainers,
+\citet{oxide}. The goal of the project is to provide formal semantics for a
+language close to surface Rust called Oxide. The authors present the first
+syntactic proof of type safety for the borrow checking of (the considered subset
+of) Rust and implement a type-checker for that language. The interpretation of
+lifetimes in Oxide is already compatible with the future version of Rust's
+borrow checker called \emph{Polonius} \cite{polonius}.
 
-\item
-  \textbf{Lightweight Formalism for Rust (FR)} was developed in parallel
-  to Oxide by \citet{fr}. Like Oxide, it draws strong inspiration from
-  Featherweight Java (FJ) \cite{fj}, hence the name FR. The paper also
-  presents a calculus that models source-level Rust with its salient
-  features like borrowing, reference lifetimes and move versus copy
-  semantics. The authors prove the soundness of their calculus but
-  unlike Oxide, they implemented the system in Java rather than in Rust.
-  Other differences to Oxide are that FR models boxes, that is heap
-  allocation, which Oxide doesn't. Oxide on the other hand is closer to
-  non-lexical lifetimes and hence the newer versions of the borrow
-  checker, it also covers a larger subset of Rust.
+\item \textbf{Lightweight Formalism for Rust (FR)} was developed in parallel to
+Oxide by \citet{fr}. Like Oxide, it draws strong inspiration from Featherweight
+Java (FJ) \cite{fj}, hence the name FR. The paper presents a calculus that
+models source-level Rust with its salient features like borrowing, reference
+lifetimes and move versus copy semantics. The author proves the soundness of the
+calculus but unlike Oxide, they implement the system in Java rather than in
+Rust. Another difference to Oxide is that FR models boxes, i.e. heap allocation.
+Oxide on the other hand is closer to the future version of the borrow checker
+and covers a larger subset of Rust.
 \end{itemize}
 
 The two latter works are of particular importance to this project because these
@@ -128,19 +114,19 @@ translation from \autoref{translation}.
 
 \section{Verification}
 
-Stainless in its current form with the \emph{Inox} solver \cite{inox} as
+Stainless in its current form, with the \emph{Inox} solver \cite{inox}, as
 developed by \citet*{stainless} is the successor of Leon \cite{leon}. The two
-systems come out of a long series of works exploring the possibilites of
+systems come out of a long series of works, exploring the possibilities of
 verifying functional programs, mainly in Scala, with SMT solvers \cite{smt},
 like the early work by \citet{smrp}. Stainless distinguishes itself from many
-other verifiers in that it is \emph{counter-example complete}, that is it
+other verifiers in that it is \emph{counter-example complete}, that is, it
 produces and minimises counter-examples for all failed verification conditions.
 
 Of particular interest to this project is the imperative phase of Stainless that
 was introduced by \citet{regb} and acts as main backend to the translation
 presented in this thesis. The new imperative phase by \citet{new-imperative} is
 likely to overcome the current limitations of imperative code in Stainless and
-may be the ideal target for Rust-Stainless.
+may be the ideal target for Rust-Stainless in the future.
 
 \subsubsection{Rust Verification}
 
@@ -158,21 +144,21 @@ largely stems from
 
 \item \textbf{CRUST} \cite{crust} tries to prove memory safety of Rust code
 using unsafe features, in the same manner as RustBelt. The approach is to
-translate Rust to C, generate test sequences of function calls and then verify
-the code with the CBMC bounded model checker for C.
+translate Rust to C, generate test sequences of function calls, and then verify
+the code with the CBMC bounded model checker for C~\cite{cbmc}.
 
 \item \textbf{RustHorn} \cite{rusthorn} translates Rust into \emph{constrained
 Horn clauses} that can be solved by an appropriate solver. The authors prove
 correctness of their translation for a formalised subset of Rust including
 mutable references, inspired by RustBelt \cite{rustbelt}. Contrary to
-Rust-Stainless, RustHorn operates on the MIR. While it mainly proves the absence
-of runtime errors, the tool has no features to  express and verify
-specifications or higher-level properties of a given program.
+Rust-Stainless, RustHorn operates on the MIR. The tool mainly proves the absence
+of runtime errors and has no features to  express and verify specifications or
+higher-level properties.
 
 \item \textbf{Seer} \cite{seer} stands for \emph{symbolic execution engine for
 Rust}. The engine takes the MIR and executes it symbolically with Z3 \cite{z3}
-as a solver backend, similar to Stainless. However, as an execution engine the
-tool tries to find executions that produce errors but cannot prove stronger
+as a solver backend, similar to Stainless. However, as an execution engine, the
+tool tries to find executions that produce errors but cannot prove higher-level
 properties.
 
 \item \textbf{SMACK} is a verification toolchain that translates LLVM-IR to
@@ -180,41 +166,41 @@ Boogie \cite{boogie} and  has been extended to support Rust \cite{smack}. Like
 RustHorn, it is able to prove the absence of runtime errors and correctness of
 assertions but no higher-level properties like laws in Rust-Stainless.
 
-\item \textbf{MIRAI} \cite{mirai} is an abstract interpreter for MIR developed
+\item \textbf{MIRAI} \cite{mirai} is an abstract interpreter for MIR, developed
 at Facebook. It supports very similar pre- and postconditions like
-Rust-Stainless that are standardised by the \lstinline!contracts! crate. The
-repository also contains contracts for many modules in the standard library.
-Such a contract could be a solution to Rust-Stainless's one-crate-limitation (cf.
-\autoref{impl-limitations}).  Contrary to Stainless, MIRAI may produce false
-negatives and  is unable to generate counter-examples for failed verification
-conditions.
+Rust-Stainless that are standardised by the \lstinline!contracts!
+crate.\footnote{\url{https://docs.rs/contracts/latest/contracts/}} The
+repository also contains contracts for many modules of the standard library.
+Such contracts could be a solution to Rust-Stainless's one-crate-limitation
+(cf. \autoref{impl-limitations}).  Contrary to Stainless, MIRAI may produce
+false negatives and  is unable to generate counter-examples for failed
+verification conditions.
 
 \item \textbf{Electrolysis} \cite{electrolysis} is probably the most similar
 work to Rust-Stainless. It translates Rust to the functional language Lean which
 is used as an interactive theorem prover \cite{lean}. Like Rust-Stainless,
 Electrolysis only works on the safe subset of Rust and one of the core topics of
 the project is the translation of mutable references. The author chooses
-functional lenses as representation of mutable references in Lean, this has the
+functional lenses as representation of mutable references in Lean. This has the
 limitation that the translation needs to keep track of the provenance of mutable
 references. Unlike Rust-Stainless, this project operates on the MIR.
 
-
 \item \textbf{Creusot} \cite{creusot} is similar to Electrolysis, it also
-translates Rust to a verification language, WhyML \cite{why3}. Like MIRAI,
-Prusti and Rust-Stainless, Creusot lets  the programmer state specifications as
-pre- and postconditions. However it uses a special language for the contracts,
-called \emph{Pearlite}, that is developed with the project. Creusot also works
-with the MIR.
+translates Rust to a verification language, WhyML \cite{why3}. Like MIRAI and
+Rust-Stainless, Creusot lets  the programmer state specifications as pre- and
+postconditions. However, it uses a special language for the contracts, called
+\emph{Pearlite}, that is developed with the project. Creusot also works with the
+MIR.
 
 \item \textbf{Prusti} \cite{prusti} is probably to most useable tool currently,
 as it is the only one  to offer a VSCode extension that verifies properties
 while the programmer is writing code. Prusti translates MIR to Viper
-\cite{viper}, a larger verification framework with frontends for various
-mainstream languages. Like Rust-Stainless, pre- and postconditions are expressed
-in Rust itself. Prusti has also the ability to attach contracts to
-crate-external items, similar to MIRAI, solving the one-crate-limitation (cf.
+\cite{viper}, a verification framework with frontends for various mainstream
+languages. Like Rust-Stainless, pre- and postconditions are expressed in Rust
+itself. Prusti also has the ability to attach contracts to crate-external items,
+similar to MIRAI, solving the one-crate-limitation (cf.
 \autoref{impl-limitations}). On the other hand, Prusti does not yet offer trait
-contract verification like Rust-Stainless introduces in this project with laws.
+contract verification like Rust-Stainless with laws.
 
 \end{itemize}
 
@@ -222,6 +208,6 @@ contract verification like Rust-Stainless introduces in this project with laws.
 Rust-Stainless is currently the only tool that operates on an IR above the MIR
 -- the THIR. The trade-offs involved in that decision are discussed in
 \autoref{mir-thir}. Rust-Stainless could draw an advantage from that decision in
-the future: counter-example generation for Rust. Currently, counter-examples are
-generated for the translated Scala program but it should be feasible to reverse
-the translation and return to the user counter-examples in Rust.
+the future and provide counter-example generation for Rust. That and other
+promising paths for the future of the tool are explored in the next and last
+chapter.
