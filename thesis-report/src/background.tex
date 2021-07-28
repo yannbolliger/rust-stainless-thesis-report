@@ -252,6 +252,13 @@ impl Id for String {
 \end{lstlisting}
 \end{minipage}
 
+\subsubsection{Crates}
+
+Rust code is structured in \emph{modules} that can be inlined in files, single
+files or entire folders. The unit of compilation in Rust is called a
+\emph{crate} which is compiled to a binary or library. To import external code
+in a project, one has to import its crate, like \lstinline!extern crate xx;!.
+
 \subsection{Owning and Referencing Data}
 
 \subsubsection{Value Categories}
@@ -529,9 +536,6 @@ objects, which is mainly important for mutable objects. The translation
 presented in \autoref{translation} will extensively exploit this fact.
 
 
-
-
-
 \section{Stainless Verifier}
 
 With a solid understanding of Rust, it is time to introduce verification.
@@ -689,7 +693,7 @@ implementation fails verification, and thereby a possible bug is caught.
 \noindent \begin{minipage}[t]{.49\textwidth}
 \begin{lstlisting}[
   language=Rust,
-  caption={Example implementation of the rectangle trait.},
+  caption={Implementation of the rectangle trait.},
   label={lst:liskov2},
   basicstyle=\footnotesize\ttfamily,
 ]
@@ -734,12 +738,12 @@ impl Rectangle for Square {
 \end{minipage}
 \end{figure}
 
-\hfill \break \noindent This concludes the introduction to Rust and Stainless.
-All Rust features needed for the motivating example (\autoref{running-example})
-were introduced, as were the verification features of Rust-Stainless.  Most of
-these features were only added in the course of this thesis project. The goal of
-the remaining chapters is now to extend Rust-Stainless with all these features.
-In particular, \autoref{translation} will explain how mutability and mutable
+\noindent This concludes the introduction to Rust and Stainless. All Rust
+features needed for the motivating example (\autoref{running-example}) were
+introduced, as were the verification features of Rust-Stainless.  Most of these
+features were only added in the course of this thesis project. The goal of the
+remaining chapters is now to extend Rust-Stainless with all these features. In
+particular, \autoref{translation} will explain how mutability and mutable
 references are translated to Scala. Chapter \ref{implementation} distinguishes
 between existing and added features, then gives some implementation details.
 
