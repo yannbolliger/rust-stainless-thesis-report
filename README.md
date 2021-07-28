@@ -1,4 +1,6 @@
-# `rust-stainless` MSc thesis by [@yannbolliger](https://github.com/yannbolliger)
+# MSc thesis report: `rust-stainless`
+
+_by [@yannbolliger](https://github.com/yannbolliger)_
 
 This repo contains the MSc thesis report on the
 [`rust-stainless`](https://github.com/epfl-lara/rust-stainless) project as well
