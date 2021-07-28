@@ -27,7 +27,7 @@ at extraction of the code and abort the translation.
 \subsection{Algorithm}
 
 The goal of the translation is to bridge the gaps between Rust's and Scala's
-memory model -- making references accessible to the programer and allowing
+memory model -- making references accessible to the programmer and allowing
 mutability of all struct fields if needed. To achieve the first one and bring
 the ability of manipulating references to Scala, I introduce a special wrapper
 case class, the \emph{mutable cell}:

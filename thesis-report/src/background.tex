@@ -296,7 +296,7 @@ stored at the place it designates. In other words, its data is \emph{used}.
 \subsubsection{Ownership}
 
 As said previously, Rust's distinguishing feature is its ownership system which
-is responsible for
+is responsible for:
 
 \begin{quote}
 {[enforcing]} an ownership invariant where a
@@ -458,7 +458,7 @@ However, the method often needs to temporarily consume some part of
 that swaps a new value into a \lstinline!Some! and returns the old option value.
 The naive approach to that method in \autoref{lst:swap-naive} does not compile
 because the ownership system does not allow moving out of a mutable reference,
-which happens on line 3. This makes sense, because the mutable reference needs
+which happens on line 3. This makes sense because the mutable reference needs
 to stay valid, hence the data cannot disappear by moving out.
 
 \begin{figure}[hbt]
@@ -507,8 +507,8 @@ already the entire method.
 \subsubsection{Mutability}
 
 Scala has local mutable variables (\lstinline!var!) comparable to
-\passthrough{\lstinline!let mut!} in Rust. Class fields however are immutable by
-default. One can opt into mutability for a certain field by marking it as
+\passthrough{\lstinline!let mut!} in Rust. Class fields, however, are immutable
+by default. One can opt into mutability for a certain field by marking it as
 \lstinline!var! at the class declaration. Such a field is then mutable on all
 instances of the class and irrespective of whether its corresponding instance is
 locally bound with the immutable \lstinline!val! or the mutable \lstinline!var!.
@@ -673,9 +673,9 @@ Stainless also proves the correctness of the laws for each implementation of the
 trait.
 
 The last addition to the running example, is a law on the \lstinline!Id! trait
-stating  that ids need to be positive. Of course, the toy implementation that
-hard-codes an id for strings, holds that contract (lines 7-8 in
-\autoref{running-example}). A more interesting example of laws in
+stating that the returned integer need to be positive. Of course, the toy
+implementation that hard-codes an id for strings, holds that contract (lines 7-8
+in \autoref{running-example}). A more interesting example of laws in
 \autoref{lst:liskov1} shows a violation of the  Liskov Substitution principle
 \cite{liskov}. The trait defines four methods. Two of them have regular
 postconditions and the laws state that a change to the width should not change

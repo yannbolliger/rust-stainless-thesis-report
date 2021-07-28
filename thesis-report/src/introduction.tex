@@ -12,7 +12,8 @@ One type of systems that have both a high financial cost of failure and are
 difficult to upgrade are blockchains that power cryptocurrencies. Bitcoin
 \cite{bitcoin} and Ethereum \cite{ethereum} have become very popular and are
 valued at amounts reaching into the hundreds of billions of dollars at the time
-of writing. Upgrading such distributed systems is hard because a majority of the
+of writing\footnote{\url{https://coinmarketcap.com/historical/20210725/}}.
+Upgrading such distributed systems is hard because a majority of the
 participating machines need to reach a consensus about the upgrade. This makes
 upgrading the two former blockchains nearly impossible and even systems that
 were designed with upgrades in mind like the Cosmos network \cite{cosmos} wish
@@ -31,7 +32,7 @@ However, blockchains are usually not implemented in Scala, but rather in
 C\texttt{++}, Go or Rust for performance reasons. While Go achieves high
 performance despite its \emph{garbage collector}, C\texttt{++} and Rust leave
 memory management to the programmer. This is the primary source of security
-problems in C\texttt{++}. Rust however guarantees memory safety by introducing a
+problems in C\texttt{++}. Rust, however, guarantees memory safety by introducing a
 new type checking phase in its compiler, the \emph{borrow checker}. Rust is
 therefore well-suited for implementing highly performant, correct, and safe
 systems, for example the \emph{Tendermint blockchain consensus}
@@ -64,13 +65,13 @@ Rust-Stainless in the right direction.
 
 \begin{itemize}
 
-\item \textbf{Theory} In \autoref{translation}, I develop a translation from
+\item \textbf{Theory}: In \autoref{translation}, I develop a translation from
 Rust to Scala that produces equivalent runtime semantics in Scala for Rust
 features like mutability, mutable and immutable references, mutable tuples and
 data types, and move semantics. The translation is further adapted for use with
 the current state of Stainless's imperative phase.
 
-\item \textbf{Implementation} The largest contribution of this project are the
+\item \textbf{Implementation}: The largest contribution of this project are the
 numerous features that I added  to the implementation of Rust-Stainless. In over
 70 pull requests, I fixed bugs, added extraction capabilities for new Rust
 language fragments, implemented the mutability translation, and improved the
@@ -78,14 +79,14 @@ user-facing \lstinline!stainless! library. Chapter \ref{implementation} first
 describes the overall design and pipeline of the tool, then it outlines the
 state of the frontend before and after this project.
 
-\item \textbf{Bugfixes} By using Stainless only as a backend and with unforeseen
-Scala-atypical inputs, we uncovered 14 issues in Stainless of which I solved or
-helped solve eight. Furthermore, I added the \lstinline!freshCopy! primitive to
-the imperative phase of Stainless.
+\item \textbf{Bugfixes}: By using Stainless only as a backend and with
+unforeseen Scala-atypical inputs, we uncovered 14 issues in Stainless of which I
+solved or helped solve eight. Furthermore, I added the \lstinline!freshCopy!
+primitive to the imperative phase of Stainless.
 
-\item \textbf{User Perspective} The internship at Informal Systems allowed me to
-test our tool on real-world code, see \autoref{peerlist}. This helped taking on
-a user perspective and had great influence on the choice and priorisation of new
-features.
+\item \textbf{User Perspective}: The internship at Informal Systems allowed me
+to test our tool on real-world code, see \autoref{peerlist}. This helped taking
+on a user perspective and had great influence on the choice and priorisation of
+new features.
 
 \end{itemize}
