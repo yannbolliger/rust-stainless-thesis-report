@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-time_columns = ["std_item_detection", "extraction", "verification", "total"]
+time_columns = ["std_item_detection", "translation", "verification", "total"]
 
 df = pd.concat(
     [
@@ -49,15 +49,24 @@ if __name__ == "__main__":
         ),
     )
 
-    print("LoC total", mean.sum()["loc"])
-    print("VCs total", mean.sum()["vcs"])
-    print("Time total [min]", mean.sum()["total"] / (1000000 * 60))
+    print("LoC total", "{:.0f}".format(mean.sum()["loc"]))
+    print("VCs total", "{:.0f}".format(mean.sum()["vcs"]))
+    print("Time total [min]", "{:.1f}".format(mean.sum()["total"] / (1000000 * 60)))
 
-    print("Std mean", df.mean()["std_item_detection"] / 1000)
-    print("Std std", df.std()["std_item_detection"] / 1000)
-    print("Std share", df.mean()["std_item_detection"] / df.mean()["total"])
+    print("Std mean [s]", "{:.2f}".format(df.mean()["std_item_detection"] / 1000000))
+    print("Std std [s]", "{:.2f}".format(df.std()["std_item_detection"] / 1000000))
+    print(
+        "Std share",
+        "{:.2f}".format(df.mean()["std_item_detection"] / df.mean()["total"]),
+    )
 
-    print("Extraction mean", df.mean()["extraction"] / 1000)
-    print("Extraction share", df.mean()["extraction"] / df.mean()["total"])
+    print("Translation mean [ms]", "{:.1f}".format(df.mean()["translation"] / 1000))
+    print(
+        "Translation share",
+        "{:.4f}".format(df.mean()["translation"] / df.mean()["total"]),
+    )
 
-    print("Verification share", df.mean()["verification"] / df.mean()["total"])
+    print(
+        "Verification share",
+        "{:.2f}".format(df.mean()["verification"] / df.mean()["total"]),
+    )
