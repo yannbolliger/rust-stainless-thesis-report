@@ -6,12 +6,12 @@
     draw=black
   },
   align=center,
-  node distance=1.1cm,
+  node distance=1.2cm,
   auto
 ]
 \node (rustc)     []   {\texttt{rustc}};
-\node (tool)      [right= 2cm of rustc]   {Rust-Stainless};
-\node (stainless) [right= 2.5cm of tool]   {Stainless (JVM)};
+\node (tool)      [right= 2.5cm of rustc]   {Rust-Stainless};
+\node (stainless) [right= 3cm of tool]   {Stainless (JVM)};
 
 \node (source)  [rect, below= 0.2cm of rustc] {Source};
 \node (ast)     [rect, below of=source] {AST};
@@ -41,7 +41,7 @@
 \draw[->] (svr) -- (json);
 
 \draw[->] (hir.east) to    [out=0, in=180] (srast.west);
-\draw[->] (thir.east) to   [out=0, in=180] (srast.west);
-\draw[->] (binary.east) to [out=0, in=180] (ssast.west);
-\draw[->] (json.south) to  [out=270, in=0] (rvr.east);
+\draw[->] (thir.east) to   [out=0, in=180] node[anchor=west, text width=2cm, yshift=-0.5cm] {\textit{Extraction \& Translation}} (srast.west);
+\draw[->] (binary.east) to [out=0, in=180] node[anchor=north, text width=2cm, below, yshift=-0.4cm] {\textit{Temporary File}} (ssast.west);
+\draw[->] (json.south) to  [out=270, in=0] node {\textit{Standard I/O}}  (rvr.east);
 \end{tikzpicture}
