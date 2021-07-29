@@ -810,8 +810,8 @@ discussed in the previous section.
 The second problem with type classes is that they are expensive in verification
 with the current Stainless pipeline. Functions that rely on type class instances
 are transformed by multiple phases of the Stainless pipeline, especially the
-\emph{refinement lifting}, in such a way that verification may become
-untraceable in extreme cases.
+\emph{refinement lifting} \cite{inox}, in such a way that verification may
+become untraceable in extreme cases.
 
 A radical solution to the problem would be to erase and replace calls to
 \lstinline!PartialEq::eq! by \lstinline!==! in Scala. With a similar safety

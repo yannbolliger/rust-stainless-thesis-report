@@ -106,7 +106,7 @@ impl<T: Equals> Equals for List<T> {
 \end{lstlisting}
 
 Lastly, note that the three laws need to be reimplemented in the list
-implementation. This is due to Stainless not being able to recursively proof the
+implementation. This is due to Stainless not being able to recursively prove the
 properties without some guidance by the programmer. However, the same is
 necessary in an equivalent Scala example. Thus, this is not a limitation of the
 Rust frontend but of Stainless itself. On the other hand, the law
