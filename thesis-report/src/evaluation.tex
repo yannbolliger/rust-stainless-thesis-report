@@ -64,12 +64,76 @@ recursive data type is made possible by the support for boxes. This example was
 translated from an equivalent Scala example in Stainless's test suite, therefore
 it shows a functional way of writing Rust; there is no mutation in the entire
 example. In idiomatic Rust, one would probably use a vector instead of a
-linked-list.
+linked-list. The example further showcases the use of implementation blocks and
+specs on methods. For proving termination of the recursive implementation it is
+crucial to add the new \lstinline!measure! attribute. Also note that the
+\lstinline!Option! type is the one from the standard library.
 
-The example further showcases the use of implementation blocks and specs on
-methods. For proving termination of the recursive implementation it is crucial
-to add the new \lstinline!measure! attribute. Also note that the
-\lstinline!Option! type is the one of the standard library.
+Because the example is completely functional, it serves perfectly to evaluate
+whether the  mutability translation preserves functional code -- despite the
+mutable cell encoding. To test that, consider the \lstinline!sorted_insert!
+method, displayed in \autoref{lst:sort-ins-rs}, and its translation as it is
+submitted to Stainless, shown in \autoref{lst:sort-ins-1}. The translation is
+almost identical. The only changes are the mutable cell patterns in the match,
+the \lstinline!freshCopy! around the return values, and the erasure of the
+boxes. This is thanks to the optimisations of \autoref{optimisations}. For
+example, the function arguments are not wrapped in mutable cells because they're
+immutable.
+
+\noindent\begin{minipage}[t]{.43\textwidth}
+\begin{lstlisting}[
+  language=Rust,
+  basicstyle=\footnotesize\ttfamily,
+  label={lst:sort-ins-rs},
+  caption={Completely functional method of \autoref{lst:insertion-sort}.}
+]
+#[pre(self.is_sorted())]
+#[measure(self)]
+#[post(
+  ret.size() == self.size() + 1 &&
+  ret.is_sorted() &&
+  ret.contents().is_subset(
+    &self.contents().insert(e)
+  ) &&
+  self.contents().insert(e).is_subset(
+    &ret.contents()
+  )
+)]
+pub fn sorted_insert(
+  self,
+  e: i32
+)-> List<i32> {
+  match self {
+    List::Cons(head, tail)
+      if head <= e => List::Cons(
+        head,
+        Box::new(tail.sorted_insert(e))
+      ),
+    _ => List::Cons(e, Box::new(self)),
+  }
+}
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.55\textwidth}
+\lstinputlisting[
+  language=Scala,
+  basicstyle=\footnotesize\ttfamily,
+  label=lst:sort-ins-1,
+  caption={Translation of \autoref{lst:sort-ins-rs}.}
+]{code/sorted_insert_1.scala}
+\end{minipage}
+
+To go a step deeper, consider the final encoding of the function, displayed in
+\autoref{apx:insertion-encoding}. Stainless submits this encoding to its solver,
+Inox, after having executed all its transformations. In particular, after the
+imperative phase has transformed all mutable fields like the one of the mutable
+cells to functional code. The encoding contains refinement assertions and
+multiple casts to use the fields of the ADT directly, e.g.~\lstinline!._1!,
+instead of using the matched bindings. Otherwise, it does not introduce
+unnecessary complexity to deal with mutable cells. Thus, it can be concluded
+that the mutability translation preserves the verifiability of functional code
+-- at least as long, as no type classes are involved that may cause trouble with
+the refinement lifting.
 
 \paragraph{Type Class}
 
@@ -89,6 +153,7 @@ trait bound (\lstinline!T: Equals!) and two type class method calls that will be
 resolved in the translation.
 
 \begin{lstlisting}[
+  float=htb,
   language=Rust,
   caption={Equality implemented for the linked-list.},
   label={lst:equals-list}
@@ -124,7 +189,7 @@ changed as well by the mutation. The mutability translation  will replace the
 \lstinline!clone! call with \lstinline!freshCopy!.
 
 \begin{lstlisting}[
-  float,
+  float=bht,
   language=Rust,
   caption={Local mutation and cloning of a simple struct.},
   label=lst:local-clone
@@ -154,14 +219,13 @@ mutable borrows, pattern matching on mutable references, passing mutable
 references as values, and struct mutation via references.
 
 In the translation of \lstinline!get_mut_by_id!
-(\autoref{lst:mut-ref-translated}), one can observe how the optimisations of
-\autoref{optimisations} apply. The \lstinline!id! argument is not wrapped in a
-mutable cell because it is immutable. The pattern match binds the mutable cell
-object \lstinline!v! inside the tuple ADT instead of its value. Furthermore, the
-evidence argument responsible for the trait method, \lstinline!ev0.id! on line
-8, is added as parameter.
+(\autoref{lst:mut-ref-translated}), one can observe how the pattern match binds
+the mutable cell object \lstinline!v! inside the tuple ADT instead of its value.
+Furthermore, the evidence argument responsible for the trait method,
+\lstinline!ev0.id! on line 8, is added as parameter.
 
 \begin{lstlisting}[
+  float=htb,
   language=Scala,
   caption={Translation of the \lstinline!get_mut_by_id! method from \autoref{running-example}.},
   label={lst:mut-ref-translated}

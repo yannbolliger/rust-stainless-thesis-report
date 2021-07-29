@@ -23,6 +23,19 @@ These code examples are taken from the test suite of Rust-Stainless.
 ]{code/insertion_sort.rs}
 \hspace{5mm}
 
+\lstinputlisting[
+  language=Scala,
+  caption={
+    Final encoding of the \lstinline!sorted_insert! method from
+    \autoref{lst:insertion-sort} in fully functional Stainless AST form that
+    results after all Stainless transformations have passed. This is submitted
+    to Inox.
+  },
+  label={apx:insertion-encoding},
+  captionpos=t!
+]{code/sorted_insert_2.scala}
+\hspace{5mm}
+
 \subsubsection{Type Class}
 \lstinputlisting[
   language=Rust,
@@ -63,6 +76,6 @@ a supporting list-map implementation in the second one.
   },
   label={apx:listmap},
   framerule=15pt,
-   xleftmargin=20pt,
-   captionpos=t!
+  xleftmargin=20pt,
+  captionpos=t!
 ]{code/list.rs}
