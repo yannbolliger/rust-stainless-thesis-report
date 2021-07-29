@@ -12,7 +12,7 @@ df = pd.concat(
         .dropna(axis=1, how="all")
         .fillna(0)
         .rename(columns=lambda x: x.strip())
-        for i in range(6)
+        for i in range(2)
     ]
 )
 

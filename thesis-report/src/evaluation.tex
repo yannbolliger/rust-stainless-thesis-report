@@ -17,29 +17,26 @@ the positive test examples, displayed in \autoref{measurements}. Only the
 positive examples were used for the measurements because the negative examples
 may fail at different stages of the extraction or verification pipeline. Thus,
 the time measurement is only representative for the positive examples which
-complete the verification pipeline. The used benchmarks amount to 2100 lines of
-Rust code (LoC), Stainless generates in total 470 verification conditions (VCs)
-and the accumulated running time is just under 6 minutes (Total). Note that the
-test suite normally (when run with \texttt{cargo test}) runs multiple tests in
+complete the verification pipeline. The used benchmarks amount to 2214 lines of
+Rust code (LoC), Stainless generates in total 475 verification conditions (VCs)
+and the accumulated running time is 5.1 minutes (Total). Note that the test
+suite normally (when run with \texttt{cargo test}) runs multiple tests in
 parallel and thus completes in less than 2 minutes on the same
 machine.\footnote{All the tests were run on a MacBook Pro with a 2.8~GHz
 Quad-Core Intel Core i7 and 16~GB of RAM.}
 
 It is instructive to decompose the running time into its different parts. As
 described in \autoref{sec:extraction-overview}, the frontend first needs to
-detect some standard library items before it can translate the user crate. Even
-if the detection iterates through the same crates on each run, one observes
-larger variations in its running time. On average, detection takes $199 \pm
-33$~ms or equivalently 4~\% of the running time.
-
-The actual translation is very fast, especially for the rather short examples
-that account for the majority of the test suite. It takes only 0.4~ms or about
-0.008~\% of the running time on average. By far the largest part of the running
-time of our tool is not spent in the frontend itself but rather in the JVM
+detect some standard library items before it can translate the user crate. On
+average, detection takes $0.17 \pm 0.01$~s or equivalently 4~\% of the running
+time. The actual translation is very fast, especially for the rather short
+examples that account for the majority of the test suite. It takes only 0.4~ms
+or less than 0.01~\% of the running time on average. By far the largest part of
+the running time is not spent in the frontend itself but rather in the JVM
 backend. Verification time accounts for on average 95~\% of the total time. The
-rest is made up of starting, serialising and reporting. This shows that
-translation time is inferior to verification time by multiple orders of
-magnitudes which is not surprising, given that verification is much more complex
+rest is made up of starting, serialising and reporting. This shows that the
+translation time is inferior to the verification time by multiple orders of
+magnitude which is not surprising, given that verification is much more complex
 than translation.
 
 \input{measurements/measurements.tex}
