@@ -258,11 +258,11 @@ defined by Romain Rüetschi. Thus, a primary driver of this thesis was to verify
 a version of the data structure that was as close to the original code as
 possible.
 
-Thanks to the mutability translation and especially the in-place updates, I
-achieved that goal adequately, found a problem in the original specification and
-was able to strengthen the postconditions of some methods. The verified version
-of the code is in \autoref{apx:peerlist} and by comparing it with the original
-code one can see that there are indeed no large changes.\footnote{The original
+Thanks to the mutability translation and especially in-place updates, I achieved
+that goal adequately, found a problem in the original specification and was able
+to strengthen the postconditions of some methods. The verified version of the
+code is in \autoref{apx:peerlist} and by comparing it with the original code,
+one can see that there are indeed no large changes.\footnote{The original
 version can be found here:
 \url{https://github.com/informalsystems/tendermint-rs/blob/d8e18c647cd8695d16610c4292b15ec6d1b45fbc/light-client/src/peer_list.rs}.}
 
@@ -294,17 +294,17 @@ types, to be verifiable. Unfortunately, the one-crate-limitation (cf.
 user crate.
 
 Nonetheless, verifying the peer-list implementation with
-\passthrough{\lstinline!cargo stainless!} allowed me  to improve the
-specifications of the code. First, the precondition that the invariant must hold
-before the two methods was not set in the code. Furthermore, I could strengthen
-the postconditions of  both methods so as to also prove that the methods perform
-the correct changes. For example, \autoref{lst:postcondition} shows the
-postcondition of \lstinline!replace_faulty_primary!. If the method succeeds and
-returns an \lstinline!Ok! result, the \lstinline!self! not only has to satisfy
-the invariant but the faulty primary given as argument also needs to be in the
-faulty nodes. This prevents the method from doing nothing which would also
-uphold the invariant. Note also the use of the \lstinline!old(&self)! helper to
-use the value of \lstinline!self! before the function.
+\passthrough{\lstinline!cargo stainless!} allowed me to improve its
+specifications. First, I found a problem: the precondition that the invariant
+must hold before the two methods was not set in the code. Furthermore, I could
+strengthen the postconditions of both methods to also prove that the methods
+perform the correct changes. For example, \autoref{lst:postcondition} shows the
+improved postcondition of \lstinline!replace_faulty_primary!. If the method
+succeeds and returns an \lstinline!Ok! result, the \lstinline!self! not only has
+to satisfy the invariant but the faulty primary given as argument also needs to
+be in the faulty nodes. This prevents the method from doing nothing which would
+also uphold the invariant. Note also the use of the \lstinline!old(&self)!
+helper to use the value of \lstinline!self! before the function.
 
 \begin{lstlisting}[
   language=Rust,
