@@ -324,11 +324,14 @@ f(MutCell(456), MutCell(r))
 
 \subsubsection{Boxes}
 
-Contrary to the JVM, where all objects live on the heap, Rust lets the
-programmer allocate objects on the heap with boxes. However, for verification it
-does not matter, whether something is on the heap or the stack as long as
-general memory safety is preserved. Therefore, this distinction can be erased in
-the translation and everything uses normal heap-allocated Scala objects.
+Heap allocation, i.e. boxes, are needed in Rust to create data that can outlive
+the function where it's created. Without boxes, data is always stack-allocated
+and thus dropped, at the end of the function. This distinction is not needed in
+Scala because, on the JVM, all objects live on the heap. Therefore, the
+translation can erase the fact that data is in a box, because it wraps the data
+in a mutable cell anyway, to model the variable that ``holds the box''. Thus,
+the data  is modelled on the heap which corresponds to what happens in Rust and
+thanks to the cell object all of this also works for primitive types.
 
 \subsubsection{Memory Replace}
 
