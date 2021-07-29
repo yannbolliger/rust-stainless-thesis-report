@@ -4,8 +4,14 @@ created by Georg Schmid to explore a new frontend to Stainless for the Rust
 language. Upon completion of this thesis project, the tool is implemented in
 approximately 12K lines of Rust code. Most features described here are available
 on the \lstinline!master! branch, except for the mutability translation that
-lives on the \lstinline!mutable-cells!
-branch.\footnote{\url{https://github.com/epfl-lara/rust-stainless/pull/164}}
+lives on the \lstinline!mutable-cells! branch.\footnote{The commits on the two
+branches corresponding to the state at the end of this project are: \\ master:
+\url{https://github.com/epfl-lara/rust-stainless/commit/1e16201c0b63fcc7f8871f0f9e9974b663e0e3eb},\\
+{\Urlmuskip=-2.7mu plus 2mu
+mutable-cells:
+\url{https://github.com/epfl-lara/rust-stainless/commit/1df1d28d6100a2306a8cd5ed1b4445c60512d9b2},
+}\\ PR of the mutability translation:
+\url{https://github.com/epfl-lara/rust-stainless/pull/164}.}
 
 Before presenting the tool's design and implementation details, the next section
 provides some background on the Rust compiler needed to understand the inner
