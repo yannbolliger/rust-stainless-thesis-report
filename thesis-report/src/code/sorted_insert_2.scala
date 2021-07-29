@@ -34,21 +34,15 @@ def sorted_insert(self: List[Int], e: Int): List[Int] = {
   (ret: List[Int]) => {
     val t: Boolean = if (size[Int](ret) == size[Int](self) + 1) {
       is_sorted(ret)
-    } else {
-      false
-    }
+    } else { false }
     val res: Boolean = t
     val t: Boolean = if (res) {
       contents(ret).subsetOf(contents(self) + e)
-    } else {
-      false
-    }
+    } else { false }
     val res: Boolean = t
     val t: Boolean = if (res) {
       contents(self) + e.subsetOf(contents(ret))
-    } else {
-      false
-    }
+    } else { false }
     val res: Boolean = t
     res
   }

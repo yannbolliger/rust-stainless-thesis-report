@@ -298,10 +298,11 @@ example of supported and verified Rust code before this project is
 
 \subsubsection{New Features}
 
-This section gives an overview of all the language features that were added to
-the extraction in the course of this project except for the mutability
-translation which has been introduced in \autoref{translation}. The features
-described here are available on the \lstinline!master! branch of the project.
+This section gives an overview of all the Rust language features that were added
+to the extraction of Rust-Stainless in the course of this project except for the
+mutability translation which has already been introduced in
+\autoref{translation}. The features described here are available on the
+\lstinline!master! branch of the project.
 
 \paragraph{Syntactical and Notational Improvements}
 
@@ -312,7 +313,11 @@ Support was added for:
   \passthrough{\lstinline!else if!} expressions,
 \item
   \passthrough{\lstinline!let!} bindings with user-specified type
-  annotation, \passthrough{\lstinline!let t: u16 = 1;!},
+  annotation,
+\begin{lstlisting}[language=Rust, style=short]
+let t: u16 = 1;
+\end{lstlisting}
+
 \item
   pattern matching on tuples,
 \item
@@ -647,9 +652,9 @@ method calls is to resolve the receiver instance they are called on. For
 example, \autoref{lst:clstranslation} shows a call to \lstinline!this.equals!
 inside the type class. In Rust, the call happens on the first parameter of the
 function which is also the receiver. This is implicitly resolved by the
-compiler. In Stainless however, the call needs to happen on the type class
-instance and because our type class instances are only created in the
-extraction, the tool has to resolve the receivers itself.
+compiler. In Stainless, the call needs to happen on the type class instance and
+because our type class instances are only created in the extraction, the tool
+has to resolve the receivers itself.
 
 Instance resolution takes a triple of type class identifier, receiver type, and
 type parameters, as well as the current surrounding class to resolve the
