@@ -143,7 +143,11 @@ assert!(x.0 == 123)
 \begin{lstlisting}[
   language=Scala,
   label=lst:tuple-sharing,
-  caption={In Scala, the tuple object is shared not copied.}
+  caption={
+    In Scala, the tuple object is shared not copied on line 4. The solution to
+    that is to add a \lstinline!copy!. Hence, line 4 becomes
+    \lstinline!MutCell(copy(x.value))!.
+  }
 ]
 val x =
   MutCell(Tuple2(MutCell(123), MutCell(false)))
@@ -378,15 +382,14 @@ cells in Scala is equivalent in runtime semantics, i.e.~when run the Scala
 translation yields the same result as the Rust program.
 \end{quote}
 
-The Rust borrow checker ensures that there is no unsafely aliased state,
-i.e.~aliased state that is mutated, in the original program. This may seem like
-an unnecessarily strict assumption, but Rust's ownership system is so
-fundamental to the language that it is impossible to define Rust's semantics
-without borrow checking \cite{krust}. Consider \autoref{lst:move-err}, because
-\lstinline!y! moves out \lstinline!x! on line 2, \lstinline!x! can never be
-reused and its value is undefined, even if some code could illegally read it
-again. Therefore, the borrow check assumption is necessary to reason about the
-semantics of the original program.
+The Rust borrow checker ensures that there is no aliased mutable data in the
+original program. This may seem like an unnecessarily strict assumption, but
+Rust's ownership system is so fundamental to the language that it is impossible
+to define Rust's semantics without borrow checking \cite{krust}. Consider
+\autoref{lst:move-err}, because \lstinline!y! moves out \lstinline!x! on line 2,
+\lstinline!x! can never be reused and its value is undefined, even if some code
+could illegally read it again. Therefore, the borrow check assumption is
+necessary to reason about the semantics of the original program.
 
 \begin{lstlisting}[
   language=Rust,
@@ -423,11 +426,11 @@ results in correct Scala runtime semantics.
 If data is used by value, it grants ownership to the new binding. This holds for
 both moveable and copyable types. Only for the latter, the original binding and
 data stay intact, whereas for moveable types, the original owner is invalidated
-and the data de-initialised. In both cases, changes will not appear on the
-original binding if the used data is later mutated. Therefore, the translation
-is correct in inserting the \lstinline!move! or \lstinline!copy! operator --
-which for this argument can be taken as deep copies -- around by-value reads of
-a cell's data.
+and the data is conceptually de-initialised (the compiler may invisibly optimise
+that away). In both cases, changes will not appear on the original binding if
+the used data is later mutated. Therefore, the translation is correct in
+inserting the \lstinline!move! or \lstinline!copy! operator -- which for this
+argument can be taken as deep copies -- around by-value reads of a cell's data.
 
 Performing a deep copy for moveable types is correct because the original
 binding can never be reused. Thus, one can think of moving as performing a deep
@@ -445,14 +448,14 @@ aggregate type is trivially the same as a deep copy, as long as all contained
 types are present by value. That means, all contained data is embedded in the
 bits of the aggregate structure and is simply copied deeply (bitwise) as well.
 It gets more complicated for shared references (mutable references are not
-copyable as they need to be unique). For a shared reference, Rust simply copies
-the reference, i.e.~the pointer value, but not the referenced object. Still,
-that operation is equivalent to a deep copy because the reference is shared.
-Thus, by the borrow check assumption, as long as any shared reference to an
-object exists, that object cannot be mutated. In other words, under that
-assumption a shared reference will never see its referenced value change.
-Therefore, it is equivalent to copy that object deeply when needed, as it
-doesn't change. The sharing can be viewed simply as an optimisation in Rust.
+copyable as they need to be unique). Rust simply copies the shared reference,
+i.e.~the pointer value, but not the referenced object. Still, that operation is
+equivalent to a deep copy for a shared reference because, by the borrow check
+assumption, as long as any shared reference to an object exists, that object
+cannot be mutated. In other words, a shared reference will never see its
+referenced value change under that assumption. Therefore, it is equivalent to
+copy that object deeply when needed because it cannot change. The sharing can be
+viewed simply as an optimisation in Rust.
 
 The above holds for tuples, arrays and user-defined \lstinline!Copy! types as
 long as the \lstinline!copy! operator supports them in Scala. Other copyable
@@ -549,7 +552,8 @@ multiple immutable references. The borrow check assumption guarantees that the
 program does not have illegal aliasing of mutable state, but the translation
 needs to convince Stainless of that fact. It does so with the \lstinline!move!
 and \lstinline!copy! operators. The translation already introduces
-\lstinline!move! and \lstinline!copy! when data is used by value. To work around
+\lstinline!move! and \lstinline!copy! when data is used by value, as can be seen
+in \autoref{lst:tuple-sharing} and \autoref{lst:replace}. To work around
 Stainless's aliasing restrictions, it additionally introduces \lstinline!copy!
 for function arguments that are shared references and lastly, it adds
 \lstinline!move! or \lstinline!copy! to the return values of functions and inner

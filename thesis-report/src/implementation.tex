@@ -59,7 +59,7 @@ The last compilation phase is \emph{code generation}. Generic code is
 \emph{monomorphised}, i.e.~copied and specialised for each type it is
 instantiated with. Then, a special IR for \emph{LLVM} \cite{llvm} is generated.
 LLVM is a general purpose compiler backend, also used by C\texttt{++}. It will
-perform much more performance optimisations and finally generate the assembly
+perform many more performance optimisations and finally generate the assembly
 code for the target architecture.
 
 \section{System Overview}
@@ -194,16 +194,42 @@ serialised to a custom binary format understood by Stainless. At this point, the
 program is represented by a list of functions, a list of ADTs and a list of
 classes (\autoref{lst:stainless-trees}).
 
-If the user specified to export the AST, the binary format is simply written to
-a file. Otherwise, Rust-Stainless spawns a subprocess with the
-\lstinline!Noxt-Frontend! of Stainless. The subprocess reads the binary format
-from a temporary file, performs some minor transformations and passes it to the
-verification pipeline. In the end, it reports back the results in JSON format
-via standard output such that Rust-Stainless can print them. In this example,
-Stainless returns a problem: the integer multiplication on line 6 of
-\autoref{lst:stainless-trees} could overflow and therefore, the postcondition
-does not hold.
+If the user specified to export the AST with \lstinline!--export!, the binary
+format is simply written to a file. Otherwise, Rust-Stainless spawns a
+subprocess with the \lstinline!NoxtFrontend! of Stainless. The subprocess reads
+the binary format from a temporary file, performs minor transformations and
+passes it to the verification pipeline. In the end, it reports back the results
+in JSON format via standard output such that Rust-Stainless can print them. In
+this example, Stainless returns a problem, see \autoref{lst:console}: the
+integer multiplication on line 6 of \autoref{lst:stainless-trees} could overflow
+and therefore, the postcondition does not hold.
 
+\begin{lstlisting}[
+  style=short,
+  caption={Console output of \lstinline!cargo stainless! for the code of \autoref{lst:example}.},
+  label=lst:console
+]
+<@\textbf{\textcolor{MidnightBlue}{\$} cargo stainless -{}-example ex}@>
+cargo-stainless: Found example target 'ex'.
+
+=== Analysing crate 'ex' ===
+
+[ Discovering local definitions ]
+  - ADT A
+  - Fun main
+  - Fun f
+[ Extracted items ]
+ - ADT        A$0
+ - ADT        MutCell$2
+ - Function   main$5
+ - Function   f$6
+
+<@\textcolor{ForestGreen}{note}@>: Verified 2 items.
+<@\textcolor{Dandelion}{warning}@>: Failed to prove 1 VCs:
+- f             postcondition                 0.3              Invalid
+
+<@\textcolor{Dandelion}{warning}@>: 1 warning emitted
+\end{lstlisting}
 
 
 \section{Extraction}
@@ -337,7 +363,7 @@ pub enum List<T> {
 
 \paragraph{Measure Attribute}
 
-Recursive proofs in Stainless often require the programmer to state the
+Inductive proofs in Stainless often require the programmer to state the
 induction variable with a \lstinline!decreases! call in Scala. This helps
 Stainless infer the so called \emph{measure} of the proof, with which it checks
 termination. The same feature was introduced in Rust as a new spec attribute
@@ -447,8 +473,7 @@ and their implementations, including specification attributes on abstract
 methods. Lastly, it can extract  trait bounds like \passthrough{\lstinline!T:
 Equals!} from top-level functions and implementation blocks, and transform them
 to the equivalent Scala pattern of \emph{evidence parameters}. More details on
-that tranlsation follow in the next section.
-
+that translation follow in the next section.
 
 
 \subsection{Implementation Details}
@@ -610,8 +635,8 @@ has no type parameter, it can be extracted as a ground case object.
 
 If there are classes, it is also necessary to distinguish \emph{function calls}
 from \emph{method calls}. This distinction is mostly achieved by adding flags
-like \passthrough{\lstinline!abstract!} and
-\passthrough{\lstinline!methodOf(i32asEquals)!} to methods. The challenge of
+like \passthrough{\lstinline!@abstract!} and
+\passthrough{\lstinline!@methodOf(i32asEquals)!} to methods. The challenge of
 method calls is to resolve the receiver instance they are called on. For
 example, \autoref{lst:clstranslation} shows a call to \lstinline!this.equals!
 inside the type class. In Rust, the call happens on the first parameter of the
@@ -634,7 +659,7 @@ with the ground object \lstinline!i32asEquals!.
 
 
 
-\subsubsection{Spec Closure Encoding}
+\subsubsection{Encoding of Specifications}
 \label{spec-encoding}
 
 \autoref{lst:example2} highlighted how specification attributes are desugared by
