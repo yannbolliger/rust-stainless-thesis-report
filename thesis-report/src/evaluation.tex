@@ -7,8 +7,8 @@ Rust-Stainless.
 \section{Benchmarks}
 
 The Rust-Stainless repository contains a test suite of 67 passing (positive) and
-12 failing (negative) test code examples of in total around 3000
-lines.\footnote{Found under \texttt{stainless\_frontend/tests/[pass|fail]} on
+12 failing (negative) test code examples of approximately 3000
+lines in total.\footnote{Found under \texttt{stainless\_frontend/tests/[pass|fail]} on
 the \texttt{mutable-cells} branch.} The suite is run for every pull request and
 every commit to the \texttt{master} branch.
 
@@ -21,7 +21,7 @@ complete the verification pipeline. The used benchmarks amount to 2214 lines of
 Rust code (LoC), Stainless generates in total 475 verification conditions (VCs)
 and the accumulated running time is 5.1 minutes (Total). Note that the test
 suite normally (when run with \texttt{cargo test}) runs multiple tests in
-parallel and thus completes in less than 2 minutes on the same
+parallel and thus, completes in less than 2 minutes on the same
 machine.\footnote{All the tests were run on a MacBook Pro with a 2.8~GHz
 Quad-Core Intel Core i7 and 16~GB of RAM.}
 
@@ -74,7 +74,7 @@ submitted to Stainless, shown in \autoref{lst:sort-ins-1}. The translation is
 almost identical. The only changes are the mutable cell patterns in the match,
 the \lstinline!freshCopy! around the return values, and the erasure of the
 boxes. This is thanks to the optimisations of \autoref{optimisations}. For
-example, the function arguments are not wrapped in mutable cells because they're
+example, the function arguments are not wrapped in cells because they're
 immutable.
 
 \noindent\begin{minipage}[t]{.43\textwidth}
@@ -82,7 +82,7 @@ immutable.
   language=Rust,
   basicstyle=\footnotesize\ttfamily,
   label={lst:sort-ins-rs},
-  caption={Completely functional method of \autoref{lst:insertion-sort}.}
+  caption={Completely functional method of the \lstinline!List<i32>! in \autoref{lst:insertion-sort}.}
 ]
 #[pre(self.is_sorted())]
 #[measure(self)]
@@ -129,7 +129,7 @@ multiple casts to use the fields of the ADT directly, e.g.~\lstinline!._1!,
 instead of using the matched bindings. Otherwise, it does not introduce
 unnecessary complexity to deal with mutable cells. Thus, it can be concluded
 that the mutability translation preserves the verifiability of functional code
--- at least as long, as no type classes are involved that may cause trouble with
+-- at least as long as no type classes are involved that may cause trouble with
 the refinement lifting.
 
 \paragraph{Type Class}
@@ -271,8 +271,8 @@ node. These states are recorded with sets in the struct and the
 \lstinline!invariant! method returns true if the sets are in a valid
 configuration. For example, they all  need to be disjoint as each node must be
 in exactly one state. The two methods of interest are
-\lstinline!replace_faulty_witness! and \lstinline!replace_faulty_primary! that
-both change the state of some of the nodes.
+\lstinline!replace_faulty_witness! and \lstinline!replace_faulty_primary!.
+Both change the state of some of the nodes.
 
 The only notable but crucial change from the original code is that instead of
 the standard \lstinline!HashMap! and \lstinline!HashSet!, the verified code uses
@@ -286,7 +286,7 @@ element retrieval. Therefore, I created the list-backed collections and added a
 \lstinline!first! method. Ideally, the two list-collections should be in the
 Stainless crate and be part of the library. If that was the case, the peer-list
 example would only have to import the Stainless crate and change  the collection
-types, to be verifiable. Unfortunately, the one-crate-limitation (cf.
+types to be verifiable. Unfortunately, the one-crate-limitation (cf.
 \autoref{impl-limitations}) currently forces us to have the collections in the
 user crate.
 

@@ -329,7 +329,7 @@ the function where it's created. Without boxes, data is always stack-allocated
 and thus dropped, at the end of the function. This distinction is not needed in
 Scala because, on the JVM, all objects live on the heap. Therefore, the
 translation can erase the fact that data is in a box, because it wraps the data
-in a mutable cell anyway, to model the variable that ``holds the box''. Thus,
+in a mutable cell anyway to model the variable that ``holds the box''. Thus,
 the data  is modelled on the heap which corresponds to what happens in Rust and
 thanks to the cell object all of this also works for primitive types.
 
@@ -571,7 +571,7 @@ The borrow checker has made sure that the latter are not aliased. Hence, the
 resulting program contains no aliasing of mutable types but still preserves
 correct runtime semantics.
 
-\subsubsection{\texttt{move} is the identity}
+\subsubsection{\texttt{move} is the Identity}
 
 This subsection shows that the \lstinline!move! operator -- though very useful
 to work with Stainless -- is not necessary to the semantic correctness of the
@@ -600,8 +600,7 @@ Stainless. The same holds for function arguments and return values. Thus, in
 order to only achieve correct Scala runtime semantics, the \lstinline!move! can
 be omitted because it is equivalent to the identity.
 
-\subsubsection{\texorpdfstring{\texttt{copy} is the functional
-identity}{copy is the functional identity}}
+\subsubsection{\texttt{copy} is the Functional Identity}
 
 The second claim only concerns completely functional programs, that is, programs
 that do not mutate any data.
@@ -628,7 +627,7 @@ again, if that data cannot change at all, one may as well share the objects.
 This shows that the \lstinline!copy! operator is equivalent to the identity in
 programs without mutation.
 
-\subsubsection{Cloning is copying}
+\subsubsection{Cloning is Copying}
 \label{sec:clone-is-copy}
 
 Unlike the built-in implicit copy that occurs for copyable Rust types, a clone
