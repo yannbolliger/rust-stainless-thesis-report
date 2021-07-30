@@ -54,7 +54,7 @@ assigned value to it. Function parameters are also variables in
 Rust~\cite{rustref}. By default, variables are immutable, that is, the compiler
 rejects any attempt to reassign to an initialised variable. On the other hand,
 Rust accepts to redeclare and thereby \emph{shadow} a binding, which is what
-happens on line 6 of \autoref{lst:let}.
+happens on line 5 of \autoref{lst:let}.
 
 The compiler infers the type of most let-bindings, such that the type does not
 have to be annotated like for function parameters. In \autoref{lst:let}, all the
@@ -80,7 +80,7 @@ three forms: without fields, like \lstinline!OnlyAMarker! in
 numerically indexed fields, e.g. \lstinline!a.0!; and the C-like structs with
 field names, \lstinline!b.field!. Enumerations are sum types and have members
 that are again in either unit, tuple or C-like form. \autoref{lst:option} shows
-an enumeration example from the standard library, the option type. It also shows
+an enumeration type example from the standard library, the option type. It also shows
 how the type parameter \lstinline!T! is used to create a generic data type.
 
 \noindent\begin{minipage}[t]{.48\textwidth}
@@ -171,7 +171,7 @@ fn g(mut a: i32) -> i32 {
 \begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[
   language=Rust,
-  caption={Mutable variable bindings.},
+  caption={Mutable field of a mutable struct.},
   label={lst:mut-ex-2},
 ]
 let mut b = B { field: 2 };
@@ -220,7 +220,7 @@ which the method was called, in the example of \lstinline!c.is_empty()!, this is
 equivalent to \lstinline!is_empty(&c)!. The same happens for
 \passthrough{\lstinline!&mut self!} but mutably.\footnote{More on references in
 \autoref{references}.} Finally, it is also possible to consume the instance by
-specifying \lstinline!self! as receiver.
+specifying \lstinline!self! or \passthrough{\lstinline!mut self!} as receiver.
 
 Traits are used to specify interfaces in Rust. A trait \lstinline!X! can be
 implemented for a data type \lstinline!A! with an \passthrough{\lstinline!impl X
@@ -235,7 +235,7 @@ available.
 \noindent\begin{minipage}[t]{.48\textwidth}
 \begin{lstlisting}[language=Rust, style=short, caption={Rust trait with one abstract method.}, label=lst:trait-impl1]
 trait Id {
-  fn id(&self) -> usize;
+  fn id(&self) -> isize;
 }
 \end{lstlisting}
 \end{minipage}\hfill
@@ -247,7 +247,7 @@ trait Id {
   label=lst:trait-impl2
 ]
 impl Id for String {
-  fn id(&self) -> usize { 123456 }
+  fn id(&self) -> isize { 123456 }
 }
 \end{lstlisting}
 \end{minipage}
@@ -320,7 +320,7 @@ linearly \cite{oxide}, moving out can be seen as \emph{destructive read}
 out of \lstinline!a! and its ownership is transferred to \lstinline!b!.
 
 From the example it is clear, why Rust's borrow checker needs to be
-flow-sensitive. The move semantics render \lstinline!a! dead before it formally
+flow-sensitive. The move renders \lstinline!a! dead before it formally
 goes out of scope, e.g. at the end of the block. The same applies to individual
 fields. A field can be moved out of its struct and become inaccessible while
 another field of the same struct is still available. This is called a
@@ -347,7 +347,7 @@ let b = a;
   caption={Copy semantics of the \lstinline!i32! type.}
 ]
 let a = 123;
-let mut b = a;
+let mut b = a; // `a` is copied
 b += 1;
 // `a` can still be used
 assert!(a == 123 && b == 124)
@@ -368,7 +368,7 @@ by the compiler and the original binding stays valid and independent. In
 contrast to shared references that are copyable, mutable references have move
 semantics because they need to stay unique, as will become clear shortly.
 Non-copyable types can still be explicitly copied by implementing the
-\lstinline!std::clone::Clone! trait and calling the \lstinline!clone! method.
+\lstinline!std::clone::Clone! trait and calling the \lstinline!.clone()! method.
 
 \paragraph{Heap Allocation}
 
@@ -488,7 +488,7 @@ impl<T> Option<T> {
 \begin{lstlisting}[
   language=Rust,
   label=lst:swap-replace,
-  caption={Swap using the replace method.}
+  caption={Swap using the \texttt{replace} method.}
 ]
 impl<T> Option<T> {
   fn swap(&mut self, t: T) -> Self {
@@ -522,9 +522,9 @@ locally bound with the immutable \lstinline!val! or the mutable \lstinline!var!.
 
 \subsubsection{References}
 
-Places or lvalues are not programatically accessible in Scala, as in JVM
-languages there is no way to take a reference to a place explicitly. That means
-it's possible a priori to generalise over whether one wants to assign to a local
+Places or lvalues are not programatically accessible in Scala, as on the JVM,
+there is no way to take a reference to a place explicitly. That means,
+it's impossible a priori to generalise over whether one wants to assign to a local
 variable or an object field by taking a reference to that lvalue/place.
 
 As in all JVM languages, objects in Scala are heap-allocated and function
@@ -677,8 +677,8 @@ Stainless also proves the correctness of the laws for each implementation of the
 trait.
 
 The last addition to the running example, is a law on the \lstinline!Id! trait
-stating that the returned integer need to be positive. Of course, the toy
-implementation that hard-codes an id for strings, holds that contract (lines 7-8
+stating that the returned integer needs to be positive. Of course, the toy
+implementation that hard-codes an id for strings holds that contract (lines 7-8
 in \autoref{running-example}). A more interesting example of laws in
 \autoref{lst:liskov1} shows a violation of the  Liskov Substitution principle
 \cite{liskov}. The trait defines four methods. Two of them have regular
@@ -741,9 +741,9 @@ impl Rectangle for Square {
 \noindent This concludes the introduction to Rust and Stainless. All Rust
 features needed for the motivating example (\autoref{running-example}) were
 introduced, as were the verification features of Rust-Stainless.  Most of these
-features were only added in the course of this thesis project. The goal of the
+features were only added in the course of this project. The goal of the
 remaining chapters is now to extend Rust-Stainless with all these features. In
-particular, \autoref{translation} will explain how mutability and mutable
+particular, \autoref{translation} will explain how mutability and 
 references are translated to Scala. Chapter \ref{implementation} distinguishes
 between existing and added features, then gives some implementation details.
 
