@@ -153,9 +153,7 @@ def balance(c: Color, a: Tree, x: BigInt, b: Tree): Tree = {
   \centering
   \includegraphics[width=0.8\textwidth]{img/rbtree_cases.png}
   \vfill
-  \only<2>{
-    \includegraphics[width=0.3\textwidth]{img/rbtree_solution.png}
-  }
+  \includegraphics[width=0.3\textwidth]{img/rbtree_solution.png}
 \end{frame}
 
 \begin{frame}[standout]
@@ -373,16 +371,152 @@ fn balance(&mut self) {
 
 \section{Mutability Translation}
 
+\begin{frame}{Goal}
+Translate Rust mutability and references to Scala while providing runtime
+equivalence in Scala and verification in Stainless.
+\end{frame}
+
+\begin{frame}{Challenges}
+\begin{itemize}
+\item Explicit references (borrows) and ownership in Rust don't exist in Scala.
+\item Heap- \& stack-allocated data in Rust vs everything on the heap in Scala.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]{Mutable Cells}
+To make references possible, a layer of indirection is needed. All mutability is
+modelled with the mutable cell object:
+\begin{lstlisting}[language=Scala, style=short]
+case class MutCell[T](var value: t)
+\end{lstlisting}
+\vfill
+\begin{block}{Idea}
+Whenever something is (possibly) mutable, we wrap it into a mutable cell.
+\end{block}
+\vfill
+In Scala (on the JVM):
+\begin{itemize}
+  \item all objects are on the heap,
+  \item objects are handled by reference only.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Example}
+This allows modelling references by wrapping values in mutable cells:
+
+\begin{columns}
+\column{0.35\textwidth}
+\begin{lstlisting}[language=Rust]
+struct A<T> {
+  a: T, b: i32
+}
+let x = A {
+  a: "foo", b: 123
+}
+let mut y = 123;
+assert!(y == x.b);
+\end{lstlisting}
+\column{0.6\textwidth}
+\begin{lstlisting}[language=Scala]
+case class A[T](
+  a: MutCell[T], b: MutCell[Int]
+)
+val x = MutCell(
+  A(MutCell("foo"), MutCell(123))
+)
+val y = MutCell(123)
+assert(y.value == x.value.b.value)
+\end{lstlisting}
+\end{columns}
+
+A reference to \lstinline!y! in Rust, e.g. \lstinline!&mut y!, is now equivalent
+to the mutable cell \lstinline!y! in Scala.
+\end{frame}
 
 
 
+\begin{frame}{Ownership and Aliasing}
+To model Rust's ownership type system, the translation uses the
+\lstinline!freshCopy! operator of Stainless.
 
+\begin{itemize}
+\item Semantically, a deep copy
+\item Models move and copy semantics
+\item Helps avoid aliasing restrictions of the Stainless imperative phase
+\end{itemize}
+\end{frame}
 
+\begin{frame}[fragile]{Example}
+\begin{columns}[T]
+\column{.4\textwidth}
+\begin{lstlisting}[language=Rust]
+let x = (
+  123,
+  false
+);
+// copies `x`
+let mut y = x;
 
+y.0 = 456;
+// holds:
+assert!(x.0 == 123)
+\end{lstlisting}
+\column{.6\textwidth}
+\begin{onlyenv}<1>
+\begin{lstlisting}[language=Scala]
+val x = MutCell(Tuple2(
+  MutCell(123),
+  MutCell(false)
+))
+// shares tuple object `x.value`
+val y = MutCell(x.value)
+// i.e. x.value == y.value
+y.value._0.value = 456
+// fails:
+assert(x.value._0.value == 123)
+\end{lstlisting}
+\end{onlyenv}
+\begin{onlyenv}<2>
+\begin{lstlisting}[language=Scala]
+val x = MutCell(Tuple2(
+  MutCell(123),
+  MutCell(false)
+))
+// copies tuple object `x.value`
+val y = MutCell(freshCopy(x.value))
+// i.e. x.value != y.value
+y.value._0.value = 456
+// holds:
+assert(x.value._0.value == 123)
+\end{lstlisting}
+\end{onlyenv}
+\end{columns}
+\end{frame}
 
-
-
-
+\begin{frame}[fragile]{Memory Replace}
+\begin{columns}[T]
+\column{.42\textwidth}
+\begin{lstlisting}[language=Rust]
+fn f(a: &mut A) -> A {
+  std::mem::replace(
+    a,
+    A { a: "bar", b: 0 }
+  )
+}
+\end{lstlisting}
+\column{.55\textwidth}
+\begin{lstlisting}[language=Scala]
+def f(a: MutCell[A]): A = {
+  val res = freshCopy(a.value)
+  a.value = A(
+    MutCell("bar"), MutCell(0)
+  )
+  freshCopy(res)
+}
+\end{lstlisting}
+\end{columns}
+\end{frame}
 
 
 \section{Conclusions}
@@ -416,29 +550,6 @@ fn balance(&mut self) {
 \item No access to lifetimes
 \item Refinement lifting in the backend
 \item Stainless aliasing restrictions
-\begin{columns}[T]
-\column{.35\textwidth}
-\begin{lstlisting}[
-  language=Rust
-]
-let mut a = 123;
-let mut b = 456;
-let mut x = &mut a;
-
-x = &mut b;
-\end{lstlisting}
-
-\column{.65\textwidth}
-\begin{lstlisting}[
-  language=Scala
-]
-val a: MutCell[Int] = MutCell[Int](123)
-val b: MutCell[Int] = MutCell[Int](456)
-val x: MutCell[MutCell[Int]] =
-  MutCell[MutCell[Int]](a)
-x.value = b // Illegal aliasing
-\end{lstlisting}
-\end{columns}
 \end{itemize}
 \end{frame}
 
@@ -515,4 +626,34 @@ trait Rectangle {
   }
 }
 \end{lstlisting}
+\end{frame}
+
+\begin{frame}{Heap Allocation}
+
+\end{frame}
+
+\begin{frame}[fragile]{Aliasing Limitations}
+\begin{columns}[T]
+\column{.35\textwidth}
+\begin{lstlisting}[
+  language=Rust
+]
+let mut a = 123;
+let mut b = 456;
+let mut x = &mut a;
+
+x = &mut b;
+\end{lstlisting}
+
+\column{.65\textwidth}
+\begin{lstlisting}[
+  language=Scala
+]
+val a: MutCell[Int] = MutCell[Int](123)
+val b: MutCell[Int] = MutCell[Int](456)
+val x: MutCell[MutCell[Int]] =
+  MutCell[MutCell[Int]](a)
+x.value = b // Illegal aliasing
+\end{lstlisting}
+\end{columns}
 \end{frame}
