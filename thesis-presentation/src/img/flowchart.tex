@@ -1,0 +1,48 @@
+\begin{tikzpicture}[
+  rect/.style={
+    rectangle,
+    minimum height=5mm,
+    text centered,
+    draw=black,
+  },
+  align=center,
+  node distance=0.85cm,
+  auto
+]
+\small
+\node (rustc)     []   {\texttt{rustc}};
+\node (tool)      [right= 2.4cm of rustc]   {Rust-Stainless};
+\node (stainless) [right= 2.8cm of tool]   {Stainless (JVM)};
+
+\node (source)  [rect, below= 0.2cm of rustc] {Source};
+\node (ast)     [rect, below of=source] {AST};
+\node (hir)     [rect, below of=ast] {HIR};
+\node (thir)    [rect, below of=hir] {THIR};
+\node (mir)     [rect, below of=thir] {MIR};
+\node (llvm)    [rect, below of=mir,  draw=gray, text=gray] {LLVM-IR};
+\node (asm)     [rect, below of=llvm, draw=gray, text=gray] {ASM (Target)};
+
+\node (srast)   [rect, below= 0.2cm of tool] {Stainless AST (Rust)};
+\node (binary)  [rect, below of=srast] {Binary};
+\node (rvr)     [rect, right= 2cm of mir] {Verification Result (Rust)};
+
+\node (ssast)   [rect, below= 0.2cm of stainless] {Stainless AST (Scala)};
+\node (svr)     [rect, below of=ssast] {Verification Result (Scala)};
+\node (json)    [rect, below of=svr] {JSON};
+
+% down arrows
+\draw[->] (source) -- (ast);
+\draw[->] (ast) -- (hir);
+\draw[->] (hir) -- (thir);
+\draw[->] (thir) -- (mir);
+\draw[->, draw=gray] (mir) -- (llvm);
+\draw[->, draw=gray] (llvm) -- (asm);
+\draw[->] (srast) -- (binary);
+\draw[->] (ssast) -- (svr);
+\draw[->] (svr) -- (json);
+
+\draw[->] (hir.east) to    [out=0, in=180] (srast.west);
+\draw[->] (thir.east) to   [out=0, in=180] node[anchor=west, text width=2cm, yshift=-0.5cm] {\textit{Extraction \& Translation}} (srast.west);
+\draw[->] (binary.east) to [out=0, in=180] node[anchor=north, text width=2cm, below, yshift=-0.4cm] {\textit{Temporary File}} (ssast.west);
+\draw[->] (json.south) to  [out=270, in=0] node {\textit{Standard I/O}}  (rvr.east);
+\end{tikzpicture}

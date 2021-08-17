@@ -43,6 +43,8 @@ fn square(x: i32) -> i32 { -2 * x }
   \setbeamertemplate{section in toc}[sections numbered]
 
   \tableofcontents%[hideallsubsections]
+
+  \textit{Keeping it specific.}
 \end{frame}
 
 \section{Verifying a Red-Black Tree}
@@ -113,7 +115,7 @@ fn square(x: i32) -> i32 { -2 * x }
 
 \begin{frame}[fragile]{Insertion}
 In Scala
-\begin{lstlisting}[language=Scala, basicstyle=\footnotesize\ttfamily,]
+\begin{lstlisting}[language=Scala, basicstyle=\footnotesize\ttfamily]
 def ins(x: BigInt, t: Tree): Tree = {
   require(redNodesHaveBlackChildren(t) && blackBalanced(t))
   t match {
@@ -359,13 +361,141 @@ fn balance(&mut self) {
 
 \section{Tool Overview}
 
-\section{Translation}
+\begin{frame}{How it works}
+\begin{itemize}
+  \item Verification by Stainless in Scala
+  \item \texttt{rust-stainless} is a frontend to Stainless
+  \item Translate Rust fragment to Scala fragment supported by Stainless
+  \item Get verification result back
+\end{itemize}
+\end{frame}
 
-\subsection{Mutability}
+\begin{frame}{Pipeline}
+\centering
+\include{img/flowchart}
+\end{frame}
 
-\subsection{Traits to Type Classes}
+
+
+
+\section{Mutability Translation}
+
+
+
+
+
+
+
+
+
+
+
+
 
 \section{Conclusions}
+
+\subsection{Result}
+
+\begin{frame}{Result}
+\begin{itemize}
+  \item \texttt{rust-stainless} tool supports a large part of Rust
+  \item Full support for mutable and shared references
+  \item Frontend only accounts for 5~\% of running time
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]{Added Features}
+\textbf{Implementation blocks, traits and laws}
+\begin{lstlisting}[
+  language=Rust,  basicstyle=\footnotesize\ttfamily,
+]
+trait Rectangle {
+  #[post(ret > 0)]
+  fn width(&self) -> u32;
+  #[post(ret > 0)]
+  fn height(&self) -> u32;
+
+  fn set_width(&self, width: u32) -> Self;
+  fn set_height(&self, height: u32) -> Self;
+  #[law]
+  fn preserve_height(&self, any: u32) -> bool {
+    self.set_width(any).height() == self.height()
+  }
+  #[law]
+  fn preserve_width(&self, any: u32) -> bool {
+    self.set_height(any).width() == self.width()
+  }
+}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{More Added Features}
+\begin{itemize}
+\item Stainless Map and Set implementations,
+\item \lstinline!return! keyword,
+\item Pattern matching for tuples,
+\item and many notational improvements.
+\end{itemize}
+\end{frame}
+
+\subsection{Limitations}
+
+\begin{frame}[fragile]{Limitations}
+\begin{itemize}
+\item Missing Rust features: arrays, loops, iterators and closures
+\item One-crate-limitation
+\item No access to lifetimes
+\item Refinement lifting in the backend
+\item Stainless aliasing restrictions
+\begin{columns}[T]
+\column{.35\textwidth}
+\begin{lstlisting}[
+  language=Rust
+]
+let mut a = 123;
+let mut b = 456;
+let mut x = &mut a;
+
+x = &mut b;
+\end{lstlisting}
+
+\column{.65\textwidth}
+\begin{lstlisting}[
+  language=Scala
+]
+val a: MutCell[Int] = MutCell[Int](123)
+val b: MutCell[Int] = MutCell[Int](456)
+val x: MutCell[MutCell[Int]] =
+  MutCell[MutCell[Int]](a)
+x.value = b // Illegal aliasing
+\end{lstlisting}
+\end{columns}
+\end{itemize}
+\end{frame}
+
+\subsection{Future Work}
+
+\begin{frame}{Future Work}
+\begin{itemize}
+  \item Solving the \textbf{one-crate-limitation} by allowing specifications
+  for crate-external items.
+
+  \item Using the new fully imperative phase currently in development.
+
+  \item Providing Rust counter-examples.
+
+  \item Uncover new use-cases, for example in the blockchain context.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[standout]
+Thank you!
+\end{frame}
+
+\begin{frame}[standout]
+Questions?
+\end{frame}
 
 
 \begin{frame}[allowframebreaks]{References}
