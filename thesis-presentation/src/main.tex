@@ -1,0 +1,713 @@
+\documentclass[10pt, aspectratio=149]{beamer}
+
+\usetheme[progressbar=frametitle, block=fill]{metropolis}
+
+%\setbeamertemplate{frame footer}{Yann Bolliger -- \textit{Frequent Subgraph Search}}
+
+\usepackage{appendixnumberbeamer}
+
+\usepackage{booktabs}
+
+\usepackage{pgfplots}
+\usepackage{svg}
+\usepgfplotslibrary{dateplot}
+
+\usepackage{tikz}
+\usetikzlibrary{graphs, graphdrawing,graphdrawing.layered, graphdrawing.force, quotes}
+
+\usepackage{xspace}
+\newcommand{\themename}{\textbf{\textsc{metropolis}}\xspace}
+
+\title{Frequent Subgraph Search}
+\subtitle{On deterministic and probablistic graphs}
+\date{25.06.20}
+\author{Yann Bolliger}
+\institute{
+COM-512 Networks out of control \\
+Prof. Matthias Grossglauser and Prof. Patrick Thiran \\
+École polytechnique fédérale de Lausanne
+}
+\titlegraphic{\includesvg[height=0.5cm]{epfl-logo.svg}}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{Contents}
+  \setbeamertemplate{section in toc}[sections numbered]
+  
+  \begin{columns}[T]
+  \column{0.5\textwidth}
+  \tableofcontents%[hideallsubsections]
+  
+  
+  \column{0.5\textwidth}
+  \textbf{Based on}
+  \begin{itemize}
+      \item  Kuramochi et al., \textit{An efficient algorithm for discovering frequent subgraphs} \cite{FSG} 
+      
+      \item Yuan et al., \textit{Efficient Subgraph Similarity Search on Large Probabilistic Graph Databases} \cite{sim}
+  \end{itemize}
+  
+  
+  \end{columns}
+\end{frame}
+
+\section[Intro]{Introduction}
+
+\begin{frame}{Labelled Graphs}
+  \begin{itemize}
+    
+    \item Deterministic, labelled, undirected graph:
+    $G = (V, E, \Sigma, L)$ with labelling $L: V \cup E \rightarrow \Sigma$, \cite{sim}.
+   \end{itemize}
+   
+   \only<-2>{
+   \begin{columns}[T]
+    \column{0.3\textwidth}
+   $(V, E)=$
+  \begin{figure}
+     \begin{tikzpicture}
+     \graph[nodes={draw,circle}]{
+        a__ -- b__ -- c__;
+        b -- d__ -- a;
+     };
+     \end{tikzpicture}
+   \end{figure}
+   
+    \column{0.3\textwidth}<2>
+    $\Sigma = \{a,b,c,d, x,y\}$
+   \end{columns}
+   }
+   
+   \only<3>{
+    \begin{figure}
+     \begin{tikzpicture}
+     \graph[nodes={draw,circle}]{
+        a -- b --["x"] c;
+        b -- d --["y"] a;
+     };
+     \end{tikzpicture}
+   \end{figure}
+   }
+\end{frame}
+
+\begin{frame}{Application}
+\begin{itemize}
+    \item Database of graphs (transactions):
+    $\mathcal{D} = \{G_1, G_2, \ldots \}$
+\end{itemize}
+
+\only<1>{
+  \begin{figure}
+  \centering
+  \begin{tikzpicture}
+    \graph[layered layout, nodes={draw,circle}]{
+    a -- { b, c, d }; 
+    b -- { c, e };
+    c -- { f };
+    i__f -- { l__a, j__e }; 
+    j -- { m__b }; 
+    l -- {o__c, m} ;
+    m -- o ; 
+  };
+  \end{tikzpicture}
+\end{figure}
+}
+\only<2>{
+  \begin{figure}
+    \centering
+    \includegraphics[width=0.55\textwidth]{img/silico.png}
+    \caption{Protein-protein interaction network \cite{silico}.}
+  \end{figure}
+} \only<3>{
+  \begin{figure}
+    \centering
+    \includegraphics[width=0.6\textwidth]{img/schizo1.jpg}
+    \caption{The schizophrenia interactome, genes as nodes and PPIs as edges  \cite{schizo}.}
+  \end{figure}
+}
+\end{frame}
+
+\begin{frame}{Find Subgraphs}
+
+We want to find \textbf{common patterns in the database}.
+
+ \begin{columns}[T]
+\column{0.5\textwidth}
+\centering
+\begin{figure}
+     \begin{tikzpicture}
+     \graph[spring layout, nodes={draw,circle}]{
+        a -- b -- c;
+        b -- d -- a;
+        g__a -- h__b;
+     };
+     \end{tikzpicture}
+   \end{figure}
+   Yes.
+
+\column{0.5\textwidth}
+\centering
+\begin{figure}
+     \begin{tikzpicture}
+     \graph[spring layout, nodes={draw,circle}]{
+        a -- b -- c;
+        b -- d -- a;
+        g__a -- h__c;
+     };
+     \end{tikzpicture}
+   \end{figure}
+   No.
+\end{columns}
+\end{frame}
+
+\begin{frame}{More precisely}
+  \begin{block}{Subgraph Isomorphism \cite{sim}}
+    Given two deterministic, labelled, undirected graphs $G_1, G_2$, we say $G_1$ is subgraph isomorphic to $G_2$,
+    $$
+    G_1 \subseteq_{iso} G_2
+    $$ $\Leftrightarrow \ \exists$ an injection $f: V_1 \rightarrow V_2$ such that: 
+     \begin{itemize}
+         \item $G_1$ is an unlabelled subgraph of $G_2$
+         
+         \item the vertex labels are preserved
+         
+         \item  the edge labels are preserved
+     \end{itemize}
+  \end{block}
+\end{frame}
+
+
+\section[Discovering frequent subgraphs]{Frequent Subgraph Search}
+
+\subsection{The Problem}
+
+\begin{frame}{For deterministic graphs}
+
+\begin{alertblock}{Frequent Subgraph Discovery Problem as in \cite{FSG}}
+Given 
+
+\begin{itemize}
+    \item database $\mathcal{D} = \{G_1, G_2, \ldots \}$
+    \item \textit{support threshold} $\sigma \in (0, 1]$,
+\end{itemize}
+ find all connected graphs that occur as subgraphs in at least $\sigma \cdot |\mathcal{D}|$ input graphs.
+\end{alertblock}
+
+\begin{quote}
+    Return all common subgraph patterns (in most of the database).
+\end{quote}
+
+A naive solution is to solve the subgraph isomorphism problem (which is in NP-complete \cite{npcomp}) many times for each $G \in \mathcal{D}$.
+    
+\end{frame}
+
+\subsection{High-level Algorithm}
+
+\begin{frame}{The FSG Algorithm}
+The high-level idea \cite{FSG}:
+
+\begin{enumerate}
+    \item Start with all frequent single-edge subgraphs.
+    \item Smartly generate size-$(k+1)$ candidate subgraphs from the previous frequent size-$k$ subgraphs.
+    \item Smartly count the frequency and prune infrequent ones.
+    \item Go back to 2.) unless no frequent subgraph was found in this iteration.
+\end{enumerate}
+\end{frame}
+
+\begin{frame}{Step-by-step}
+Toy example with $\mathcal{D} = \{G_1, G_2\}$ and $\sigma = 1$.
+
+\begin{columns}[T]
+\only<2->{
+\column{0.5\textwidth}
+
+\begin{itemize}
+    \only<2-3> {
+    \item Common subgraphs with one edge: \\
+    \begin{figure}
+    \begin{tikzpicture}[inner sep=0.05cm, level distance=0.05cm, sibling distance=0.05cm]
+    \graph[layered layout, nodes={draw,circle}]{
+    a -- b;
+    z__a -- c;
+    y__b -- w__c; 
+    x__b -- e;
+    };
+    \end{tikzpicture}
+    \end{figure}
+    }
+    
+    \only<3-4>{
+     \item 
+        \only<3>{Join only 1-subgraphs with a common node:} 
+        \only<4>{1-subgraphs:} 
+    \begin{figure}
+    \begin{tikzpicture}[inner sep=0.025cm, level distance=0.025cm, sibling distance=0.025cm]
+    \graph[layered layout, nodes={draw,circle}]{
+    a -- {b, c};
+    z__b -- {y__c, x__a};
+    w__c -- {q__a, r__b}; 
+    };
+    \end{tikzpicture} \\
+    \begin{tikzpicture}[inner sep=0.025cm, level distance=0.025cm, sibling distance=0.025cm]
+    \graph[layered layout, nodes={draw,circle}]{
+    s__b -- {e, t__c};
+    u__b -- {v__e, k__a};
+    };
+    \end{tikzpicture}
+    \end{figure}
+    }
+    
+    \only<4-5>{
+    \item  
+        \only<4>{Join only 2-subgraphs with a common 1-subgraph:} 
+        \only<5>{2-subgraphs:} 
+    \begin{figure}
+    \begin{tikzpicture}[inner sep=0.025cm, level distance=0.025cm, sibling distance=0.025cm]
+    \graph[layered layout, nodes={draw,circle}]{
+    a -- {b, c};
+    b -- e;
+    
+    x__a -- y__b -- z__c -- x;
+    
+    h__b -- {i__a, j__c, k__e};
+    };
+    \end{tikzpicture}
+    \end{figure}
+    }
+    
+    \only<5>{
+    \item Join only 3-subgraphs with a common 2-subgraph: 
+    \begin{figure}
+    \begin{tikzpicture}[inner sep=0.025cm]
+    \graph[spring layout, horizontal=e to b, node distance=0.8cm, nodes={draw,circle}]{
+        e -- b;
+        b -- {c, a};
+        a -- c;
+    };
+    \end{tikzpicture}
+    \end{figure}
+    }
+\end{itemize}
+
+}
+
+\column{0.5\textwidth}
+\begin{figure}
+  \centering
+  \begin{tikzpicture}
+    \graph[layered layout, nodes={draw,circle}]{
+    a -- { b, c, d }; 
+    b -- { c, e };
+    c -- { f };
+    i__f -- { l__a, j__e }; 
+    j -- { m__b }; 
+    l -- {o__c, m} ;
+    m -- o ; 
+  };
+  \end{tikzpicture}
+  \caption{$\mathcal{D} = \{G_1, G_2\}$}
+\end{figure}
+
+\end{columns}
+\end{frame}
+
+
+\subsection{Specialities}
+
+\begin{frame}{FSG's strengths}
+
+The algorithm contains two main achievements  that make it efficient by
+taking full advantage of the \textbf{downward closed property} \cite{FSG}:
+
+\begin{enumerate}
+    \item \textbf{Iterative candidate generation} \\ 
+    Only create a size-$(k + 1)$ candidates by joining frequent size-$k$ candidates, that have a \textit{common size-$(k-1)$ subgraph}.
+    
+    \item \textbf{Canonical labelling} \\ 
+    Uniquely labels subgraphs such that isomorphic candidates have the same label, to avoid regenerating the same candidate multiple times.
+\end{enumerate}
+
+Plus some more \textit{downward closed} property related optimisations for the frequency counting.
+\end{frame}
+
+
+
+
+\section[Subgraph Similarity Search on Probabilistic Graphs]
+{Probabilistic subgraph similarity}
+
+\subsection{The Problem}
+
+\begin{frame}{A query algorithm}
+We want to find out which graphs have a certain substructure.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{img/query.png}
+    \caption{This algorithm takes a query as input. From \cite{structural}.}
+\end{figure}
+    
+\end{frame}
+
+\begin{frame}{For Probabilistic Graphs}
+    The second paper \cite{sim} was the first to treat this problem on graphs such that
+    
+    \begin{columns}[T]
+    \column{0.5\textwidth}
+    \begin{itemize}
+        \item a probabilistic graph $g = (g^c, X_E)$ for $g^c = (V, E, \Sigma, L)$ the corresponding deterministic graph.
+        
+        \item<2-> the edge probabilities $X_E$ are \textit{not} independent but correlate in small neighbour edge sets,
+        
+        \item<3-> those follow a joint density $\mathbb{P}(x_{ne})$\\
+        for $x_{ne} = (x_1, x_2, \ldots x_k)$ of $X_E$.
+    \end{itemize}
+    
+    \column{0.5\textwidth}
+    \begin{figure}
+    \centering
+    \begin{tikzpicture}[inner sep=0.025cm]
+    \graph[spring layout, horizontal=e to b, node distance=1cm, nodes={draw,circle}]{
+        e --["i"] b;
+        b --["j"] c;
+        b --["k"] a;
+        a --["l"] c;
+    };
+    \end{tikzpicture}
+    \caption{Underlying $g^c$.}
+    \end{figure}
+    
+    \only<3->{
+    \begin{itemize}
+        \item Triangle joint density $\forall (x_j, x_k, x_l) \in X_E: \mathbb{P}(x_j, x_k, x_l)$.
+        
+        \item $b$'s neighbours joint density $\forall (x_i,x_j,x_k) \in X_E: \mathbb{P}(x_i,x_j,x_k)$.
+    \end{itemize}
+    }
+    
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Only similar}
+   We relax the subgraph isomorphism with a \textit{subgraph distance threshold} $\delta$.
+
+\vspace{0.3cm}
+ \begin{columns}[T]
+    \centering
+  \column{0.2\textwidth}
+  Graph $q$: \\ 
+  \begin{figure} 
+  \centering
+  \begin{tikzpicture}[inner sep=0.025cm, level distance=0.5cm]
+    \graph[layered layout, nodes={draw,circle}]{
+        b -- {c, a};
+    };
+  \end{tikzpicture}
+  \end{figure}
+  
+  \column{0.3\textwidth}
+  $U = \{q_1, \ldots, q_a\}$ the set of $q$'s subgraphs if removed $\delta = 1$ edge:  \\ 
+   \begin{figure} 
+  \centering
+  \begin{tikzpicture}[inner sep=0.025cm]
+    \graph[spring layout, node distance=0.5cm, nodes={draw,circle}]{
+         b -- c;
+        z__b -- a;
+    };
+  \end{tikzpicture}
+  \end{figure}
+  
+  \column{0.2\textwidth}
+  $\exists q_s \in U$ s.t. $q_s \subseteq_{iso} p$:
+   \begin{figure} 
+  \centering
+  \begin{tikzpicture}[inner sep=0.025cm, level distance=0.5cm]
+    \graph[layered layout, node distance=0.5cm, nodes={draw,circle}]{
+        a -- {b, c};
+    };
+  \end{tikzpicture}
+  \end{figure}
+  \end{columns}
+  
+  \vspace{0.3cm}
+  \begin{block}{Subgraph similarity}<2>
+  Two deterministic graphs are \textbf{subgraph similar} $\mathbf{q \subseteq_{sim} p}$ if any ($|q| - \delta$)-subgraph of $q$ is subgraph isomorphic to $p$.
+  \end{block}
+\end{frame}
+
+
+\begin{frame}{And probable}
+  \begin{itemize}
+    \item<1-> A sample from a probabilistic graph is a \textit{possible world graph}, denoted $g \Rightarrow g'$, $g' \in PWG(g)$.
+
+    \item<2-> $SIM(q, g) = \{g' |g' \in PWG(g), q \subseteq_{sim} g' \}$ is the set of subgraph similar possible world graphs of $g$.
+  \end{itemize}
+    
+  \begin{block}<3->{Subgraph Similarity Probability (SSP)}
+  For a query graph $g$ and a probabilistic graph $g$, the SSP is
+    $$
+    \mathbb{P}(q \subseteq_{sim} g) = \sum_{g' \in SIM(q, g)} \mathbb{P}(g \Rightarrow g')
+    $$
+  \end{block}
+\end{frame}
+
+
+\begin{frame}{The Problem}
+
+\begin{alertblock}{Threshold-based probabilistic subgraph similarity matching (T-PS)}
+Given 
+\begin{itemize}
+    \item a database of probabilistic graphs $\mathcal{D} = \{g_1, g_2, \ldots\}$
+    
+    \item a deterministic \textbf{query graph} $q$
+    
+    \item a \textit{subgraph distance threshold} $\delta \in \mathbb{N}$
+    
+    \item a \textit{probability threshold} $\epsilon \in (0,1]$
+\end{itemize}
+
+return $A_q = \{ g | g \in \mathcal{D}, \mathbb{P}(q \subseteq_{sim} g) \geq \epsilon \}$
+\end{alertblock}
+
+\begin{quote}
+    Return all graphs that contain something similar to $q$.
+\end{quote}
+
+This problem is \#P-complete \cite{sim} and the algorithm returns an approximate answer.
+
+\end{frame}
+
+\subsection{High-level Algorithm}
+
+\begin{frame}{The T-PS Algorithm}
+
+In each step, the set of graphs from $\mathcal{D}$ is reduced until $A_q$ is remaining \cite{sim}.
+
+\begin{enumerate}
+    \item Structural pruning \\ 
+    Remove all graphs don't contain $q$ for sure. Deterministic algorithm from another paper \cite{structural}.
+    
+    \item \textbf{Probabilistic pruning}  \\
+    Using the PMI \textit{Probabilistic Matrix Index}.
+    
+    \item Verification \\
+    Verify results with Monte Carlo sampling.
+\end{enumerate}
+\end{frame}
+
+
+\subsection{Specialities}
+
+\begin{frame}{Probabilistic Matrix Index}
+An extension of the technique used in \cite{structural}.
+
+  \begin{itemize}
+      \item Create \textbf{feature set} $F$ of small graphs using the algorithm from \cite{structural}.
+      
+      \item Calculate upper and lower bounds on $\mathbb{P}(f \subseteq_{sim} g), \ \forall (f,g) \in F \times \mathcal{D}$.
+  \end{itemize}
+  
+  \vspace{0.3cm}
+  
+  \begin{columns}
+    \column{0.5\textwidth}
+    \begin{figure}
+    \centering
+    \begin{tikzpicture}[inner sep=0.025cm]
+    \graph[spring layout, nodes={draw,circle}]{
+      a__ --["b"] b__;
+      
+      i__ --["a"] k__ --["b"] l__;
+      
+      x__ --["a"] y__ --["c"] z__;
+      y --["b"]  w__;
+    };
+    \end{tikzpicture}
+    \caption{Features $f_1$, $f_2, f_3$}
+    \end{figure}
+
+    \column{0.5\textwidth}
+    \centering
+    \only<1>{
+    \begin{figure}
+    \centering
+    \begin{tikzpicture}[inner sep=0.025cm]
+    \graph[spring layout, nodes={draw,circle}]{
+      a__ --["a"] b__ --["b"] d__ --["d"] a__;
+      
+      h__ --["a"] i__;
+      j__ --["b"] i --["a"] k__ --["b"] l__;
+      k -- ["c"] m__;
+    };
+    \end{tikzpicture}
+    \caption{$g_1$, $g_2$}
+    \end{figure}
+    }
+    
+    \only<2>{
+      \begin{tabular}{|l|lll|}
+  \hline
+  {} & $g_1$ & $g_2$ & $\cdots$ \\
+  \hline
+  $f_1$  & (0.55, 0.64) & (0.42, 0.5)  & {} \\
+  $f_2$  & (0.3, 0.48) & (0.26, 0.58)  & {} \\
+  $f_3$  & (-) & (0.08, 0.15)  & {} \\
+  $\vdots$ & {} & {} & $\ddots$ \\
+  \hline
+  \end{tabular}
+}
+  \end{columns}
+
+Example taken from \cite{sim}.
+\end{frame}
+
+
+\begin{frame}{Pruning conditions}
+Let $U = \{q_1, \ldots, q_a\}$ the set of graphs after $q$ is relaxed by $\delta$ edges.
+
+\begin{block}{Probabilistic pruning}
+  \begin{enumerate}
+      \item For each $q_i$ take features $f_i^1, \  f_i^2 \in F$ such that $f_i^1, f_i^2 \subseteq_{iso} g^c$ and
+      $$
+      f_i^1 \subseteq_{iso} q_i \subseteq_{iso} f_i^2.
+      $$
+      
+      \item If $\sum_{i=1}^a UpperB(f_i^1) < \epsilon$ then $g$ can be pruned.
+      
+      \item If $\sum_{i=1}^a LowerB(f_i^2) -  \sum_{1\leq i,j \leq a} UpperB(f_i^2)UpperB(f_j^2) \geq \epsilon$ then $g \in A_q$.
+  \end{enumerate}
+\end{block}
+
+ The algorithm minimises the gaps of the lower and upper bounds by transforming the feature choice to two well known problems: \textit{weighted set cover} and \textit{integer quadratic programming}.
+\end{frame}
+
+
+
+\section{Conclusion}
+
+\begin{frame}{Similarities}
+ Both algorithms 
+    \begin{itemize}
+        \item solve some form of subgraph isomorphism problem.
+        
+        \item need to minimise the number of isomorphism calculations.
+        
+        \item therefore use the \textit{filter-and-verify} approach.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Differences}
+    \begin{columns}[T,onlytextwidth]
+    \column{0.5\textwidth}
+    
+    \textbf{FSG}
+    \begin{itemize}
+        \item Deterministic graphs in $\mathcal{D}$
+        
+        \item Only isomorphic, i.e. $\delta = 0$
+        
+        \item \textbf{Mining algorithm}: Find and return \textit{subgraphs} that are common, no query graph.
+    \end{itemize}
+    
+    \column{0.5\textwidth}
+    
+    \textbf{T-PS}
+    \begin{itemize}
+        \item Probabilistic graphs in $\mathcal{D}$
+        
+        \item $\delta > 0$
+        
+        \item \textbf{Query system}: Return all $g \in \mathcal{D}$ that are probably subgraph similar to the input query graph $q$.
+    \end{itemize}
+    
+    \end{columns}
+    
+    \vspace{6pt}
+    Could use FSG to discover common patterns in the deterministic graphs $g^c, g \in \mathcal{D}$, then see where the patterns occur with T-PS.
+\end{frame}
+
+
+{\setbeamercolor{palette secondary}{fg=black, bg=yellow}
+\begin{frame}[standout]
+  Questions?
+\end{frame}
+}
+
+{\setbeamercolor{palette secondary}{fg=black, bg=yellow}
+\begin{frame}[standout]
+  Thank you!
+\end{frame}
+}
+
+
+\appendix
+
+\begin{frame}{FSG Candidate Generation}
+    \begin{itemize}
+        \item For a size-$k$ subgraph $F_i$, let $\mathcal{P}(F_i) = \{ H_{i,1}, H_{i,2} \}$ the set of size-$(k-1)$ subgraphs with the smallest and second smallest canonical label – the \textit{primary subgraphs} of $F_i$.
+        
+        \item FSG only joins $F_i, F_j$ if $\mathcal{P}(F_i) \cap \mathcal{P}(F_j) \neq \emptyset$. This still generates all the candidates.
+    \end{itemize}
+
+    \begin{block}{Theorem 1 in \cite{FSG}}
+      Given a connected size-$(k+1)$ valid candidate subgraph $C$, there exists a pair of connected size-$k$ frequent subgraphs $F_i, F_j$ such that $\mathcal{P}(F_i) \cap \mathcal{P}(F_j) \neq \emptyset$, that can be joined with respect to their common primary subgraph to obtain $C$.
+    \end{block}
+\end{frame}
+
+\begin{frame}{FSG Canonical Labelling}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/labelling.png}
+    \caption{A sample graph and three possible labels. From \cite{FSG}.}
+\end{figure}
+\end{frame}
+
+
+\begin{frame}{Probabilistic Pruning theorems}
+
+    \begin{block}{Lemma 1 in \cite{sim}}
+      $U = \{q_1, \ldots, q_a\}$ the set of graphs after $q$ is relaxed by $\delta$ edges. $Bq_i$ is an Boolean variable that is true if $q_i \subseteq_{iso} g^c$.
+      
+      $$
+      \mathbb{P}(q \subseteq_{sim} g) = \mathbb{P}(Bq_1 \vee \ldots \vee Bq_a)
+      $$
+    \end{block}
+    
+       \begin{block}{Theorem 3 in \cite{sim}}
+      Given a probability threshold $\epsilon$, if $\sum_{i=1}^a UpperB(f_i^1) < \epsilon$ then $g$ can be safely pruned.
+    \end{block}
+    
+       \begin{block}{Theorem 4 in \cite{sim}}
+      Given a probability threshold $\epsilon$, if $\sum_{i=1}^a LowerB(f_i^2) -  \sum_{1\leq i,j \leq a} UpperB(f_i^2)UpperB(f_j^2) \geq \epsilon$ then $g \in A_q$.
+    \end{block}
+\end{frame}
+
+\begin{frame}{Probabilistic Pruning theorems}
+     \begin{block}{Theorem 3 in \cite{sim}}
+      Given a probability threshold $\epsilon$, if $\sum_{i=1}^a UpperB(f_i^1) < \epsilon$ then $g$ can be safely pruned.
+    \end{block}
+    
+    \textbf{Proof} \\
+    Since $f_i \subseteq_{iso} q_i \Rightarrow Bq_i \subseteq Bf_i$
+    \begin{align*}
+      \mathbb{P}(q \subseteq_{sim} g) 
+      &= \mathbb{P}(Bq_1 \vee \ldots \vee Bq_a)
+      \\
+      &\leq \mathbb{P}(Bf_1^1 \vee \ldots \vee Bf_a^1)
+      \\
+     &\leq \mathbb{P}(Bf_1^1) + \ldots + \mathbb{P}(Bf_a^1)
+     \\
+     &\leq UpperB(Bf_1^1) + \ldots + UpperB(Bf_a^1) < \epsilon.
+    \end{align*}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{References}
+
+  \bibliography{bib}
+  \bibliographystyle{abbrv}
+
+\end{frame}
+
+\end{document}

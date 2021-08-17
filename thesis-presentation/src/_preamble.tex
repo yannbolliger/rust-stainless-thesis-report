@@ -1,0 +1,64 @@
+\documentclass[10pt, aspectratio=149,usenames,dvipsnames]{beamer}
+
+\usetheme[progressbar=frametitle, block=fill]{metropolis}
+
+%\setbeamertemplate{frame footer}{Yann Bolliger -- \textit{Frequent Subgraph Search}}
+
+\usepackage{appendixnumberbeamer}
+
+\usepackage{booktabs}
+
+\usepackage{pgfplots}
+\usepackage{svg}
+\usepgfplotslibrary{dateplot}
+
+\usepackage{tikz}
+
+\usepackage{xspace}
+\newcommand{\themename}{\textbf{\textsc{metropolis}}\xspace}
+
+% Extra colours; need to be first
+\usepackage{xcolor}
+\definecolor{light-gray}{gray}{0.95}
+
+% Listings
+\usepackage{listings,multicol}
+\usepackage{listings-rust}
+
+\lstset{
+  basicstyle=\small\ttfamily,
+  style=boxed,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\bfseries\color{MidnightBlue},
+  captionpos=b!,
+  escapeinside={<@}{@>}
+}
+
+\lstdefinestyle{short}{
+  numbers=none,
+  framerule=0pt,
+  xleftmargin=5pt
+}
+
+% Use code in description item, Based on http://tex.stackexchange.com/a/181325/77356
+\newcommand*{\lstitem}[1]{
+  \setbox0\hbox{\textbf{\Inline{#1}}}
+  \item[\usebox0]
+}
+
+\title{Formal Verification of Rust with Stainless}
+\subtitle{Master Thesis}
+\date{\today}
+\author{Yann Bolliger}
+\institute{
+\noindent\begin{tabular}{@{}ll}
+\textit{Company supervisor:}     & Romain Rüetschi, Informal Systems \\
+\textit{Academic co-supervisor:} & Georg Stefan Schmid, Laboratory for Automated Reasoning and Analysis, EPFL \\
+\textit{Academic supervisor:}    & Prof. Viktor Kun\v{c}ak, Laboratory for Automated Reasoning and Analysis, EPFL
+\end{tabular}
+}
+\titlegraphic{
+  \includegraphics[height=1cm]{img/logos.pdf}
+}
+
+\begin{document}
