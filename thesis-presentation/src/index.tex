@@ -14,13 +14,20 @@
 fn square(x: i32) -> i32 { -2 * x }
 \end{lstlisting}
 \end{onlyenv}
-
 \begin{onlyenv}<4>
 \begin{lstlisting}[style=short, language=Rust]
 /// Returns the square of `x`. Squares are non-negative.
 #[post(ret >= 0)]
 fn square(x: i32) -> i32 { -2 * x }
-// postcondition INVALID
+\end{lstlisting}
+\end{onlyenv}
+\begin{onlyenv}<5>
+\begin{lstlisting}[style=short]
+- Result for 'postcondition' VC for square @?:?:
+-2 * x >= 0
+=> INVALID
+Found counter-example:
+ x: Int -> 1
 \end{lstlisting}
 \end{onlyenv}
 \end{frame}
