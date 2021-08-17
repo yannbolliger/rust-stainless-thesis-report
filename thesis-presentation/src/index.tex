@@ -173,6 +173,190 @@ To insert the integers from 1 to 5000 into the implementation takes:
 \end{itemize}
 \end{frame}
 
+\begin{frame}[fragile]{Red-Black Tree in Rust}
+\begin{lstlisting}[language=Rust, caption={Data types with heap-allocation}]
+enum Color {
+  Red,
+  Black,
+}
+
+enum RBTree<T> {
+  Empty,
+  Node(Color, Box<RBTree<T>>, T, Box<RBTree<T>>),
+}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Red-Black Tree in Rust}
+\begin{lstlisting}[language=Rust, caption={Insert method}]
+impl RBTree<i32> {
+  pub fn insert(&mut self, t: i32) {
+    // Insert and color the root black.
+    self.ins(t);
+    if let Node(ref mut c, _, _, _) = self {
+      *c = Black;
+    }
+  }
+}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Red-Black Tree in Rust}
+\begin{lstlisting}[language=Rust, caption={Insert method with specification}]
+#[pre(
+  self.red_nodes_have_black_children()
+  && self.black_balanced()
+)]
+#[post(set_equals(
+    &self.content(),&old(&self).content().insert(&t)
+  ) && (old(&self).size() == self.size()
+    || old(&self).size() + 1 == self.size())
+  && self.red_nodes_have_black_children()
+  && self.black_balanced()
+)]
+pub fn insert(&mut self, t: i32) { ... }
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Red-Black Tree in Rust}
+\begin{lstlisting}[language=Rust, caption={Recursive insertion}]
+fn ins(&mut self, t: i32) {
+  match self {
+    Empty => {
+      *self = Node(Red, Box::new(Empty), t, Box::new(Empty));
+    }
+    Node(_, left, value, right) => {
+      if t < *value {
+        left.ins(t); self.balance();
+      } else if t > *value {
+        right.ins(t); self.balance();
+      }
+    }
+  }
+}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Red-Black Tree in Rust}
+\begin{columns}
+\column{0.7\textwidth}
+\begin{lstlisting}[language=Rust, caption={Balance imperatively}, basicstyle=\footnotesize\ttfamily,]
+fn balance(&mut self) {
+  match self {
+    Node(Black, left, _, _) if left.is_red() => {
+      match &mut **left {
+        Node(Red, ll, _, _) if ll.is_red() => {
+          self.rotate_right();
+          self.recolor();
+        }
+        Node(Red, _, _, lr) if lr.is_red() => { ... }
+        _ => {}
+      }
+    }
+    Node(Black, _, _, right) if right.is_red() =>
+      { ... }
+    _ => {}
+  }
+}
+\end{lstlisting}
+\column{0.3\textwidth}
+\centering
+\includegraphics[width=0.8\textwidth]{img/rbtree_case_1.png}
+\vspace{1cm}
+\includegraphics[width=0.8\textwidth]{img/rbtree_solution.png}
+\end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Red-Black Tree in Rust}
+\begin{columns}
+\column{0.7\textwidth}
+\begin{lstlisting}[language=Rust, caption={Tree rotation without allocation}, basicstyle=\footnotesize\ttfamily]
+fn rotate_right(&mut self) {
+  let self_tree = std::mem::replace(self, Empty);
+  if let Node(c1, mut left, y, c) = self_tree {
+    let left_tree = std::mem::replace(&mut *left, Empty);
+    if let Node(c2, a, x, b) = left_tree {
+      *left = Node(c1, b, y, c);
+      *self = Node(c2, a, x, left);
+    } else {
+      *left = left_tree;
+      *self = Node(c1, left, y, c);
+    }
+  }
+}
+\end{lstlisting}
+\column{0.3\textwidth}
+\centering
+\includegraphics[width=0.6\textwidth]{img/rotate_right.png}
+\end{columns}
+\end{frame}
+
+
+\begin{frame}{Spin it up}
+\only<1>{
+  OK, then let's try it!
+  \includegraphics[width=\textwidth]{img/terminal_1.png}
+}
+
+\only<2>{
+  \textbf{\alert{INVALID}} \\
+  \texttt{
+  - Result for 'postcondition' VC for balance @?:?:\\
+  ...\\
+    => INVALID\\
+  Found counter-example:\\
+    self: MutCell[RBTree[Int]] -> ...
+  }
+}
+\end{frame}
+
+\begin{frame}[fragile]{Red-Black Tree in Rust}
+\begin{onlyenv}<1>
+\begin{lstlisting}[language=Rust]
+fn balance(&mut self) {
+  match self {
+    Node(Black, left, _, _) if left.is_red() => {
+      match &mut **left {
+        Node(Red, ll, _, _) if ll.is_red() => { ... }
+        ...
+      }
+    }
+    Node(Black, _, _, right) if right.is_red() => { ... }
+    _ => {}
+  }
+}
+\end{lstlisting}
+\end{onlyenv}
+\begin{onlyenv}<2>
+\begin{lstlisting}[language=Rust, caption={Solved bug in balance function}]
+fn balance(&mut self) {
+  if let Node(Black, left, _, _) = self {
+    if left.is_red() {
+      match &mut **left {
+        Node(Red, ll, _, _) if ll.is_red() => { ... }
+        ...
+      }
+    }
+  }
+  if let Node(Black, _, _, right) = self {
+    if right.is_red() { ... }
+  }
+}
+\end{lstlisting}
+\end{onlyenv}
+\end{frame}
+
+\begin{frame}{Required New Features}
+\begin{itemize}
+\item Heap-allocation
+\item Methods on data types
+\item Full support for mutability
+\item Shared and mutable references
+\item \lstinline!old! helper in postconditions
+\end{itemize}
+\end{frame}
+
 \section{Tool Overview}
 
 \section{Translation}
@@ -184,8 +368,10 @@ To insert the integers from 1 to 5000 into the implementation takes:
 \section{Conclusions}
 
 
-
 \begin{frame}[allowframebreaks]{References}
   \bibliography{bib}
   \bibliographystyle{IEEEtranS}
 \end{frame}
+
+
+\appendix
