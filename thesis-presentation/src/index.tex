@@ -54,10 +54,8 @@ fn square(x: i32) -> i32 { -2 * x }
 \column{0.5\textwidth}
 \begin{itemize}
   \item Binary search tree
-  \only<2->{
-    \item Lookup, insertion and deletion in $\mathcal{O}(\log n)$ time
-    \item But only if well balanced
-  }
+  \item Lookup, insertion and deletion in $\mathcal{O}(\log n)$ time
+  \only<2->{  \item But only if well balanced }
   \only<3->{
     \item Red-Black Tree uses colouring to automatically rebalance at insertion
     and deletion
@@ -85,7 +83,7 @@ fn square(x: i32) -> i32 { -2 * x }
   \item All NIL (empty) nodes are considered black.
   \item A red node does not have a red child.
   \item Every path from a given node to any of its descendant NIL nodes goes through the same number of black nodes.
-  \only<2>{\item The root is black.}
+  \item (The root is black.)
 \end{enumerate}
 
 \column{0.5\textwidth}
@@ -132,15 +130,6 @@ def ins(x: BigInt, t: Tree): Tree = {
 \end{lstlisting}
 \end{frame}
 
-\begin{frame}{Rebalancing}
-  \centering
-  \includegraphics[width=0.8\textwidth]{img/rbtree_cases.png}
-  \vfill
-  \only<2>{
-    \includegraphics[width=0.3\textwidth]{img/rbtree_solution.png}
-  }
-\end{frame}
-
 \begin{frame}[fragile]{Rebalancing}
 In Scala
 \begin{lstlisting}[language=Scala, basicstyle=\footnotesize\ttfamily,]
@@ -160,6 +149,15 @@ def balance(c: Color, a: Tree, x: BigInt, b: Tree): Tree = {
 \end{lstlisting}
 \end{frame}
 
+\begin{frame}{Rebalancing}
+  \centering
+  \includegraphics[width=0.8\textwidth]{img/rbtree_cases.png}
+  \vfill
+  \only<2>{
+    \includegraphics[width=0.3\textwidth]{img/rbtree_solution.png}
+  }
+\end{frame}
+
 \begin{frame}[standout]
   Why in Rust?
 \end{frame}
@@ -176,7 +174,7 @@ To insert the integers from 1 to 5000 into the implementation takes:
 \end{frame}
 
 \begin{frame}[fragile]{Red-Black Tree in Rust}
-\begin{lstlisting}[language=Rust, caption={Data types with heap-allocation}]
+\begin{lstlisting}[language=Rust, caption={Data types with heap allocation}]
 enum Color {
   Red,
   Black,
@@ -189,34 +187,23 @@ enum RBTree<T> {
 \end{lstlisting}
 \end{frame}
 
-\begin{frame}[fragile]{Red-Black Tree in Rust}
-\begin{lstlisting}[language=Rust, caption={Insert method}]
-impl RBTree<i32> {
-  pub fn insert(&mut self, t: i32) {
-    // Insert and color the root black.
-    self.ins(t);
-    if let Node(ref mut c, _, _, _) = self {
-      *c = Black;
-    }
-  }
-}
-\end{lstlisting}
-\end{frame}
 
 \begin{frame}[fragile]{Red-Black Tree in Rust}
 \begin{lstlisting}[language=Rust, caption={Insert method with specification}]
-#[pre(
-  self.red_nodes_have_black_children()
-  && self.black_balanced()
-)]
-#[post(set_equals(
-    &self.content(),&old(&self).content().insert(&t)
-  ) && (old(&self).size() == self.size()
-    || old(&self).size() + 1 == self.size())
-  && self.red_nodes_have_black_children()
-  && self.black_balanced()
-)]
-pub fn insert(&mut self, t: i32) { ... }
+impl RBTree<i32> {
+  #[pre(
+    self.red_nodes_have_black_children()
+    && self.black_balanced()
+  )]
+  #[post(set_equals(
+      &self.content(),&old(&self).content().insert(&t)
+    ) && (old(&self).size() == self.size()
+      || old(&self).size() + 1 == self.size())
+    && self.red_desc_have_black_children()
+    && self.black_balanced()
+  )]
+  pub fn ins(&mut self, t: i32) { ... }
+}
 \end{lstlisting}
 \end{frame}
 
@@ -272,8 +259,12 @@ fn balance(&mut self) {
 
 \begin{frame}[fragile]{Red-Black Tree in Rust}
 \begin{columns}
-\column{0.7\textwidth}
-\begin{lstlisting}[language=Rust, caption={Tree rotation without allocation}, basicstyle=\footnotesize\ttfamily]
+\column{0.75\textwidth}
+\begin{lstlisting}[
+  language=Rust,
+  caption={Tree rotation without allocation, \textit{in-place}.},
+  basicstyle=\footnotesize\ttfamily
+]
 fn rotate_right(&mut self) {
   let self_tree = std::mem::replace(self, Empty);
   if let Node(c1, mut left, y, c) = self_tree {
@@ -288,34 +279,36 @@ fn rotate_right(&mut self) {
   }
 }
 \end{lstlisting}
-\column{0.3\textwidth}
+\column{0.2\textwidth}
 \centering
-\includegraphics[width=0.6\textwidth]{img/rotate_right.png}
+\includegraphics[width=0.8\textwidth]{img/rotate_right.png}
 \end{columns}
 \end{frame}
 
 
-\begin{frame}{Spin it up}
-\only<1>{
-  OK, then let's try it!
-  \includegraphics[width=\textwidth]{img/terminal_1.png}
-}
+\begin{frame}[fragile]{Spin it up}
+\begin{onlyenv}<1>
+OK, then let's try it! \\
+\begin{lstlisting}[style=short]
+$ STAINLESS_FLAGS='--timeout=60' cargo stainless
+\end{lstlisting}
+\end{onlyenv}
 
-\only<2>{
-  \textbf{\alert{INVALID}} \\
-  \texttt{
-  - Result for 'postcondition' VC for balance @?:?:\\
-  ...\\
-    => INVALID\\
-  Found counter-example:\\
-    self: MutCell[RBTree[Int]] -> ...
-  }
-}
+\begin{onlyenv}<2>
+\textbf{\alert{INVALID}}
+\begin{lstlisting}[style=short]
+- Result for 'postcondition' VC for balance @?:?:\\
+...\\
+  => INVALID\\
+Found counter-example:\\
+  self: MutCell[RBTree[Int]] -> ...
+\end{lstlisting}
+\end{onlyenv}
 \end{frame}
 
 \begin{frame}[fragile]{Red-Black Tree in Rust}
 \begin{onlyenv}<1>
-\begin{lstlisting}[language=Rust]
+\begin{lstlisting}[language=Rust, caption={Pattern match acts like an \lstinline!else if!}.]
 fn balance(&mut self) {
   match self {
     Node(Black, left, _, _) if left.is_red() => {
@@ -331,7 +324,7 @@ fn balance(&mut self) {
 \end{lstlisting}
 \end{onlyenv}
 \begin{onlyenv}<2>
-\begin{lstlisting}[language=Rust, caption={Solved bug in balance function}]
+\begin{lstlisting}[language=Rust, caption={Solved bug in balance function.}]
 fn balance(&mut self) {
   if let Node(Black, left, _, _) = self {
     if left.is_red() {
@@ -351,7 +344,7 @@ fn balance(&mut self) {
 
 \begin{frame}{Required New Features}
 \begin{itemize}
-\item Heap-allocation
+\item Heap allocation
 \item Methods on data types
 \item Full support for mutability
 \item Shared and mutable references
@@ -404,34 +397,9 @@ fn balance(&mut self) {
 \end{itemize}
 \end{frame}
 
-
-\begin{frame}[fragile]{Added Features}
-\textbf{Implementation blocks, traits and laws}
-\begin{lstlisting}[
-  language=Rust,  basicstyle=\footnotesize\ttfamily,
-]
-trait Rectangle {
-  #[post(ret > 0)]
-  fn width(&self) -> u32;
-  #[post(ret > 0)]
-  fn height(&self) -> u32;
-
-  fn set_width(&self, width: u32) -> Self;
-  fn set_height(&self, height: u32) -> Self;
-  #[law]
-  fn preserve_height(&self, any: u32) -> bool {
-    self.set_width(any).height() == self.height()
-  }
-  #[law]
-  fn preserve_width(&self, any: u32) -> bool {
-    self.set_height(any).width() == self.width()
-  }
-}
-\end{lstlisting}
-\end{frame}
-
-\begin{frame}{More Added Features}
+\begin{frame}{Added Features}
 \begin{itemize}
+\item Implementation blocks, traits and laws
 \item Stainless Map and Set implementations,
 \item \lstinline!return! keyword,
 \item Pattern matching for tuples,
@@ -489,6 +457,11 @@ x.value = b // Illegal aliasing
 \end{itemize}
 \end{frame}
 
+\begin{frame}{That was}
+\centering
+\includegraphics[width=0.9\textwidth]{img/github.png}
+\end{frame}
+
 \begin{frame}[standout]
 Thank you!
 \end{frame}
@@ -505,3 +478,41 @@ Questions?
 
 
 \appendix
+
+\begin{frame}[fragile]{Red-Black Tree in Rust}
+\begin{lstlisting}[language=Rust, caption={Insert method}]
+impl RBTree<i32> {
+  pub fn insert(&mut self, t: i32) {
+    // Insert and color the root black.
+    self.ins(t);
+    if let Node(ref mut c, _, _, _) = self {
+      *c = Black;
+    }
+  }
+}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Implementation blocks, traits and laws}
+\begin{lstlisting}[
+  language=Rust,  basicstyle=\footnotesize\ttfamily,
+]
+trait Rectangle {
+  #[post(ret > 0)]
+  fn width(&self) -> u32;
+  #[post(ret > 0)]
+  fn height(&self) -> u32;
+
+  fn set_width(&self, width: u32) -> Self;
+  fn set_height(&self, height: u32) -> Self;
+  #[law]
+  fn preserve_height(&self, any: u32) -> bool {
+    self.set_width(any).height() == self.height()
+  }
+  #[law]
+  fn preserve_width(&self, any: u32) -> bool {
+    self.set_height(any).width() == self.width()
+  }
+}
+\end{lstlisting}
+\end{frame}
