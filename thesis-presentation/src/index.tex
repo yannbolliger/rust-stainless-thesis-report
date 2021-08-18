@@ -18,7 +18,7 @@
 Over the course of this project I substantially extended \texttt{rust-stainless}.
 \begin{itemize}
 \item Support for mutability, shared and mutable references
-\item {\color<2>{gray}Theoretical argument for the correctness of the mutability translation}
+\item {\color<2>{gray}General translation algorithm from Rust mutability to Scala and theoretical argument for its correctness.}
 \item Heap allocation
 \item \lstinline!old! helper in postconditions
 \item Methods on data types
@@ -507,9 +507,7 @@ def f(a: MutCell[A]): A = {
 \end{frame}
 
 
-\section{Conclusions}
-
-\subsection{Result}
+\section{Conclusion}
 
 \begin{frame}{Result}
 \begin{itemize}
@@ -518,8 +516,6 @@ def f(a: MutCell[A]): A = {
   \item Frontend only accounts for 5~\% of running time
 \end{itemize}
 \end{frame}
-
-\subsection{Limitations}
 
 \begin{frame}[fragile]{Limitations}
 \begin{itemize}
@@ -530,8 +526,6 @@ def f(a: MutCell[A]): A = {
 \item Refinement lifting in the backend
 \end{itemize}
 \end{frame}
-
-\subsection{Future Work}
 
 \begin{frame}{Future Work}
 \begin{itemize}
