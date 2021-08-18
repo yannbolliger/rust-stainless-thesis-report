@@ -1,6 +1,42 @@
 \maketitle
 
-\section{Introduction}
+\begin{frame}{Presenting our tool}
+  \begin{columns}
+  \column{0.5\textwidth}
+  {\Large\texttt{rust-stainless}}
+  \begin{itemize}
+  \item Created by Georg Schmid
+  \end{itemize}
+
+  \column{0.5\textwidth}
+  \centering
+  \includegraphics[width=\textwidth]{img/rbtree.png}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Master Project}
+Over the course of this project I substantially extended \texttt{rust-stainless}.
+\begin{itemize}
+\item Support for mutability, shared and mutable references
+\item {\color<2>{gray}Theoretical argument for the correctness of the mutability translation}
+\item Heap allocation
+\item \lstinline!old! helper in postconditions
+\item Methods on data types
+\item {\color<2>{gray}Implementation blocks, traits and laws (algebraic properties),}
+\item \color<2>{gray}{Stainless Map and Set implementation,}
+\item \color<2>{gray}{\lstinline!return! keyword,}
+\item \color<2>{gray}{Pattern matching for tuples,}
+\item \color<2>{gray}{and many notational improvements.}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Contents}
+  \setbeamertemplate{section in toc}[sections numbered]
+
+  \tableofcontents%[hideallsubsections]
+\end{frame}
+
+\section{Motivation}
 
 \begin{frame}[fragile]{Motivation}
 \centering
@@ -33,26 +69,25 @@ Found counter-example:
 \end{frame}
 
 
-\begin{frame}{Presenting our tool}
-  \begin{columns}
-  \column{0.5\textwidth}
-  \centering
-  \Large{\texttt{rust-stainless}}
 
-  \column{0.5\textwidth}
-  \centering
-  \includegraphics[width=\textwidth]{img/rbtree.png}
-\end{columns}
+\section{Tool Overview}
+
+\begin{frame}{How it works}
+\begin{itemize}
+  \item Verification by Stainless in Scala.
+  \item \texttt{rust-stainless} is a frontend to Stainless.
+  \item Translate supported Rust features to Scala.
+  \item Stainless verifies the generated Scala. \\
+  But it only supports a subset of Scala, in particular concerning mutability.
+  \item Get verification result back.
+\end{itemize}
 \end{frame}
 
-
-\begin{frame}{Contents}
-  \setbeamertemplate{section in toc}[sections numbered]
-
-  \tableofcontents%[hideallsubsections]
-
-  \textit{Keeping it specific.}
+\begin{frame}{Pipeline}
+\centering
+\include{img/flowchart}
 \end{frame}
+
 
 \section{Verifying a Red-Black Tree}
 
@@ -90,7 +125,6 @@ Found counter-example:
   \item All NIL (empty) nodes are considered black.
   \item A red node does not have a red child.
   \item Every path from a given node to any of its descendant NIL nodes goes through the same number of black nodes.
-  \item (The root is black.)
 \end{enumerate}
 
 \column{0.5\textwidth}
@@ -116,44 +150,6 @@ Found counter-example:
 \only<1>{\includegraphics[width=\textwidth]{img/rbtree.png}}
 \only<2>{\includegraphics[width=\textwidth]{img/rbtree_insert.png}}
 \end{columns}
-\end{frame}
-
-\begin{frame}[fragile]{Insertion}
-In Scala
-\begin{lstlisting}[language=Scala, basicstyle=\footnotesize\ttfamily]
-def ins(x: BigInt, t: Tree): Tree = {
-  require(redNodesHaveBlackChildren(t) && blackBalanced(t))
-  t match {
-    case Empty() => Node(Red(),Empty(),x,Empty())
-    case Node(c,a,y,b) =>
-      if      (x < y)  balance(c, ins(x, a), y, b)
-      else if (x == y) Node(c,a,y,b)
-      else             balance(c,a,y,ins(x, b))
-  }
-} ensuring (res => content(res) == content(t) ++ Set(x)
-                 && size(t) <= size(res) && size(res) <= size(t) + 1
-                 && redDescHaveBlackChildren(res)
-                 && blackBalanced(res))
-\end{lstlisting}
-\end{frame}
-
-\begin{frame}[fragile]{Rebalancing}
-In Scala
-\begin{lstlisting}[language=Scala, basicstyle=\footnotesize\ttfamily,]
-def balance(c: Color, a: Tree, x: BigInt, b: Tree): Tree = {
-    Node(c,a,x,b) match {
-      case Node(Black(),Node(Red(),Node(Red(),a,xV,b),yV,c),zV,d) =>
-        Node(Red(),Node(Black(),a,xV,b),yV,Node(Black(),c,zV,d))
-      case Node(Black(),Node(Red(),a,xV,Node(Red(),b,yV,c)),zV,d) =>
-        Node(Red(),Node(Black(),a,xV,b),yV,Node(Black(),c,zV,d))
-      case Node(Black(),a,xV,Node(Red(),Node(Red(),b,yV,c),zV,d)) =>
-        Node(Red(),Node(Black(),a,xV,b),yV,Node(Black(),c,zV,d))
-      case Node(Black(),a,xV,Node(Red(),b,yV,Node(Red(),c,zV,d))) =>
-        Node(Red(),Node(Black(),a,xV,b),yV,Node(Black(),c,zV,d))
-      case Node(c,a,xV,b) => Node(c,a,xV,b)
-    }
-  } ensuring (res => content(res) == content(Node(c,a,x,b)))
-\end{lstlisting}
 \end{frame}
 
 \begin{frame}{Rebalancing}
@@ -292,14 +288,21 @@ fn rotate_right(&mut self) {
 
 
 \begin{frame}[fragile]{Spin it up}
-\begin{onlyenv}<1>
-OK, then let's try it! \\
+Now, the tool developed in this project finally comes to action! \\
 \begin{lstlisting}[style=short]
 $ STAINLESS_FLAGS='--timeout=60' cargo stainless
 \end{lstlisting}
+\vfill
+\begin{onlyenv}<1>
+\begin{itemize}
+  \item See whether the implementation is correct
+  \item Tool translates Rust code to Scala
+  \item Feeds that to Stainless
+\end{itemize}
 \end{onlyenv}
 
 \begin{onlyenv}<2>
+Stainless says:
 \textbf{\alert{INVALID}}
 \begin{lstlisting}[style=short]
 - Result for 'postcondition' VC for balance @?:?:\\
@@ -347,33 +350,9 @@ fn balance(&mut self) {
 \end{onlyenv}
 \end{frame}
 
-\begin{frame}{Required New Features}
-\begin{itemize}
-\item Heap allocation
-\item Methods on data types
-\item Full support for mutability
-\item Shared and mutable references
-\item \lstinline!old! helper in postconditions
-\end{itemize}
+\begin{frame}[standout]
+That's why we need verification!
 \end{frame}
-
-\section{Tool Overview}
-
-\begin{frame}{How it works}
-\begin{itemize}
-  \item Verification by Stainless in Scala
-  \item \texttt{rust-stainless} is a frontend to Stainless
-  \item Translate Rust fragment to Scala fragment supported by Stainless
-  \item Get verification result back
-\end{itemize}
-\end{frame}
-
-\begin{frame}{Pipeline}
-\centering
-\include{img/flowchart}
-\end{frame}
-
-
 
 
 \section{Mutability Translation}
@@ -385,8 +364,9 @@ equivalence in Scala and verification in Stainless.
 
 \begin{frame}{Challenges}
 \begin{itemize}
-\item Explicit references (borrows) and ownership in Rust don't exist in Scala.
-\item Heap- \& stack-allocated data in Rust vs everything on the heap in Scala.
+\item Rust has explicit memory management with references. Scala does not.
+\item Rust has data on the heap \& stack. Scala has all objects on the heap.
+\item Stainless does not support all mutability.
 \end{itemize}
 \end{frame}
 
@@ -450,7 +430,7 @@ To model Rust's ownership type system, the translation uses the
 \begin{itemize}
 \item Semantically, a deep copy
 \item Models move and copy semantics
-\item Helps avoid aliasing restrictions of the Stainless imperative phase
+\item Helps avoiding problems with Stainless's support of mutability
 \end{itemize}
 \end{frame}
 
@@ -502,7 +482,7 @@ assert(x.value._0.value == 123)
 \only<2>{Insert \lstinline!freshCopy! wherever data is moved or copied.}
 \end{frame}
 
-\begin{frame}[fragile]{Memory Replace}
+\begin{frame}[fragile]{In-place Update}
 \begin{columns}[T]
 \column{.42\textwidth}
 \begin{lstlisting}[language=Rust]
@@ -539,26 +519,15 @@ def f(a: MutCell[A]): A = {
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Added Features}
-Other than mutability, this project added:
-\begin{itemize}
-\item Implementation blocks, traits and laws (algebraic properties),
-\item Stainless Map and Set implementation,
-\item \lstinline!return! keyword,
-\item Pattern matching for tuples,
-\item and many notational improvements.
-\end{itemize}
-\end{frame}
-
 \subsection{Limitations}
 
 \begin{frame}[fragile]{Limitations}
 \begin{itemize}
 \item Missing Rust features: arrays, loops, iterators and closures
-\item One-crate-limitation
-\item No access to lifetimes
+\item Stainless's limitations of mutability
+\item One-crate-limitation, cannot use functions of the standard library
+\item \color{gray} No access to lifetimes
 \item Refinement lifting in the backend
-\item Stainless aliasing restrictions
 \end{itemize}
 \end{frame}
 
@@ -566,11 +535,11 @@ Other than mutability, this project added:
 
 \begin{frame}{Future Work}
 \begin{itemize}
+  \item Using the new fully imperative phase of Stainless currently in
+  development to overcome mutability problems.
+
   \item Solving the \textbf{one-crate-limitation} by allowing specifications
   for crate-external items.
-
-  \item Using the new fully imperative phase of Stainless currently in
-  development to overcome aliasing restrictions.
 
   \item Providing Rust counter-examples.
 
