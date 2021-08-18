@@ -499,6 +499,7 @@ assert(x.value._0.value == 123)
 \end{lstlisting}
 \end{onlyenv}
 \end{columns}
+\only<2>{Insert \lstinline!freshCopy! wherever data is moved or copied.}
 \end{frame}
 
 \begin{frame}[fragile]{Memory Replace}
@@ -539,9 +540,10 @@ def f(a: MutCell[A]): A = {
 \end{frame}
 
 \begin{frame}{Added Features}
+Other than mutability, this project added:
 \begin{itemize}
-\item Implementation blocks, traits and laws
-\item Stainless Map and Set implementations,
+\item Implementation blocks, traits and laws (algebraic properties),
+\item Stainless Map and Set implementation,
 \item \lstinline!return! keyword,
 \item Pattern matching for tuples,
 \item and many notational improvements.
@@ -567,7 +569,8 @@ def f(a: MutCell[A]): A = {
   \item Solving the \textbf{one-crate-limitation} by allowing specifications
   for crate-external items.
 
-  \item Using the new fully imperative phase currently in development.
+  \item Using the new fully imperative phase of Stainless currently in
+  development to overcome aliasing restrictions.
 
   \item Providing Rust counter-examples.
 
@@ -612,31 +615,90 @@ impl RBTree<i32> {
 \end{frame}
 
 \begin{frame}[fragile]{Implementation blocks, traits and laws}
+\begin{onlyenv}<1>
 \begin{lstlisting}[
   language=Rust,  basicstyle=\footnotesize\ttfamily,
 ]
-trait Rectangle {
-  #[post(ret > 0)]
-  fn width(&self) -> u32;
-  #[post(ret > 0)]
-  fn height(&self) -> u32;
-
-  fn set_width(&self, width: u32) -> Self;
-  fn set_height(&self, height: u32) -> Self;
-  #[law]
-  fn preserve_height(&self, any: u32) -> bool {
-    self.set_width(any).height() == self.height()
+trait Equals {
+  fn equals(&self, x: &Self) -> bool;
+  fn not_equals(&self, x: &Self) -> bool {
+    !self.equals(x)
   }
   #[law]
-  fn preserve_width(&self, any: u32) -> bool {
-    self.set_height(any).width() == self.width()
+  fn reflexive(x: &Self) -> bool {
+    x.equals(x)
+  }
+  #[law]
+  fn symmetric(x: &Self, y: &Self) -> bool {
+    x.equals(y) == y.equals(x)
+  }
+  #[law]
+  fn transitive(x: &Self, y: &Self, z: &Self) -> bool {
+    !(x.equals(y) && y.equals(z)) || x.equals(z)
   }
 }
 \end{lstlisting}
+\end{onlyenv}
+\begin{onlyenv}<2>
+\begin{lstlisting}[
+  language=Rust,
+  basicstyle=\footnotesize\ttfamily,
+]
+impl Equals for i32 {
+  fn equals(&self, y: &i32) -> bool {
+    *self == *y
+  }
+}
+enum List<T> {
+  Nil,
+  Cons(T, Box<List<T>>)
+}
+impl<T: Equals> Equals for List<T> {
+  fn equals(&self, other: &List<T>) -> bool {
+    match (self, other) {
+      (List::Nil, List::Nil) => true,
+      (List::Cons(x, xs), List::Cons(y, ys)) => x.equals(y) && xs.equals(ys),
+      _ => false,
+    }
+  }
+  ...
+}
+\end{lstlisting}
+\end{onlyenv}
+\begin{onlyenv}<3>
+\begin{lstlisting}[language=Scala, basicstyle=\footnotesize\ttfamily]
+abstract class Equals[Self] {
+  def equals(self: Self, x: Self): Boolean
+  def notEquals(self: Self, x: Self): Boolean = !this.equals(self, x)
+  @law def reflexive(x: Self): Boolean = this.equals(x, x)
+  ...
+}
+case object i32asEquals extends Equals[Int] {
+  def equals(self: Int, y: Int): Boolean = self == y
+}
+case class ListasEquals[T](ev0: Equals[T]) extends Equals[List[T]] {
+  def equals(self: List[T], other: List[T]): Boolean =
+    (self, other) match {
+      case (Nil(), Nil()) => true
+      case (Cons(x,xs),Cons(y,ys)) => ev0.equals(x,y) && this.equals(xs,ys)
+      case _ => false
+    }
+  ...
+}
+val list = Cons(123, Nil())
+ListasEquals[i32](i32asEquals).equals(list, Nil())
+\end{lstlisting}
+\end{onlyenv}
 \end{frame}
 
 \begin{frame}{Heap Allocation}
-
+With mutable cells and memory safety, heap allocation is for free:
+\begin{itemize}
+  \item Achieved with Boxes in Rust, otherwise data is stack-allocated.
+  \item Distinction not needed in Scala because all objects are on the heap.
+  \item Translation erases boxes because it wraps the variables in mutable
+  cells anyway.
+\end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]{Aliasing Limitations}
